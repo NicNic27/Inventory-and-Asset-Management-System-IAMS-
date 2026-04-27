@@ -17,7 +17,6 @@ use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\User\DashboardController as UserDashboardController;
 use App\Http\Controllers\User\RisController as UserRisController;
-use App\Http\Controllers\User\IcsController as UserIcsController;
 use App\Http\Controllers\User\ProfileController as UserProfileController;
 use App\Http\Controllers\RisController as StaffRisController;
 use App\Http\Controllers\Admin\BarcodeController as AdminBarcodeController;
@@ -25,6 +24,7 @@ use App\Http\Controllers\Admin\TransactionController as AdminTransactionControll
 use App\Http\Controllers\GlobalSearchController as StaffSearchController;
 use App\Http\Controllers\Admin\GlobalSearchController as AdminSearchController;
 use App\Http\Controllers\PurchaseOrderController;
+use App\Http\Controllers\IcsController;
 
 // --- GUEST ROUTES (Login) ---
 Route::middleware('guest')->group(function () {
@@ -89,6 +89,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/ris', [StaffRisController::class, 'index']);
     Route::get('/ris/{id}/review', [StaffRisController::class, 'review']);
     Route::post('/ris/{id}/update', [StaffRisController::class, 'update']);
+
+    // ICS Requests
+    Route::get('/ics', [IcsController::class, 'create']);
+    Route::post('/ics', [IcsController::class, 'store']);
 
     // Staff Profile
     Route::post('/profile/update', [\App\Http\Controllers\ProfileController::class, 'update'])->name('profile.update');
@@ -175,9 +179,6 @@ Route::middleware('auth')->group(function () {
     Route::get('/user/ris/{id}/edit', [UserRisController::class, 'edit']);
     Route::post('/user/ris/{id}/update', [UserRisController::class, 'update']);
 
-    // ICS Routes
-    Route::get('/user/ics', [UserIcsController::class, 'create']);
-    Route::post('/user/ics', [UserIcsController::class, 'store']);
 
     // Profile Routes
     Route::get('/user/profile', [UserProfileController::class, 'index']);

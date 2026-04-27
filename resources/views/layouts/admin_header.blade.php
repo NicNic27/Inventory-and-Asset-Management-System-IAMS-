@@ -100,6 +100,10 @@
 
     /* Cropper Styles */
     .cropper-container-wrapper { width: 100%; max-height: 350px; background-color: #333; border-radius: 8px; overflow: hidden; }
+
+    /* --- Modal & Mobile Button Z-Index Fixes --- */
+    .mobile-menu-btn { z-index: 1041 !important; }
+    .modal-backdrop { z-index: 1055 !important; }
 </style>
 
 @if(session('profile_success'))
@@ -167,7 +171,7 @@
     </div>
 </div>
 
-<div class="modal fade no-print" id="profileEditModal" tabindex="-1" aria-labelledby="profileEditModalLabel" aria-hidden="true" style="z-index: 1051;">
+<div class="modal fade no-print" id="profileEditModal" tabindex="-1" aria-labelledby="profileEditModalLabel" aria-hidden="true" style="z-index: 1060;">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content border-0 shadow-lg">
             <div class="modal-header" style="background: linear-gradient(135deg, #101954 0%, #0a4d9c 100%); color: white;">
@@ -262,7 +266,7 @@
     </div>
 </div>
 
-<div class="modal fade" id="logoutModal" tabindex="-1" aria-labelledby="logoutModalLabel" aria-hidden="true" style="z-index: 1052;">
+<div class="modal fade" id="logoutModal" tabindex="-1" aria-labelledby="logoutModalLabel" aria-hidden="true" style="z-index: 1060;">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow">
             <div class="modal-header bg-danger text-white">

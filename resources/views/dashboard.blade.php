@@ -26,8 +26,9 @@
             background: white; border-radius: 12px; padding: 25px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.05); transition: transform 0.2s;
             border-bottom: 4px solid transparent; height: 100%; position: relative; overflow: hidden;
+            cursor: pointer;
         }
-        .stat-card:hover { transform: translateY(-5px); }
+        .stat-card:hover { transform: translateY(-5px); box-shadow: 0 8px 15px rgba(0,0,0,0.1); }
         .stat-card.assets { border-color: #0d6efd; }
         .stat-card.supplies { border-color: #198754; }
         .stat-card.ris { border-color: #ffc107; }
@@ -36,17 +37,34 @@
         .stat-icon {
             width: 50px; height: 50px; border-radius: 10px; display: flex;
             align-items: center; justify-content: center; font-size: 1.5rem; margin-bottom: 15px;
+            transition: transform 0.3s;
         }
+        .stat-card:hover .stat-icon { transform: scale(1.1); }
 
         .chart-card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); height: 100%; }
-        .chart-header { font-weight: 700; color: #101954; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 10px;}
+        
+        /* Flex header for charts/tables */
+        .chart-header { 
+            font-weight: 700; color: #101954; margin-bottom: 15px; 
+            display: flex; justify-content: space-between; align-items: center; 
+            border-bottom: 1px solid #eee; padding-bottom: 10px;
+        }
         
         .table-card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); height: 100%;}
         .status-available { background-color: #d1e7dd; color: #0f5132; }
         .status-low { background-color: #fff3cd; color: #856404; }
         .status-out { background-color: #f8d7da; color: #842029; }
         
-        @media (max-width: 768px) { .main-content { margin-left: 0; } }
+        /* --- MOBILE RESPONSIVE TWEAKS --- */
+        @media (max-width: 768px) { 
+            .main-content { margin-left: 0; padding: 15px; padding-top: 85px !important; } 
+            .welcome-banner { padding: 20px; }
+            .stat-card { padding: 20px; }
+            
+            /* Stack the chart headers on mobile so buttons don't squish */
+            .chart-header { flex-direction: column; align-items: flex-start; gap: 12px; }
+            .chart-header .d-flex { width: 100%; justify-content: space-between; }
+        }
     </style>
 </head>
 <body>
@@ -58,28 +76,26 @@
         
         @php
             // SMART FILTER: Enforce custom threshold dynamically 
-            // This guarantees items above their custom threshold disappear from the alert list!
             $lowStockItems = collect($lowStockItems ?? [])->filter(function($item) {
                 return $item->quantity <= ($item->low_stock_threshold ?? 10);
             });
-            // Auto-update the top red widget count to match the filtered list
             $lowStockCount = $lowStockItems->count();
         @endphp
 
-        <div class="welcome-banner d-flex justify-content-between align-items-center">
+        <div class="welcome-banner d-flex justify-content-between align-items-center flex-wrap gap-3">
             <div>
                 <h2 class="fw-bold mb-1">Welcome back, {{ $firstname ?? 'User' }} {{ $lastname ?? '' }}</h2>
                 <p class="mb-0 opacity-75">Here is a complete overview of your inventory analytics.</p>
             </div>
-            <div class="text-end d-none d-md-block">
+            <div class="text-md-end d-none d-md-block">
                 <h4 class="fw-bold mb-0" id="clock">00:00:00 AM</h4>
                 <small id="date">Loading date...</small>
             </div>
         </div>
 
         <div class="row g-3 mb-4">
-            <div class="col-md-3">
-                <div class="stat-card assets">
+            <div class="col-12 col-sm-6 col-xl-3">
+                <a href="{{ url('/asset-list') }}" class="stat-card assets text-decoration-none d-block">
                     <div class="d-flex justify-content-between align-items-start">
                         <div>
                             <div class="text-muted small fw-bold text-uppercase">Total Assets Vol.</div>
@@ -87,11 +103,11 @@
                         </div>
                         <div class="stat-icon bg-primary bg-opacity-10 text-primary"><i class="fas fa-laptop"></i></div>
                     </div>
-                </div>
+                </a>
             </div>
 
-            <div class="col-md-3">
-                <div class="stat-card supplies">
+            <div class="col-12 col-sm-6 col-xl-3">
+                <a href="{{ url('/supplies') }}" class="stat-card supplies text-decoration-none d-block">
                     <div class="d-flex justify-content-between align-items-start">
                         <div>
                             <div class="text-muted small fw-bold text-uppercase">Total Supplies Vol.</div>
@@ -99,11 +115,11 @@
                         </div>
                         <div class="stat-icon bg-success bg-opacity-10 text-success"><i class="fas fa-boxes"></i></div>
                     </div>
-                </div>
+                </a>
             </div>
 
-            <div class="col-md-3">
-                <div class="stat-card ris">
+            <div class="col-12 col-sm-6 col-xl-3">
+                <a href="{{ url('/ris') }}?status_filter=Pending%20Staff%20Review" class="stat-card ris text-decoration-none d-block">
                     <div class="d-flex justify-content-between align-items-start">
                         <div>
                             <div class="text-muted small fw-bold text-uppercase">Pending RIS</div>
@@ -111,11 +127,11 @@
                         </div>
                         <div class="stat-icon bg-warning bg-opacity-10 text-warning"><i class="fas fa-file-signature"></i></div>
                     </div>
-                </div>
+                </a>
             </div>
 
-            <div class="col-md-3">
-                <div class="stat-card critical">
+            <div class="col-12 col-sm-6 col-xl-3">
+                <a href="{{ url('/supplies') }}?status_filter=Low+Stock" class="stat-card critical text-decoration-none d-block">
                     <div class="d-flex justify-content-between align-items-start">
                         <div>
                             <div class="text-muted small fw-bold text-uppercase">Low Stock Alerts</div>
@@ -123,17 +139,17 @@
                         </div>
                         <div class="stat-icon bg-danger bg-opacity-10 text-danger"><i class="fas fa-exclamation-triangle"></i></div>
                     </div>
-                </div>
+                </a>
             </div>
         </div>
 
         <div class="row g-4 mb-4">
             
-            <div class="col-lg-7">
+            <div class="col-12 col-lg-7">
                 <div class="table-card">
                     <div class="chart-header">
                         <span class="text-danger"><i class="fas fa-exclamation-circle me-2"></i> Critical Stocks (Action Required)</span>
-                        <a href="{{ url('/supplies') }}" class="btn btn-sm btn-outline-danger">Manage Supplies</a>
+                        <a href="{{ url('/supplies') }}?status_filter=Low+Stock" class="btn btn-sm btn-outline-danger">Manage Supplies</a>
                     </div>
                     <div class="table-responsive" style="max-height: 350px;">
                         <table class="table table-hover align-middle mb-0">
@@ -175,7 +191,7 @@
                 </div>
             </div>
 
-            <div class="col-lg-5 d-flex flex-column gap-4">
+            <div class="col-12 col-lg-5 d-flex flex-column gap-4">
                 
                 <div class="chart-card flex-grow-1">
                     <div class="chart-header">
@@ -200,16 +216,17 @@
 
         <div class="row mb-4">
             <div class="col-12">
-                <div class="chart-card mb-4"> <div class="chart-header">
+                <div class="chart-card mb-4"> 
+                    <div class="chart-header">
                         <span><i class="fas fa-chart-line me-2"></i> Stock Movement Activity</span>
                         <div class="d-flex gap-2">
-                            <select id="trendRange" class="form-select form-select-sm" style="width: 140px; border-color: #0d6efd; color: #101954; font-weight: 600;">
+                            <select id="trendRange" class="form-select form-select-sm shadow-none" style="width: auto; border-color: #0d6efd; color: #101954; font-weight: 600;">
                                 <option value="7days">Last 7 Days</option>
                                 <option value="30days">Last 30 Days</option>
                                 <option value="this_year">This Year</option>
                                 <option value="last_year">Last Year</option>
                             </select>
-                            <a href="{{ url('/transactions') }}" class="btn btn-sm btn-outline-primary">View Transactions</a>
+                            <a href="{{ url('/transactions') }}" class="btn btn-sm btn-outline-primary text-nowrap">View Transactions</a>
                         </div>
                     </div>
                     <div style="height: 300px; position: relative; width: 100%;">
@@ -331,8 +348,10 @@
         // Realtime Clock
         function updateTime() {
             const now = new Date();
-            document.getElementById('clock').innerText = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-            document.getElementById('date').innerText = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+            const clockEl = document.getElementById('clock');
+            const dateEl = document.getElementById('date');
+            if(clockEl) clockEl.innerText = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            if(dateEl) dateEl.innerText = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
         }
         setInterval(updateTime, 1000);
         updateTime();

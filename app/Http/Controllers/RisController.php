@@ -109,7 +109,9 @@ class RisController extends Controller
                 $itemId = $request->item_id[$i] ?? 0;
                 $stockNo = $request->stock_no[$i] ?? null;
                 $desc = $request->description[$i] ?? null;
-                $avail = $request->input("stock_avail_$i");
+                
+                // FIXED: Default to N/A if the required dropdown is somehow bypassed
+                $avail = $request->input("stock_avail_$i") ?? 'N/A';
 
                 if (!empty($stockNo) || !empty($desc)) {
                     $itemData = [

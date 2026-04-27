@@ -204,17 +204,17 @@
 </head>
 <body>
 
-    @include('layouts.user_header')
-    @include('layouts.user_sidebar')
+    @include('layouts.header')
+    @include('layouts.sidebar')
 
     <div class="main-content">
         
-        <div class="top-bar">
+        <div class="top-bar no-print" style="margin-top: 75px;">
             <div><i class="fa-solid fa-building-shield me-2"></i> <strong>DEPED REGION V - ASSET SYSTEM</strong></div>
             <div id="clock-display"><i class="fa-regular fa-clock me-2"></i> Loading time...</div>
         </div>
 
-        <form action="{{ url('/user/ics') }}" method="POST">
+        <form action="{{ url('/ics') }}" method="POST" class="no-print">
             @csrf
             
             <div class="d-flex justify-content-between align-items-center mb-4">
@@ -227,7 +227,7 @@
                         <i class="fa-solid fa-print me-1"></i> Print PDF
                     </button>
                     <button type="submit" class="btn btn-submit shadow-sm" onclick="return confirm('Submit this request?')">
-                        <i class="fa-solid fa-paper-plane me-1"></i> Submit Request
+                        <i class="fa-solid fa-paper-plane me-1"></i> Save Form
                     </button>
                 </div>
             </div>
@@ -352,7 +352,7 @@
             <img src="{{ asset('assets/images/DepEdseal.png') }}" style="width: 70px; margin: 0 auto 5px auto; display: block;">
             <div style="font-size: 10pt;">Republic of the Philippines</div>
             <div style="font-size: 20pt; font-family: 'Old English Text MT', 'Engravers Old English', serif; line-height: 1;">Department of Education</div>
-            <div style="font-size: 11pt;">Region V - Bicol</div>
+            <div style="font-size: 11pt; font-weight: bold; margin-top: 2px;">Region V - Bicol</div>
             <div id="print_doc_title" style="font-size: 13pt; font-weight: bold; margin-top: 10px;">INVENTORY CUSTODIAN SLIP</div>
             <div id="p_category_value" style="font-size: 12pt; color: #777; font-weight: bold; margin-top: -2px; min-height: 20px;">Value</div>
         </div>
@@ -426,7 +426,6 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Variables populated from the Backend Settings Controller
         const parNo = "{{ $parNumber }}";
         const sphvNo = "{{ $sphvNumber }}";
         const splvNo = "{{ $splvNumber }}";
@@ -462,8 +461,7 @@
             }
         }
 
-        // --- NEW: Category Selection & Dynamic Label Changing Logic ---
-        let selectedCategoryValue = 'Low - Valued'; // Default
+        let selectedCategoryValue = 'Low - Valued'; 
         
         function selectOnlyThis(clickedCheckbox) {
             let checkboxes = document.getElementsByName('item_category');
@@ -474,7 +472,6 @@
             let labelEl = document.getElementById('number_label');
             let inputEl = document.getElementById('ics_no');
             
-            // Print Elements
             let printTitle = document.getElementById('print_doc_title');
             let printLabel = document.getElementById('print_doc_label');
             let mainFormTitle = document.getElementById('form-main-title');
@@ -501,7 +498,6 @@
                     printLabel.innerText = 'ICS No:';
                 }
             } else {
-                // Default fallback if unchecking
                 selectedCategoryValue = 'Low - Valued';
                 labelEl.innerText = 'ICS Number';
                 inputEl.value = splvNo;

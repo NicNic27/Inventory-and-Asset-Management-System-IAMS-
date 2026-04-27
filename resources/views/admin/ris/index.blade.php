@@ -45,6 +45,15 @@
         .page-link { color: #6c757d; }
         .page-link:hover { color: #101954; background-color: #f4f6f9; }
 
+        /* --- THE Z-INDEX FIX FOR UNCLICKABLE MODALS --- */
+        .modal { z-index: 1060 !important; }
+        .modal-backdrop { z-index: 1055 !important; }
+
+        /* --- SCROLLBAR FOR INNER PAPER MODAL --- */
+        .paper-scroll::-webkit-scrollbar { width: 8px; height: 8px; }
+        .paper-scroll::-webkit-scrollbar-track { background: #e0e0e0; border-radius: 8px; }
+        .paper-scroll::-webkit-scrollbar-thumb { background: #101954; border-radius: 8px; }
+
         @media (max-width: 768px) { .main-content { margin-left: 0; } }
     </style>
 </head>
@@ -138,7 +147,7 @@
     </div>
 
     <div class="modal fade" id="verifyRisModal" tabindex="-1">
-        <div class="modal-dialog modal-xl modal-dialog-centered"> 
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable"> 
             <div class="modal-content shadow-lg border-0" id="verify_ris_content" style="border-radius: 10px;">
             </div>
         </div>
@@ -154,9 +163,15 @@
                 new bootstrap.Modal(document.getElementById('verifyRisModal')).show();
                 contentArea.innerHTML = '<div class="p-5 text-center"><div class="spinner-border text-primary"></div><p class="mt-2 mb-0">Loading...</p></div>';
 
-                fetch(`/admin/requests/${id}/verify`)
-                    .then(response => response.text())
-                    .then(data => { contentArea.innerHTML = data; });
+                fetch(`/admin/ris/${id}/review`)
+                    .then(response => {
+                        if (!response.ok) throw new Error('Route not found');
+                        return response.text();
+                    })
+                    .then(data => { contentArea.innerHTML = data; })
+                    .catch(err => {
+                        contentArea.innerHTML = '<div class="p-5 text-center text-danger"><i class="fas fa-exclamation-triangle fa-3x mb-3"></i><p>Failed to load data. Ensure the route exists in web.php.</p></div>';
+                    });
             });
         });
 

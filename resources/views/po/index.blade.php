@@ -10,25 +10,79 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <style>
-        body { background-color: #f4f6f9; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        .main-content { margin-left: 250px; padding: 30px; transition: all 0.3s; padding-top: 90px !important; }
+        body { 
+            background-color: #f4f6f9; 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            overflow: hidden; 
+            height: 100vh;
+            margin: 0;
+        }
+
+        .main-content { 
+            margin-left: 250px; 
+            padding: 20px; 
+            padding-top: 80px !important; 
+            transition: all 0.3s; 
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
         .header-title { font-weight: 700; color: #101954; }
-        .table-card { background: #fff; border: 1px solid #e0e0e0; border-radius: 12px; padding: 25px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
-        .table thead th { background-color: #f8f9fa; border-bottom: 2px solid #dee2e6; color: #495057; font-weight: 600; text-transform: uppercase; font-size: 0.85rem; letter-spacing: 0.5px; }
-        @media (max-width: 768px) { .main-content { margin-left: 0; } }
         
+        .table-card { 
+            background: #fff; 
+            border: 1px solid #e0e0e0; 
+            border-radius: 12px; 
+            padding: 25px; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05); 
+            flex-grow: 1; 
+            display: flex;
+            flex-direction: column;
+            min-height: 0; 
+        }
+
+        .table-responsive {
+            flex-grow: 1;
+            overflow-y: auto; 
+            margin-bottom: 10px;
+        }
+
+        .table thead th { 
+            position: sticky;
+            top: 0;
+            background-color: #f8f9fa; 
+            border-bottom: 2px solid #dee2e6; 
+            color: #495057; 
+            font-weight: 600; 
+            text-transform: uppercase; 
+            font-size: 0.85rem; 
+            letter-spacing: 0.5px; 
+            z-index: 1;
+        }
+
         .swal2-styled.swal2-confirm { background-color: #0d6efd !important; color: #fff !important; }
 
         .clickable-row { cursor: pointer; transition: background-color 0.2s ease-in-out; }
         .clickable-row:hover td { background-color: #f1f5f9 !important; }
 
-        .paper-scroll::-webkit-scrollbar { width: 8px; }
+        .paper-scroll { overflow-x: auto; overflow-y: auto; }
+        .paper-scroll::-webkit-scrollbar { width: 8px; height: 8px; }
         .paper-scroll::-webkit-scrollbar-track { background: #343a40; border-radius: 8px; }
         .paper-scroll::-webkit-scrollbar-thumb { background: #adb5bd; border-radius: 8px; }
 
         .po-paper {
-            background: white; width: 100%; max-width: 800px; margin: 0 auto; padding: 0.4in;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.5); font-family: "Times New Roman", Times, serif; font-size: 11px; color: black; line-height: 1.2;
+            background: white; 
+            width: 100%; 
+            max-width: 800px; 
+            min-width: 750px;
+            margin: 0 auto; 
+            padding: 0.4in;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5); 
+            font-family: "Times New Roman", Times, serif; 
+            font-size: 11px; 
+            color: black; 
+            line-height: 1.2;
         }
 
         .po-paper table { width: 100%; border-collapse: collapse; border: 1px solid black; margin-bottom: -1px; }
@@ -39,6 +93,23 @@
         .po-paper .entity-line { border-bottom: 1px solid black; display: inline-block; min-width: 300px; font-weight: bold; text-transform: uppercase; margin-bottom: 10px; font-size: 13px; }
         
         .po-paper .empty-row td { height: 22px; }
+
+        .modal { z-index: 1060 !important; }
+        .modal-backdrop { z-index: 1055 !important; }
+        
+        @media (max-width: 768px) { 
+            body { overflow: visible; height: auto; }
+            .main-content { 
+                margin-left: 0; 
+                height: auto; 
+                overflow: visible; 
+                display: block; 
+                padding: 15px; 
+                padding-top: 80px !important; 
+            } 
+            .table-card { display: block; min-height: auto; padding: 15px; }
+            .mobile-search-width { width: 100% !important; max-width: 100% !important; }
+        }
     </style>
 </head>
 <body>
@@ -47,26 +118,32 @@
     @include('layouts.sidebar')
 
     <div class="main-content no-print">
-        <div class="d-flex justify-content-between align-items-end mb-4">
-            <div>
+        
+        <div class="row align-items-center mb-4 g-3">
+            <div class="col-12 col-md-6 text-center text-md-start">
                 <h2 class="header-title mb-1"><i class="fas fa-file-invoice-dollar text-primary me-2"></i>Purchase Orders</h2>
                 <p class="text-muted small mb-0">Manage and view official DepEd Purchase Orders</p>
             </div>
-            <button class="btn btn-primary px-4 fw-bold" onclick="openCreateModal()">
-                <i class="fas fa-plus me-2"></i> Create New P.O.
-            </button>
+            <div class="col-12 col-md-6 text-md-end">
+                <div class="d-grid d-md-block">
+                    <button class="btn btn-primary px-4 fw-bold shadow-sm" onclick="openCreateModal()">
+                        <i class="fas fa-plus me-2"></i> Create New P.O.
+                    </button>
+                </div>
+            </div>
         </div>
 
         <div class="table-card">
             
-            <form action="{{ route('po.index') }}" method="GET" id="filterForm" class="d-flex justify-content-between align-items-center mb-3">
-                <div class="input-group" style="width: 300px;">
+            <form action="{{ route('po.index') }}" method="GET" id="filterForm" class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-3">
+                
+                <div class="input-group shadow-sm mobile-search-width" style="max-width: 350px;">
                     <span class="input-group-text bg-white border-end-0"><i class="fas fa-search text-muted"></i></span>
                     <input type="text" name="search" id="poSearchInput" class="form-control border-start-0 ps-0" placeholder="Search PO or Supplier..." value="{{ request('search') }}">
                 </div>
 
-                <div class="dropdown">
-                    <button class="btn btn-outline-secondary btn-sm dropdown-toggle px-3" type="button" data-bs-toggle="dropdown" aria-expanded="false" data-bs-auto-close="outside">
+                <div class="dropdown d-grid d-md-block">
+                    <button class="btn btn-outline-secondary btn-sm dropdown-toggle px-3 shadow-sm py-2" type="button" data-bs-toggle="dropdown" aria-expanded="false" data-bs-auto-close="outside">
                         <i class="fas fa-filter me-1"></i> Filter & Sort
                     </button>
                     <div class="dropdown-menu dropdown-menu-end p-3 shadow-lg border-0" style="width: 250px;">
@@ -87,7 +164,7 @@
                             <option value="supplier_desc" {{ request('sort') == 'supplier_desc' ? 'selected' : '' }}>Supplier Name (Z-A)</option>
                         </select>
 
-                        <a href="{{ route('po.index') }}" class="btn btn-sm btn-light w-100 border text-danger fw-bold">Clear Filters</a>
+                        <a href="{{ route('po.index') }}" class="btn btn-sm btn-light w-100 border text-danger fw-bold mt-2">Clear Filters</a>
                     </div>
                 </div>
             </form>
@@ -96,10 +173,10 @@
                 <table class="table table-hover align-middle">
                     <thead>
                         <tr>
-                            <th>P.O. Number</th>
-                            <th>Supplier</th>
-                            <th>Date</th>
-                            <th>Total Amount</th>
+                            <th class="text-nowrap">P.O. Number</th>
+                            <th class="text-nowrap">Supplier</th>
+                            <th class="text-nowrap">Date</th>
+                            <th class="text-nowrap">Total Amount</th>
                             <th class="text-center">Status</th>
                             <th class="text-center">Actions</th>
                         </tr>
@@ -110,7 +187,7 @@
                             <td class="fw-bold text-primary">{{ $po->po_no }}</td>
                             <td>{{ $po->supplier_name }}</td>
                             <td>{{ \Carbon\Carbon::parse($po->po_date)->format('M d, Y') }}</td>
-                            <td class="fw-bold">₱{{ number_format($po->total_amount, 2) }}</td>
+                            <td class="fw-bold text-nowrap">₱{{ number_format($po->total_amount, 2) }}</td>
                             <td class="text-center">
                                 @php
                                     $statusClass = match($po->status) {
@@ -146,15 +223,15 @@
                 <div class="modal-header border-0 p-0 mb-2 justify-content-end">
                     <button type="button" class="btn-close btn-close-white me-2" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body paper-scroll p-4" style="background-color: #525659; border-radius: 8px;">
+                <div class="modal-body paper-scroll p-2 p-md-4" style="background-color: #525659; border-radius: 8px;">
                     <div class="po-paper">
                         <div class="header-section">
                             <img src="{{ asset('assets/images/DepEdseal.png') }}" alt="Logo" style="width: 60px;" onerror="this.src='https://upload.wikimedia.org/wikipedia/commons/f/f3/Department_of_Education.svg'">
-                            <div style="font-size: 12px;">Republic of the Philippines</div>
-                            <h4>DEPARTMENT OF EDUCATION</h4>
-                            <div style="font-size: 11px;">REGION V - BICOL</div>
+                            <div style="font-size: 14px; font-family: 'Old English Text MT', 'Engravers Old English', serif;">Republic of the Philippines</div>
+                            <h4 style="font-family: 'Old English Text MT', 'Engravers Old English', serif; font-size: 22px; font-weight: normal; margin-top: 5px; text-transform: none;">Department of Education</h4>
+                            <div style="font-size: 11px; font-family: Arial, sans-serif; font-weight: bold; margin-top: 2px;">REGION V - BICOL</div>
                             <hr style="border: 0.5px solid black; margin: 5px 0;">
-                            <h3>PURCHASE ORDER</h3>
+                            <h3 style="margin-top: 10px;">PURCHASE ORDER</h3>
                             <div class="entity-line" id="v-entity"></div>
                         </div>
 
@@ -217,15 +294,97 @@
                         </table>
                     </div>
                 </div>
-                <div class="modal-footer border-0">
-                    <button type="button" class="btn btn-light border px-4" data-bs-dismiss="modal">Close</button>
-                    <button type="button" class="btn btn-primary px-4 fw-bold shadow" onclick="triggerActualPrint()"><i class="fas fa-print me-2"></i> Print Document</button>
+                <div class="modal-footer border-0 p-3 bg-dark bg-opacity-75">
+                    <div class="w-100 d-grid gap-2 d-md-flex justify-content-md-end">
+                        <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-primary px-4 fw-bold shadow" onclick="triggerActualPrint()"><i class="fas fa-print me-2"></i> Print Document</button>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
     <div class="modal fade" id="deletePoModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header bg-danger text-white"><h5 class="modal-title"><i class="fas fa-trash-alt me-2"></i> Confirm Delete</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><form id="deletePoForm" method="POST">@csrf @method('DELETE')<div class="modal-body text-center py-4"><p class="fs-5 mb-1">Are you sure you want to delete this Purchase Order?</p></div><div class="modal-footer justify-content-center"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-danger">Delete</button></div></form></div></div></div>
+
+    <div id="printableArea">
+        <div class="p-header">
+            <img src="{{ asset('assets/images/DepEdseal.png') }}" alt="Logo" onerror="this.src='https://upload.wikimedia.org/wikipedia/commons/f/f3/Department_of_Education.svg'">
+            <div style="font-size: 14px; font-family: 'Old English Text MT', 'Engravers Old English', serif;">Republic of the Philippines</div>
+            <h4 style="font-family: 'Old English Text MT', 'Engravers Old English', serif; font-size: 24px; font-weight: normal; margin: 5px 0; text-transform: none;">Department of Education</h4>
+            <div id="p-region" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 11px;">REGION V - BICOL</div>
+            <hr style="border: 0.5px solid black; margin: 5px 0;">
+            <h3 style="font-weight: bold; margin: 5px 0; font-size: 18px; text-align: center;">PURCHASE ORDER</h3>
+            <div class="entity-line" id="p-entity">Entity Name</div>
+        </div>
+
+        <table class="info-table">
+            <tr>
+                <td width="55%">
+                    Supplier: <span id="p-supplier" style="font-weight: bold;"></span><br>
+                    Address: <span id="p-address"></span><br>
+                    TIN: ___________________________
+                </td>
+                <td width="45%">
+                    PO No: <span id="p-pono" style="font-weight: bold;"></span><br>
+                    Date: <span id="p-date"></span><br>
+                    Mode of Procurement: <span id="p-mode"></span>
+                </td>
+            </tr>
+            <tr><td colspan="2" style="font-style: italic; font-size: 10px; padding: 2px 10px;">Gentlemen: Please furnish this Office the following articles subject to the terms and conditions contained herein:</td></tr>
+            
+            <tr>
+                <td>Place of Delivery: <span id="p-place-delivery" style="font-weight: bold;"></span><br>Date of Delivery: <span id="p-date-delivery" style="font-weight: bold;"></span></td>
+                <td>Delivery Term: <span id="p-delivery-term" style="font-weight: bold;"></span><br>Payment Term: <span id="p-payment-term" style="font-weight: bold;"></span></td>
+            </tr>
+        </table>
+
+        <table class="main-table">
+            <thead>
+                <tr><th width="12%">Stocks No.</th><th width="10%">Unit</th><th width="43%">Description</th><th width="10%">Quantity</th><th width="12%">Unit Cost</th><th width="13%">Amount</th></tr>
+            </thead>
+            <tbody id="p-items"></tbody>
+            <tr style="font-weight: bold;">
+                <td colspan="5" style="text-align: left; padding-left: 10px;">(Total Amount in Words) <span id="p-words" style="text-transform: uppercase; margin-left: 10px;"></span></td>
+                <td id="p-total" style="text-align: center;">0.00</td>
+            </tr>
+        </table>
+
+        <div class="footer-note">In case of failure to make the full delivery within the time specified above, a penalty of one-tenth (1/10) of one percent for every day of delay shall be imposed on the undelivered item/s.</div>
+
+        <table style="width: 100%; border: 1px solid black; border-top: none; border-collapse: collapse;">
+            <tr>
+                <td style="width: 50%; padding: 10px; vertical-align: top; border: none;">
+                    <div style="width: 85%; margin: 0 auto;">
+                        <div style="text-align: left; margin-bottom: 30px;">Conforme:</div>
+                        <div style="border-bottom: 1px solid black; width: 100%;">&nbsp;</div>
+                        <div style="text-align: center; font-size: 10px;">Signature over Printed Name of Supplier</div>
+                        <div style="text-align: center; margin-top: 10px;">DATE: ___________</div>
+                    </div>
+                </td>
+                <td style="width: 50%; padding: 10px; vertical-align: top; border: none;">
+                    <div style="width: 85%; margin: 0 auto;">
+                        <div style="text-align: left; margin-bottom: 30px;">Very truly yours,</div>
+                        <div id="p-auth-name-display" style="border-bottom: 1px solid black; width: 100%; font-weight: bold; text-transform: uppercase; text-align: center;"></div>
+                        <div style="text-align: center; font-size: 10px;">Signature over Printed Name of Authorized Official</div>
+                        <div id="p-auth-designation" style="text-align: center; font-size: 10px; font-weight: bold;">REGIONAL DIRECTOR</div>
+                        <div style="text-align: center; font-size: 10px;">Designation</div>
+                    </div>
+                </td>
+            </tr>
+        </table>
+
+        <table class="acc-table">
+            <tr>
+                <td width="55%">
+                    Fund Cluster: _________________________________<br> Funds Available: _______________________________<br><br>
+                    <div id="p-acc-name-display" style="border-bottom: 1px solid black; width: 70%; margin: 20px auto 2px auto; text-align: center; font-weight: bold; text-transform: uppercase;">ACCOUNTANT NAME</div>
+                    <div id="p-acc-designation" style="text-align: center; font-size: 10px; font-weight: bold;">ACCOUNTANT II</div>
+                    <div style="text-align: center; font-size: 9px;">Signature over Printed Name of Chief Accountant/Head of Accounting Division/Unit</div>
+                </td>
+                <td width="45%">ORS/BURS No: ______________________<br>Date of the ORS/BURS: _______________<br>Amount: __________________________</td>
+            </tr>
+        </table>
+    </div>
 
     @include('po.receive_modal')
 
@@ -297,7 +456,7 @@
             return Array.isArray(parsed) ? parsed : [];
         }
 
-// POPULATE THE VIEW MODAL
+        // POPULATE THE VIEW MODAL
         function viewPO(id) {
             fetch(`/po/${id}`)
             .then(res => {

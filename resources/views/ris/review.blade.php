@@ -177,16 +177,17 @@
                 <button type="button" class="btn btn-secondary fw-bold shadow-sm" onclick="prepareAndPrint()">
                     <i class="fas fa-print me-1"></i> Print PDF
                 </button>
-                <button type="submit" name="action" value="save" class="btn btn-outline-primary fw-bold shadow-sm">
+                
+                <button type="button" class="btn btn-outline-primary fw-bold shadow-sm" onclick="confirmAction('save', 'Save Draft?', 'You can continue editing this RIS later without forwarding it.', 'info', 'Yes, Save Draft', '#0d6efd')">
                     <i class="fas fa-save me-1"></i> Save Draft
                 </button>
                 
                 @if($req->status == 'Approved')
-                    <button type="submit" name="action" value="return" class="btn btn-warning text-dark fw-bold shadow-sm" onclick="return confirm('Are you sure you want to reopen this RIS for corrections? This will revoke the current approval.')">
+                    <button type="button" class="btn btn-warning text-dark fw-bold shadow-sm" onclick="confirmAction('return', 'Re-open for Corrections?', 'Are you sure you want to reopen this RIS? This will revoke the current approval.', 'warning', 'Yes, Re-open', '#ffc107')">
                         <i class="fas fa-folder-open me-1"></i> Re-open for Corrections
                     </button>
                 @elseif(!in_array($req->status, ['Rejected', 'Cancelled', 'Declined']))
-                    <button type="submit" name="action" value="forward" class="btn btn-success fw-bold shadow-sm" onclick="return confirm('Forward this to Admin for final approval?')">
+                    <button type="button" class="btn btn-success fw-bold shadow-sm" onclick="confirmAction('forward', 'Forward to Admin?', 'Are you sure you want to forward this to the Admin for final approval?', 'question', 'Yes, Forward', '#198754')">
                         <i class="fas fa-share me-1"></i> Forward to Admin
                     </button>
                 @endif
@@ -234,15 +235,15 @@
                             <th style="width: 7%">Unit</th>
                             <th style="width: 25%">Item Description</th>
                             <th style="width: 7%">Req Qty</th>
-                            <th style="width: 12%" class="bg-warning bg-opacity-10 text-dark">Avail?</th>
-                            <th style="width: 12%" class="bg-success bg-opacity-10 text-success">Issue Qty</th>
+                            <th style="width: 12%" class="bg-warning bg-opacity-10 text-dark">Avail? <span class="text-danger">*</span></th>
+                            <th style="width: 12%" class="bg-success bg-opacity-10 text-success">Issue Qty <span class="text-danger">*</span></th>
                             <th style="width: 20%">Remarks</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach($req->items as $i => $item)
                             @php 
-                                $availVal = strtolower($item->stock_avail ?? 'n/a');
+                                $availVal = strtolower($item->stock_avail ?? '');
                                 
                                 $stockColor = 'danger';
                                 if($item->current_stock >= $item->req_quantity) $stockColor = 'success';
@@ -252,9 +253,8 @@
                                 $currentRemaining = $item->current_stock - ($item->issue_quantity ?: 0);
                             @endphp
                             <tr class="v-item-row">
-                                <input type="hidden" name="item_id[{{ $i }}]" value="{{ $item->id }}">
-                                
                                 <td>
+                                    <input type="hidden" name="item_id[{{ $i }}]" value="{{ $item->id }}">
                                     <input type="text" name="stock_no[{{ $i }}]" class="form-control form-control-sm v-stock" value="{{ $item->stock_no }}" readonly>
                                 </td>
                                 <td>
@@ -264,11 +264,11 @@
                                     <input type="text" name="description[{{ $i }}]" class="form-control form-control-sm v-desc fw-bold" value="{{ $item->description }}" readonly>
                                 </td>
                                 <td>
-                                    <input type="number" name="req_quantity[{{ $i }}]" class="form-control form-control-sm text-center v-req" value="{{ $item->req_quantity }}" readonly>
+                                    <input type="number" name="req_quantity[{{ $i }}]" class="form-control form-control-sm text-center v-req" value="{{ $item->req_quantity }}" required>
                                 </td>
                                 <td class="bg-warning bg-opacity-10">
-                                    <select name="stock_avail_{{ $i }}" class="form-select form-select-sm border-warning v-avail">
-                                        <option value="n/a" {{ $availVal == 'n/a' ? 'selected' : '' }}>N/A</option>
+                                    <select name="stock_avail_{{ $i }}" class="form-select form-select-sm border-warning v-avail" required>
+                                        <option value="" disabled {{ $availVal == '' || $availVal == 'n/a' ? 'selected' : '' }}>Select</option>
                                         <option value="yes" {{ $availVal == 'yes' ? 'selected' : '' }}>Yes</option>
                                         <option value="no" {{ $availVal == 'no' ? 'selected' : '' }}>No</option>
                                     </select>
@@ -284,7 +284,7 @@
                                             if(val < 0) { this.value = 0; val = 0; }
                                             document.getElementById('rem_stock_{{ $i }}').innerText = (max - val);
                                         " 
-                                        placeholder="0" title="Max available: {{ $item->current_stock }}">
+                                        placeholder="0" title="Max available: {{ $item->current_stock }}" required>
                                     
                                     <div class="mt-1 text-center" style="font-size: 0.75rem; white-space: nowrap;">
                                         <span class="text-{{ $stockColor }} fw-bold">
@@ -333,7 +333,7 @@
 <div id="print-area">
     <div style="text-align: center; font-family: 'Times New Roman', Times, serif; margin-bottom: 5px;">
         <img src="{{ asset('assets/images/DepEdseal.png') }}" style="width: 60px; margin: 0 auto 2px auto; display: block;">
-        <div style="font-size: 9pt;">Republic of the Philippines</div>
+        <div style="font-size: 9pt; font-family: 'Old English Text MT', 'Engravers Old English', serif;">Republic of the Philippines</div>
         <div style="font-size: 18pt; font-family: 'Old English Text MT', 'Engravers Old English', serif; line-height: 1;">Department of Education</div>
         <div style="font-size: 10pt;">Region V - Bicol</div>
         <div style="font-size: 12pt; font-weight: bold; margin-top: 5px;">REQUISITION AND ISSUE SLIP</div>
@@ -362,14 +362,14 @@
 
     <table style="width: 100%; border-collapse: collapse; font-family: 'Times New Roman', Times, serif; font-size: 10pt; border: 1px solid black; table-layout: fixed;">
         <colgroup>
-            <col style="width: 20%;"> 
+            <col style="width: 10%;"> 
             <col style="width: 8%;">  
             <col style="width: 38%;"> 
             <col style="width: 8%;">  
             <col style="width: 5%;">  
             <col style="width: 5%;">  
             <col style="width: 8%;">  
-            <col style="width: 10%;"> 
+            <col style="width: 18%;"> 
         </colgroup>
         <thead>
             <tr>
@@ -440,7 +440,43 @@
     </table>
 </div>
 
+<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
 <script>
+    // --- SweetAlert2 Interactive Action Confirmation ---
+    function confirmAction(actionType, title, text, icon, confirmText, confirmColor) {
+        const form = document.getElementById('reviewForm');
+        
+        // Enforce HTML5 Form Validation before popping the SWAL
+        if (!form.checkValidity()) {
+            form.reportValidity(); // Shows the native browser tooltips for empty fields
+            return;
+        }
+
+        Swal.fire({
+            title: title,
+            text: text,
+            icon: icon,
+            showCancelButton: true,
+            confirmButtonColor: confirmColor,
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: confirmText,
+            reverseButtons: true
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Dynamically inject the chosen action into the form before submitting
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'action';
+                input.value = actionType;
+                form.appendChild(input);
+                form.submit();
+            }
+        });
+    }
+
     function updateClock() {
         const now = new Date();
         const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' };
@@ -455,6 +491,12 @@
     }
 
     function prepareAndPrint() {
+        const form = document.getElementById('reviewForm');
+        if (!form.checkValidity()) {
+            form.reportValidity();
+            return;
+        }
+
         // Map Headers
         document.getElementById('p-entity').innerText = document.getElementById('v_entity').value;
         document.getElementById('p-division').innerText = document.getElementById('v_division').value;
@@ -530,6 +572,5 @@
         window.print();
     }
 </script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

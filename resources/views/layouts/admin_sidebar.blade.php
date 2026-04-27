@@ -7,8 +7,8 @@
         left: 0;
         background-color: #101954; /* DepEd Blue */
         color: white;
-        transition: all 0.3s;
-        z-index: 1000;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        z-index: 1050;
         overflow-y: auto;
     }
 
@@ -17,96 +17,94 @@
         text-align: center;
         border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     }
-
-    .sidebar-header img {
-        width: 60px;
-        height: 60px;
-        margin-bottom: 10px;
-    }
-
-    .sidebar-header h5 {
-        font-size: 1.1rem;
-        font-weight: 700;
-        margin: 0;
-        letter-spacing: 1px;
-    }
+    .sidebar-header img { width: 60px; height: 60px; margin-bottom: 10px; }
+    .sidebar-header h5 { font-size: 1.1rem; font-weight: 700; margin: 0; letter-spacing: 1px; }
 
     .nav-link {
         color: rgba(255, 255, 255, 0.8);
-        padding: 15px 20px;
-        font-size: 1rem;
+        padding: 15px 20px; font-size: 1rem;
         border-left: 4px solid transparent;
-        transition: all 0.2s;
-        display: flex;
-        align-items: center;
-        text-decoration: none;
-        position: relative; 
+        transition: all 0.2s; display: flex; align-items: center;
+        text-decoration: none; position: relative; 
     }
-
-    .nav-link i {
-        width: 30px;
-        font-size: 1.1rem;
-    }
-
+    .nav-link i { width: 30px; font-size: 1.1rem; }
     .nav-link:hover, .nav-link.active {
         background-color: rgba(255, 255, 255, 0.1);
-        color: #fff;
-        border-left-color: #fc1111;
+        color: #fff; border-left-color: #fc1111;
     }
 
-    /* Sub-menu specific styling */
     .submenu .nav-link {
         padding: 10px 20px 10px 45px;
         font-size: 0.9rem;
         background-color: rgba(0, 0, 0, 0.2);
     }
-
     .submenu .nav-link.active {
         background-color: rgba(252, 17, 17, 0.2);
         border-left-color: #fc1111;
     }
-
-    /* Parent link stays highlighted when submenu is open */
     .nav-link[aria-expanded="true"] {
-        background-color: rgba(255, 255, 255, 0.05);
-        color: #fff;
-    }
-
-    .sidebar-footer {
-        position: absolute;
-        bottom: 0;
-        width: 100%;
-        padding: 20px;
-        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        background-color: rgba(255, 255, 255, 0.05); color: #fff;
     }
 
     .menu-arrow {
-        position: absolute;
-        right: 20px;
-        top: 50%;
-        transform: translateY(-50%);
-        transition: transform 0.3s ease;
-        font-size: 0.8rem;
-        text-align: center;
-        color : rgba(255, 255, 255, 0.8);
+        position: absolute; right: 20px; top: 50%;
+        transform: translateY(-50%); transition: transform 0.3s ease;
+        font-size: 0.8rem; text-align: center; color : rgba(255, 255, 255, 0.8);
     }
-
-    a[aria-expanded="true"] .menu-arrow {
-        transform: translateY(-50%) rotate(180deg);
-        text-align: center;
-    }
+    a[aria-expanded="true"] .menu-arrow { transform: translateY(-50%) rotate(180deg); }
 
     .sidebar-footer {
-        margin-top: auto;
-        padding: 20px;
-        text-align: center;
+        margin-top: auto; padding: 20px; text-align: center;
         border-top: 1px solid rgba(255, 255, 255, 0.1);
-        color: rgba(255, 255, 255, 0.5);
-        font-size: 0.85rem;
+        color: rgba(255, 255, 255, 0.5); font-size: 0.85rem;
+    }
+
+    /* --- MOBILE RESPONSIVE STYLES --- */
+    .mobile-menu-btn {
+        position: fixed;
+        top: 12px;
+        left: 15px;
+        z-index: 1051; 
+        background: transparent;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        padding: 5px 10px;
+        font-size: 1.5rem;
+        display: none;
+        cursor: pointer;
+        transition: 0.2s;
+    }
+    .mobile-menu-btn:hover { background: rgba(255, 255, 255, 0.1); }
+
+    .sidebar-backdrop {
+        position: fixed;
+        top: 0; left: 0; width: 100vw; height: 100vh;
+        background: rgba(0,0,0,0.5);
+        z-index: 1045; 
+        display: none; opacity: 0;
+        transition: opacity 0.3s;
+    }
+    
+    .sidebar-backdrop.active { display: block; opacity: 1; }
+
+    @media (max-width: 768px) {
+        .sidebar { 
+            left: -260px; 
+            box-shadow: 5px 0 15px rgba(0,0,0,0.3);
+        }
+        .sidebar.active { left: 0; } 
+        .mobile-menu-btn { display: block; }
     }
 </style>
 
-<div class="sidebar">
+<button class="mobile-menu-btn no-print" id="mobileMenuBtn">
+    <i class="fas fa-bars"></i>
+</button>
+
+<div class="sidebar-backdrop no-print" id="sidebarBackdrop"></div>
+
+<div class="sidebar" id="mainSidebar">
     <div class="sidebar-header">
         <img src="{{ asset('assets/images/depedRovCirc.png') }}" alt="Logo">
         <h5>AMS HEAD</h5>
@@ -176,25 +174,41 @@
     </div>
 </div>
 
-
 <script>
-    // FIXED: Remembers your sidebar choice and applies it across page navigations seamlessly
+    // --- Mobile Sidebar Toggle Logic ---
     document.addEventListener("DOMContentLoaded", function() {
+        const mobileBtn = document.getElementById('mobileMenuBtn');
+        const sidebar = document.getElementById('mainSidebar');
+        const backdrop = document.getElementById('sidebarBackdrop');
+
+        if (mobileBtn && sidebar && backdrop) {
+            function toggleSidebar() {
+                sidebar.classList.toggle('active');
+                if (sidebar.classList.contains('active')) {
+                    backdrop.style.display = 'block';
+                    setTimeout(() => backdrop.style.opacity = '1', 10);
+                } else {
+                    backdrop.style.opacity = '0';
+                    setTimeout(() => backdrop.style.display = 'none', 300);
+                }
+            }
+            mobileBtn.addEventListener('click', toggleSidebar);
+            backdrop.addEventListener('click', toggleSidebar); 
+        }
+
+        // Submenu memory logic
         const inventoryToggle = document.getElementById('inventoryToggle');
         const inventorySubmenu = document.getElementById('inventorySubmenu');
 
         if(inventoryToggle && inventorySubmenu) {
-            // 1. Check if we should force it open based on memory
             let isInventoryActive = {{ $isInventoryActive ? 'true' : 'false' }};
             let savedState = sessionStorage.getItem('inventoryMenuOpen');
 
-            // If Blade didn't open it natively, but memory says it should be open
             if (!isInventoryActive && savedState === 'true') {
                 inventorySubmenu.classList.add('show');
                 inventoryToggle.setAttribute('aria-expanded', 'true');
             }
 
-            // 2. Save state whenever Bootstrap opens or closes it
             inventorySubmenu.addEventListener('shown.bs.collapse', function () {
                 inventoryToggle.setAttribute('aria-expanded', 'true');
                 sessionStorage.setItem('inventoryMenuOpen', 'true');
@@ -218,7 +232,6 @@
     }
 
     const activityEvents = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
-    
     activityEvents.forEach(event => {
         document.addEventListener(event, resetIdleTimer, true);
     });

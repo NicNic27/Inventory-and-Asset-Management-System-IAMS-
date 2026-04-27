@@ -95,6 +95,10 @@
     
     /* Cropper Styles */
     .cropper-container-wrapper { width: 100%; max-height: 350px; background-color: #333; border-radius: 8px; overflow: hidden; }
+
+    /* --- Modal & Mobile Button Z-Index Fixes --- */
+    .mobile-menu-btn { z-index: 1041 !important; }
+    .modal-backdrop { z-index: 1055 !important; }
 </style>
 
 @if(session('profile_success'))
@@ -151,7 +155,7 @@
                 <li><h6 class="dropdown-header fw-bold text-dark">{{ $user->firstname ?? 'User' }} {{ $user->lastname ?? '' }}</h6></li>
                 
                 <li><a class="dropdown-item btn" href="#" data-bs-toggle="modal" data-bs-target="#profileEditModal">
-                    <i class="fas fa-user-edit fa-sm fa-fw me-2 text-muted"></i> Edit Profile</a>
+                    <i class="fas fa-user-edit fa-sm fa-fw me-2 text-muted"></i> My Profile</a>
                 </li>
                 
                 <li><hr class="dropdown-divider"></li>
@@ -162,7 +166,7 @@
     </div>
 </div>
 
-<div class="modal fade no-print" id="profileEditModal" tabindex="-1" aria-labelledby="profileEditModalLabel" aria-hidden="true" style="z-index: 1051;">
+<div class="modal fade no-print" id="profileEditModal" tabindex="-1" aria-labelledby="profileEditModalLabel" aria-hidden="true" style="z-index: 1060;">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content border-0 shadow-lg">
             <div class="modal-header" style="background: linear-gradient(135deg, #101954 0%, #0a4d9c 100%); color: white;">
@@ -250,7 +254,7 @@
                     </div>
                 </div>
                 <div class="modal-footer border-0 bg-white">
-                    <button type="button" class="btn btn-light border px-4 fw-bold text-muted" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-light border px-4 fw-bold text-muted" data-bs-dismiss="modal">Cancel</button>
                     <button type="submit" class="btn btn-primary px-4 fw-bold shadow-sm"><i class="fas fa-save me-2"></i>Save Profile</button>
                 </div>
             </form>
@@ -258,7 +262,7 @@
     </div>
 </div>
 
-<div class="modal fade" id="logoutModal" tabindex="-1" aria-labelledby="logoutModalLabel" aria-hidden="true" style="z-index: 1052;">
+<div class="modal fade" id="logoutModal" tabindex="-1" aria-labelledby="logoutModalLabel" aria-hidden="true" style="z-index: 1060;">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow">
             <div class="modal-header bg-danger text-white">
@@ -288,6 +292,12 @@
         const first = document.getElementById("modalFirstName").value;
         const last = document.getElementById("modalLastName").value;
         document.getElementById("modalPreviewName").innerText = first + " " + last;
+
+        const previewImg = document.getElementById("modalPreviewImg");
+        if(previewImg.classList.contains('d-none') || previewImg.src === '') {
+            const initials = ((first.charAt(0) || '') + (last.charAt(0) || '')).toUpperCase();
+            document.getElementById("modalPreviewInitials").innerText = initials || 'U';
+        }
     }
 
     function initImageEditor(input) {
@@ -381,7 +391,7 @@
         cropper.destroy(); cropper = null;
     }
 
-    // --- NOTIFICATION & HEADER LOGIC ---
+    // --- DOM LOADED SCRIPTS (SEARCH & NOTIFS) ---
     document.addEventListener("DOMContentLoaded", function() {
         const notifToggle = document.getElementById('notifToggle');
         const notifDrawer = document.getElementById('notifDrawer');
@@ -434,6 +444,7 @@
         }
 
         function fetchNotifications() {
+            // USER SPECIFIC NOTIFICATION ROUTE
             fetch(`{{ url('/user/notifications/fetch') }}`, { 
                 method: 'GET', credentials: 'same-origin', 
                 headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }

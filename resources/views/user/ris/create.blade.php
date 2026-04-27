@@ -137,7 +137,6 @@
         }
         .select2-container--bootstrap-5 .select2-selection { box-shadow: none !important; }
         
-        /* Select2 Dropdown List specific styling */
         .select2-results__option {
             padding: 8px 12px !important;
             border-bottom: 1px solid #f1f1f1;
@@ -281,46 +280,7 @@
                     </div>
                     <div class="col-md-3">
                         <label class="form-label">Unit Measure <span class="text-danger">*</span></label>
-                        <select name="unit_measure[]" class="form-select" required>
-                            <option value="" selected disabled>Select Unit</option>
-                            <optgroup label="Individual Pieces">
-                                <option value="Piece">Piece (pc)</option>
-                                <option value="Unit">Unit</option>
-                                <option value="Set">Set</option>
-                                <option value="Pair">Pair</option>
-                            </optgroup>
-                            <optgroup label="Paper Products">
-                                <option value="Ream">Ream</option>
-                                <option value="Pad">Pad</option>
-                                <option value="Book">Book</option>
-                                <option value="Sheet">Sheet</option>
-                            </optgroup>
-                            <optgroup label="Bulk/Packaging">
-                                <option value="Box">Box</option>
-                                <option value="Carton">Carton (ctn)</option>
-                                <option value="Pack">Pack (pk)</option>
-                                <option value="Bundle">Bundle</option>
-                                <option value="Case">Case</option>
-                            </optgroup>
-                            <optgroup label="Liquids/Chemicals">
-                                <option value="Bottle">Bottle (btl)</option>
-                                <option value="Can">Can</option>
-                                <option value="Gallon">Gallon (gal)</option>
-                                <option value="Liter">Liter (L)</option>
-                                <option value="Milliliter">Milliliter (mL)</option>
-                            </optgroup>
-                            <optgroup label="Length/Volume">
-                                <option value="Roll">Roll</option>
-                                <option value="Meter">Meter (m)</option>
-                                <option value="Tube">Tube</option>
-                                <option value="Jar">Jar</option>
-                            </optgroup>
-                            <optgroup label="Weight">
-                                <option value="Kilogram">Kilogram (kg)</option>
-                                <option value="Gram">Gram (g)</option>
-                                <option value="Bag">Bag</option>
-                            </optgroup>
-                        </select>
+                        <input type="text" name="unit_measure[]" class="form-control bg-light unit-input" readonly placeholder="Auto-filled" required>
                     </div>
                     <div class="col-md-2">
                         <label>Quantity <span class="text-danger">*</span></label>
@@ -331,7 +291,7 @@
                         <select name="description[]" class="form-select select2-supply" required>
                             <option value="" selected disabled>-- Select Supply Item --</option>
                             @foreach($supplies as $supply)
-                                <option value="{{ $supply->article }}, {{ $supply->description }}" data-barcode="{{ $supply->barcode_id }}" data-qty="{{ $supply->quantity }}">{{ $supply->article }} - {{ $supply->description }}</option>
+                                <option value="{{ $supply->article }}, {{ $supply->description }}" data-barcode="{{ $supply->barcode_id }}" data-qty="{{ $supply->quantity }}" data-unit="{{ $supply->unit_measure }}">{{ $supply->article }} - {{ $supply->description }}</option>
                             @endforeach
                         </select>
                     </div>
@@ -498,7 +458,6 @@
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
 <script>
-    // Custom template logic to add badges to Select2 items!
     function formatSupplyOption(state) {
         if (!state.id) { return state.text; }
         
@@ -523,13 +482,18 @@
             placeholder: '-- Select Supply Item --',
             templateResult: formatSupplyOption, 
             templateSelection: formatSupplyOption, 
-            escapeMarkup: function(m) { return m; } // Allows HTML badges to render safely
+            escapeMarkup: function(m) { return m; } 
         });
 
         $('.select2-supply').on('select2:select', function (e) {
             const selectedOption = $(this).select2('data')[0].element; 
             const barcode = $(selectedOption).data('barcode'); 
-            $(this).closest('.item-row').find('.stock-input').val(barcode || '');
+            const unit = $(selectedOption).data('unit'); 
+            const row = $(this).closest('.item-row');
+            
+            // Auto-fill Stock No and Unit Measure
+            row.find('.stock-input').val(barcode || '');
+            row.find('.unit-input').val(unit || '');
         });
     }
 

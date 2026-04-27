@@ -26,12 +26,12 @@ class SupplyController extends Controller
             });
         }
 
-        // Apply Status Filter
+        // FIXED: Safe SQL logic using IFNULL to prevent crashes if low_stock_threshold is empty
         if ($request->filled('status_filter') && $request->status_filter !== 'All') {
             if ($request->status_filter === 'Available') {
-                $query->whereColumn('quantity', '>', 'low_stock_threshold');
+                $query->whereRaw('quantity > IFNULL(low_stock_threshold, 10)');
             } elseif ($request->status_filter === 'Low Stock') {
-                $query->whereColumn('quantity', '<=', 'low_stock_threshold')
+                $query->whereRaw('quantity <= IFNULL(low_stock_threshold, 10)')
                       ->where('quantity', '>', 0);
             } elseif ($request->status_filter === 'Out of Stock') {
                 $query->where('quantity', '<=', 0);

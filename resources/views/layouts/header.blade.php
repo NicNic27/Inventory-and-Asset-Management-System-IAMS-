@@ -94,6 +94,10 @@
     
     /* Cropper Styles */
     .cropper-container-wrapper { width: 100%; max-height: 350px; background-color: #333; border-radius: 8px; overflow: hidden; }
+
+    /* --- Modal & Mobile Button Z-Index Fixes --- */
+    .mobile-menu-btn { z-index: 1041 !important; }
+    .modal-backdrop { z-index: 1055 !important; }
 </style>
 
 @if(session('profile_success'))
@@ -161,7 +165,7 @@
     </div>
 </div>
 
-<div class="modal fade no-print" id="profileEditModal" tabindex="-1" aria-labelledby="profileEditModalLabel" aria-hidden="true" style="z-index: 1051;">
+<div class="modal fade no-print" id="profileEditModal" tabindex="-1" aria-labelledby="profileEditModalLabel" aria-hidden="true" style="z-index: 1060;">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content border-0 shadow-lg">
             <div class="modal-header" style="background: linear-gradient(135deg, #101954 0%, #0a4d9c 100%); color: white;">
@@ -256,7 +260,7 @@
     </div>
 </div>
 
-<div class="modal fade" id="logoutModal" tabindex="-1" style="z-index: 1052;">
+<div class="modal fade" id="logoutModal" tabindex="-1" style="z-index: 1060;">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow">
             <div class="modal-header bg-danger text-white">
@@ -287,7 +291,6 @@
         document.getElementById("modalPreviewName").innerText = first + " " + last;
     }
 
-    // Triggered when a NEW file is selected via input
     function initImageEditor(input) {
         const file = input.files[0];
         if (file) {
@@ -299,7 +302,6 @@
         }
     }
 
-    // Triggered when clicking the EXISTING avatar image
     function editExistingImage() {
         const imgElement = document.getElementById('modalPreviewImg');
         if (imgElement && !imgElement.classList.contains('d-none') && imgElement.src) {
@@ -314,16 +316,15 @@
         const target = document.getElementById('cropperTarget');
         target.src = imageSrc;
 
-        // Reset sliders
         document.getElementById('filterBrightness').value = 100;
         document.getElementById('filterContrast').value = 100;
 
         if (cropper) { cropper.destroy(); }
         
         cropper = new Cropper(target, {
-            aspectRatio: 1, // Perfect square/circle for avatar
+            aspectRatio: 1, 
             viewMode: 1,
-            dragMode: 'move', // Panning left/right/up/down
+            dragMode: 'move', 
             autoCropArea: 1,
             cropBoxMovable: false,
             cropBoxResizable: false,
@@ -335,7 +336,6 @@
         document.getElementById('imageEditorArea').classList.add('d-none');
         document.getElementById('avatarDisplayArea').classList.remove('d-none');
         if (cropper) { cropper.destroy(); cropper = null; }
-        // Clear input to allow re-selection of the same file
         document.getElementById('modalImageInput').value = ''; 
     }
 
@@ -345,7 +345,6 @@
         const c = document.getElementById('filterContrast').value;
         const filterString = `brightness(${b}%) contrast(${c}%)`;
         
-        // Cropper JS creates copies of the image. We apply CSS filters to those copies.
         document.querySelectorAll('.cropper-canvas img, .cropper-view-box img').forEach(img => {
             img.style.filter = filterString;
         });
@@ -354,10 +353,8 @@
     function confirmImageEdit() {
         if (!cropper) return;
         
-        // Get raw cropped canvas
         const canvas = cropper.getCroppedCanvas({ width: 400, height: 400, fillColor: '#fff' });
         
-        // Apply Filters via Context Context to a final canvas
         const b = document.getElementById('filterBrightness').value;
         const c = document.getElementById('filterContrast').value;
         
@@ -368,13 +365,11 @@
         ctx.filter = `brightness(${b}%) contrast(${c}%)`;
         ctx.drawImage(canvas, 0, 0);
 
-        // Update the visual preview avatar
         const dataUrl = filteredCanvas.toDataURL('image/jpeg', 0.9);
         document.getElementById('modalPreviewImg').src = dataUrl;
         document.getElementById('modalPreviewImg').classList.remove('d-none');
         document.getElementById('modalPreviewInitials').classList.add('d-none');
 
-        // SILENTLY ATTACH THE NEW BLOB TO THE FORM INPUT SO THE BACKEND RECEIVES IT
         filteredCanvas.toBlob(function(blob) {
             let file = new File([blob], "edited_avatar.jpg", { type: "image/jpeg" });
             let dt = new DataTransfer();
@@ -382,7 +377,6 @@
             document.getElementById('modalImageInput').files = dt.files;
         }, 'image/jpeg', 0.9);
 
-        // Close workspace
         document.getElementById('imageEditorArea').classList.add('d-none');
         document.getElementById('avatarDisplayArea').classList.remove('d-none');
         cropper.destroy(); cropper = null;

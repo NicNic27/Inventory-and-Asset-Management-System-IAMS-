@@ -1,12 +1,16 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
     <title>Supplies Inventory - Personnel</title>
+    
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     
     <style>
+        /* Lock body scroll on Desktop */
         body { 
             background-color: #f4f6f9; 
             font-family: 'Segoe UI', sans-serif; 
@@ -15,6 +19,7 @@
             margin: 0;
         }
 
+        /* Flexbox Layout to utilize 100vh properly on Desktop */
         .main-content { 
             margin-left: 250px; 
             padding: 20px; 
@@ -25,9 +30,10 @@
             flex-direction: column;
         }
 
+        /* Table Card matches flex height */
         .table-container { 
             background: white; 
-            padding: 20px 20px 10px 20px; 
+            padding: 20px; 
             border-radius: 8px; 
             box-shadow: 0 2px 5px rgba(0,0,0,0.05); 
             flex-grow: 1; 
@@ -36,12 +42,14 @@
             min-height: 0; 
         }
 
+        /* Scrollable table body */
         .table-responsive {
             flex-grow: 1;
             overflow-y: auto; 
             margin-bottom: 10px;
         }
 
+        /* Sticky Table Headers */
         .table thead th {
             position: sticky;
             top: 0;
@@ -58,6 +66,7 @@
         .clickable-row td { transition: background-color 0.2s ease-in-out; }
         .clickable-row:hover td { background-color: #dde2e6 !important; }
 
+        /* --- Advanced Scrollable Pagination (Sticky Arrows) --- */
         #styled-pagination nav > div:not(:last-child),
         #styled-pagination p { display: none !important; }
 
@@ -90,11 +99,23 @@
         .page-item.active .page-link { background-color: #f4f6f9; color: #101954; font-weight: 700; border-color: #dee2e6; }
         .page-link { color: #6c757d; }
         .page-link:hover { color: #101954; background-color: #f4f6f9; }
+
+        /* --- THE Z-INDEX FIX FOR UNCLICKABLE MODALS --- */
+        .modal { z-index: 1060 !important; }
         
+        /* --- MOBILE RESPONSIVE OVERRIDES --- */
         @media (max-width: 768px) { 
-            .main-content { margin-left: 0; height: auto; overflow: visible; } 
             body { overflow: visible; height: auto; }
-            .table-container { min-height: 500px; }
+            .main-content { 
+                margin-left: 0; 
+                height: auto; 
+                overflow: visible; 
+                display: block; 
+                padding: 15px; 
+                padding-top: 80px !important; 
+            } 
+            .table-container { display: block; min-height: auto; padding: 15px; }
+            .mobile-stack { width: 100% !important; max-width: 100% !important; }
         }
     </style>
 </head>
@@ -104,18 +125,17 @@
     @include('layouts.sidebar')
 
     <div class="main-content">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <div>
+        
+        <div class="row align-items-center mb-3 g-3">
+            <div class="col-12 col-md-6 text-center text-md-start">
                 <h3 class="fw-bold text-dark mb-0"><i class="fas fa-box-open text-primary me-2"></i>Supplies Inventory</h3>
                 <small class="text-muted">Manage consumable items, stock levels, and details.</small>
             </div>
-
-            <div class="d-flex gap-2">
-                <button class="btn btn-outline-dark fw-bold shadow-sm" onclick="openScanner('IN', 'supplies')">
+            <div class="col-12 col-md-6 d-flex flex-column flex-md-row gap-2 justify-content-md-end">
+                <button class="btn btn-outline-dark fw-bold shadow-sm mobile-stack" onclick="openScanner('IN', 'supplies')">
                     <i class="fas fa-barcode me-1"></i> Stock IN (Scanner)
                 </button>
-
-                <button class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#addSupplyModal">
+                <button class="btn btn-primary shadow-sm mobile-stack" data-bs-toggle="modal" data-bs-target="#addSupplyModal">
                     <i class="fas fa-plus me-2"></i> Add New Supply
                 </button>
             </div>
@@ -130,14 +150,16 @@
 
         <div class="table-container">
             
-            <form action="{{ url('/supplies') }}" method="GET" id="filterForm" class="d-flex justify-content-between align-items-center mb-3 pe-2 gap-2">
-                <div class="d-flex gap-2 flex-grow-1">
-                    <div class="input-group shadow-sm" style="max-width: 350px;">
+            <form action="{{ url('/supplies') }}" method="GET" id="filterForm" class="row g-2 mb-3 align-items-center">
+                <div class="col-12 col-md-5">
+                    <div class="input-group shadow-sm mobile-stack">
                         <span class="input-group-text bg-white border-end-0"><i class="fas fa-search text-muted"></i></span>
                         <input type="text" name="search" id="supplySearchInput" class="form-control border-start-0 ps-0" placeholder="Search Stock No., Article, or Desc..." value="{{ request('search') }}">
                     </div>
-                    
-                    <select name="status_filter" class="form-select shadow-sm" style="max-width: 180px;" onchange="document.getElementById('filterForm').submit();">
+                </div>
+                
+                <div class="col-12 col-md-3">
+                    <select name="status_filter" class="form-select shadow-sm mobile-stack" onchange="document.getElementById('filterForm').submit();">
                         <option value="All" {{ request('status_filter') == 'All' ? 'selected' : '' }}>All Statuses</option>
                         <option value="Available" {{ request('status_filter') == 'Available' ? 'selected' : '' }}>Available</option>
                         <option value="Low Stock" {{ request('status_filter') == 'Low Stock' ? 'selected' : '' }}>Low Stock</option>
@@ -145,18 +167,22 @@
                     </select>
                 </div>
 
-                @if(request('search') || request('status_filter') && request('status_filter') !== 'All')
-                    <a href="{{ url('/supplies') }}" class="btn btn-outline-danger btn-sm fw-bold shadow-sm"><i class="fas fa-times me-1"></i> Clear Filters</a>
-                @endif
+                <div class="col-12 col-md-4 text-md-end">
+                    @if(request('search') || request('status_filter') && request('status_filter') !== 'All')
+                        <a href="{{ url('/supplies') }}" class="btn btn-outline-danger btn-sm fw-bold shadow-sm mobile-stack">
+                            <i class="fas fa-times me-1"></i> Clear Filters
+                        </a>
+                    @endif
+                </div>
             </form>
 
             <div class="table-responsive">
                 <table class="table align-middle mb-0">
                     <thead class="table-light">
                         <tr>
-                            <th>Stock No.</th>
-                            <th>Article / Item</th>
-                            <th>Description</th>
+                            <th class="text-nowrap">Stock No.</th>
+                            <th class="text-nowrap">Article / Item</th>
+                            <th class="text-nowrap" style="min-width: 200px;">Description</th>
                             <th>Unit</th>
                             <th>Value</th>
                             <th>Qty</th>
@@ -177,10 +203,10 @@
                             @endphp
                             <tr class="clickable-row" data-id="{{ $row->id }}">
                                 <td class="fw-bold text-primary font-monospace">{!! $stockNo !!}</td>
-                                <td class="fw-bold">{{ $row->article }}</td>
+                                <td class="fw-bold text-nowrap">{{ $row->article }}</td>
                                 <td>{{ Str::limit($row->description, 40) }}</td>
                                 <td>{{ $row->unit_measure }}</td>
-                                <td>₱{{ number_format($row->unit_value, 2) }}</td>
+                                <td class="text-nowrap">₱{{ number_format($row->unit_value, 2) }}</td>
                                 <td class="fw-bold fs-5 text-dark">{{ $row->quantity }}</td>
                                 <td><span class="badge rounded-pill {{ $status_class }} px-2 py-1">{{ $status_text }}</span></td>
                                 <td>
@@ -226,13 +252,13 @@
                 </table>
             </div>
 
-            <div class="d-flex justify-content-between align-items-center border-top pt-3 mt-2">
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-center border-top pt-3 mt-2 gap-3">
                 
-                <div class="text-muted small">
+                <div class="text-muted small text-center text-md-start">
                     Showing {{ $supplies->firstItem() ?? 0 }} to {{ $supplies->lastItem() ?? 0 }} of {{ $supplies->total() }} results
                 </div>
 
-                <div class="d-flex align-items-center">
+                <div class="d-flex align-items-center justify-content-center">
                     <span class="text-muted small me-2">Per page</span>
                     <form action="{{ url('/supplies') }}" method="GET" id="perPageForm">
                         @if(request('search')) <input type="hidden" name="search" value="{{ request('search') }}"> @endif
@@ -246,7 +272,7 @@
                     </form>
                 </div>
 
-                <div class="custom-pagination-wrapper" id="styled-pagination">
+                <div class="custom-pagination-wrapper d-flex justify-content-center" id="styled-pagination">
                     {{ $supplies->onEachSide(1)->appends(request()->query())->links() }}
                 </div>
                 
@@ -255,7 +281,7 @@
     </div>
 
     <div class="modal fade" id="addSupplyModal" tabindex="-1">
-        <div class="modal-dialog modal-xl">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
             <div class="modal-content">
                 <div class="modal-header bg-primary text-white">
                     <h5 class="modal-title"><i class="fas fa-plus-circle me-2"></i> Add New Supply</h5>
@@ -265,10 +291,10 @@
                     @csrf
                     <div class="modal-body p-4">
                         <div class="row">
-                            <div class="col-md-3 text-center border-end pe-4">
+                            <div class="col-md-3 text-center border-end pe-md-4 mb-4 mb-md-0">
                                 <label class="form-label fw-bold d-block text-start">Supply Image</label>
                                 <div class="border rounded bg-light d-flex justify-content-center align-items-center mx-auto mb-3 overflow-hidden shadow-sm" 
-                                     style="width: 100%; aspect-ratio: 1/1; position: relative;">
+                                     style="width: 100%; max-width: 200px; aspect-ratio: 1/1; position: relative;">
                                     <img id="imagePreviewAdd" src="" alt="Preview" style="display: none; width: 100%; height: 100%; object-fit: cover;">
                                     <i id="imagePlaceholderAdd" class="fas fa-image fa-4x text-muted opacity-50"></i>
                                 </div>
@@ -276,7 +302,7 @@
                                 <small class="text-muted text-start d-block mt-2">Recommended: Square format (JPG, PNG)</small>
                             </div>
                             
-                            <div class="col-md-9 ps-4">
+                            <div class="col-md-9 ps-md-4">
                                 <div class="mb-4 bg-light p-3 rounded border">
                                     <label class="form-label text-primary fw-bold mb-2"><i class="fas fa-magic me-1"></i> Auto-Fill from Delivered P.O. (Optional)</label>
                                     <select id="po_autofill_select" class="form-select border-primary shadow-sm" onchange="autoFillSupplyForm(this)">
@@ -315,7 +341,7 @@
                                         <input type="text" name="supplier" id="add_supplier" class="form-control" placeholder="e.g. Pandayan">
                                     </div>
                                     
-                                    <div class="col-md-12">
+                                    <div class="col-12">
                                         <label class="form-label fw-bold">Description</label>
                                         <textarea name="description" id="add_desc" class="form-control" rows="2" placeholder="e.g. A4 Size, 70gsm, White"></textarea>
                                     </div>
@@ -396,7 +422,7 @@
     </div>
 
     <div class="modal fade" id="editSupplyModal" tabindex="-1">
-        <div class="modal-dialog modal-xl">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
             <div class="modal-content">
                 <div class="modal-header bg-success text-white">
                     <h5 class="modal-title"><i class="fas fa-edit me-2"></i> Edit Supply</h5>
@@ -407,10 +433,10 @@
                     @method('PUT')
                     <div class="modal-body p-4">
                         <div class="row">
-                            <div class="col-md-3 text-center border-end pe-4">
+                            <div class="col-md-3 text-center border-end pe-md-4 mb-4 mb-md-0">
                                 <label class="form-label fw-bold d-block text-start">Update Image (Optional)</label>
                                 <div class="border rounded bg-light d-flex justify-content-center align-items-center mx-auto mb-3 overflow-hidden shadow-sm" 
-                                     style="width: 100%; aspect-ratio: 1/1; position: relative;">
+                                     style="width: 100%; max-width: 200px; aspect-ratio: 1/1; position: relative;">
                                     <img id="imagePreviewEdit" src="" alt="Preview" style="display: none; width: 100%; height: 100%; object-fit: cover;">
                                     <i id="imagePlaceholderEdit" class="fas fa-image fa-4x text-muted opacity-50"></i>
                                 </div>
@@ -418,12 +444,12 @@
                                 <small class="text-muted text-start d-block mt-2">Leave blank to keep current image.</small>
                             </div>
                             
-                            <div class="col-md-9 ps-4">
+                            <div class="col-md-9 ps-md-4">
                                 <div class="row g-3">
-                                    <div class="col-md-12">
-                                        <div class="alert alert-light border-success border-start border-4 py-2 px-3 mb-1 d-flex align-items-center justify-content-between">
+                                    <div class="col-12">
+                                        <div class="alert alert-light border-success border-start border-4 py-2 px-3 mb-1 d-flex flex-column flex-md-row align-items-md-start justify-content-between gap-2">
                                             <span><i class="fas fa-barcode text-success me-2"></i>Stock No. (Barcode)</span>
-                                            <input type="text" name="barcode_id" id="edit_stock" class="form-control form-control-sm bg-white fw-bold w-50" readonly required>
+                                            <input type="text" name="barcode_id" id="edit_stock" class="form-control form-control-sm bg-white fw-bold mobile-stack" style="max-width: 250px;" readonly required>
                                         </div>
                                     </div>
                                     
@@ -436,7 +462,7 @@
                                         <input type="text" name="supplier" id="edit_supplier" class="form-control">
                                     </div>
                                     
-                                    <div class="col-md-12">
+                                    <div class="col-12">
                                         <label class="form-label fw-bold">Description</label>
                                         <textarea name="description" id="edit_desc" class="form-control" rows="2"></textarea>
                                     </div>
@@ -489,7 +515,7 @@
                                         <input type="number" name="unit_value" id="edit_value" class="form-control" step="0.01" min="0" required>
                                     </div>
                                     
-                                    <div class="col-md-12 mt-4"><hr class="m-0"></div>
+                                    <div class="col-12 mt-4"><hr class="m-0"></div>
                                     
                                     <div class="col-md-6">
                                         <label class="form-label fw-bold text-success">Total Stock Quantity <span class="text-danger">*</span></label>
@@ -552,22 +578,17 @@
     <script>
         // --- DUPLICATE ITEM CHECK INTERCEPTOR ---
         document.getElementById('addSupplyForm').addEventListener('submit', function(e) {
-            // If the form has the hidden force_save flag, submit normally
-            if (this.querySelector('input[name="force_save"]')) {
-                return; 
-            }
+            if (this.querySelector('input[name="force_save"]')) return; 
             
-            e.preventDefault(); // Stop standard form submission
+            e.preventDefault(); 
             const form = this;
             const formData = new FormData(form);
 
-            // Change button to loading state
             const submitBtn = form.querySelector('button[type="submit"]');
             const originalText = submitBtn.innerHTML;
             submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing...';
             submitBtn.disabled = true;
 
-            // Perform the AJAX fetch check
             fetch(form.action, {
                 method: 'POST',
                 body: formData,
@@ -576,7 +597,6 @@
             .then(response => response.json())
             .then(data => {
                 if (data.status === 'duplicate') {
-                    // Reset button
                     submitBtn.innerHTML = originalText;
                     submitBtn.disabled = false;
                     
@@ -585,24 +605,21 @@
                         text: 'An item with these exact details is already in the inventory. Would you like to add this quantity to the existing stock instead of creating a duplicate?',
                         icon: 'warning',
                         showCancelButton: true,
-                        confirmButtonColor: '#10b981', // Success green for "Add to existing"
-                        cancelButtonColor: '#0088ff',  // Gray for "Create as new"
+                        confirmButtonColor: '#10b981', 
+                        cancelButtonColor: '#6c757d', 
                         confirmButtonText: '<i class="fas fa-plus me-1"></i> Yes, add to existing stock',
-                        cancelButtonText: 'No, Create as a New Item',
+                        cancelButtonText: 'No, create as a new item',
                         reverseButtons: true
                     }).then((result) => {
                         if (result.isConfirmed) {
-                            // User wants to add to existing stock (Triggers stockTransaction endpoint)
                             const qty = document.getElementById('add_qty').value;
                             const supplier = document.getElementById('add_supplier').value;
                             const csrf = document.querySelector('meta[name="csrf-token"]').content;
                             
-                            // Create a temporary hidden form to post to the transaction endpoint
                             const tempForm = document.createElement('form');
                             tempForm.method = 'POST';
                             tempForm.action = `/supplies/${data.existing_id}/transaction`;
                             
-                            // Get today's date formatted as YYYY-MM-DD
                             const today = new Date().toISOString().split('T')[0];
                             
                             tempForm.innerHTML = `
@@ -614,10 +631,9 @@
                                 <input type="hidden" name="remarks" value="Added from duplicate check">
                             `;
                             document.body.appendChild(tempForm);
-                            tempForm.submit(); // Submits and naturally redirects back with success message
+                            tempForm.submit();
 
                         } else if (result.dismiss === Swal.DismissReason.cancel) {
-                            // User actively rejected the duplicate catch, force save it anyway!
                             submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Saving...';
                             submitBtn.disabled = true;
                             
@@ -627,11 +643,10 @@
                             forceInput.value = '1';
                             form.appendChild(forceInput);
                             
-                            form.submit(); // Standard submit to trigger page reload + session message
+                            form.submit(); 
                         }
                     });
                 } else if (data.status === 'success') {
-                    // It saved perfectly fine on the backend without duplicates
                     window.location.reload();
                 }
             })
@@ -653,10 +668,9 @@
                     clearTimeout(typingTimer);
                     typingTimer = setTimeout(() => {
                         filterForm.submit();
-                    }, 600); // Waits 600ms after user stops typing
+                    }, 600); 
                 });
 
-                // Keep cursor focused and at the end of the text after reload
                 if (searchInput.value.length > 0) {
                     searchInput.focus();
                     const val = searchInput.value;
@@ -683,14 +697,12 @@
             document.getElementById('add_desc').value = selectedOption.getAttribute('data-desc');
             document.getElementById('add_supplier').value = selectedOption.getAttribute('data-supplier');
             
-            // Auto-select the dropdown logic (Improved matching for standard dropdown values)
             let rawUnit = (selectedOption.getAttribute('data-unit') || "").toLowerCase().trim();
             let unitSelect = document.getElementById('add_unit');
             let matchFound = false;
             
             for (let i = 0; i < unitSelect.options.length; i++) {
                 let optVal = unitSelect.options[i].value.toLowerCase();
-                // Match exact value or check if the raw unit string contains the exact option value
                 if (optVal === rawUnit || (rawUnit.length > 1 && optVal.includes(rawUnit))) {
                     unitSelect.selectedIndex = i;
                     matchFound = true;
@@ -698,7 +710,6 @@
                 }
             }
             
-            // Fallbacks for common abbreviations if exact match fails
             if (!matchFound) {
                 if (rawUnit === 'pc' || rawUnit === 'pcs' || rawUnit === 'piece') unitSelect.value = 'Piece(s)';
                 else if (rawUnit === 'box' || rawUnit === 'bx') unitSelect.value = 'Box';
@@ -706,7 +717,7 @@
                 else if (rawUnit === 'pack' || rawUnit === 'pk') unitSelect.value = 'Pack';
                 else if (rawUnit === 'kg' || rawUnit === 'kilo') unitSelect.value = 'Kilogram';
                 else if (rawUnit === 'm' || rawUnit === 'meter') unitSelect.value = 'Meter';
-                else unitSelect.selectedIndex = 0; // Default to 'Select Unit' if absolutely nothing matches
+                else unitSelect.selectedIndex = 0; 
             }
             
             document.getElementById('add_val').value = selectedOption.getAttribute('data-val');
@@ -751,19 +762,17 @@
                 document.getElementById('edit_desc').value = this.getAttribute('data-desc');
                 document.getElementById('edit_supplier').value = this.getAttribute('data-supplier');
                 
-                // Set the dropdown value safely
                 let unitVal = this.getAttribute('data-unit');
                 let unitSelect = document.getElementById('edit_unit');
                 let optionExists = Array.from(unitSelect.options).some(opt => opt.value === unitVal);
                 if(optionExists) {
                     unitSelect.value = unitVal;
                 } else {
-                    unitSelect.selectedIndex = 0; // fallback if data is somehow invalid
+                    unitSelect.selectedIndex = 0;
                 }
 
                 document.getElementById('edit_value').value = this.getAttribute('data-value');
                 document.getElementById('edit_qty').value = this.getAttribute('data-qty');
-                
                 document.getElementById('edit_threshold').value = this.getAttribute('data-threshold');
 
                 const currentImage = this.getAttribute('data-image');

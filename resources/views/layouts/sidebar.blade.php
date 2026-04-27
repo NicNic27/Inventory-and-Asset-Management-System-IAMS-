@@ -7,9 +7,8 @@
         left: 0;
         background-color: #101954; /* DepEd Blue */
         color: white;
-        transition: all 0.3s;
-        z-index: 1000;
-        /* Add Flexbox to push footer to bottom */
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        z-index: 1050;
         display: flex;
         flex-direction: column;
         overflow-y: auto;
@@ -39,6 +38,7 @@
         display: flex;
         align-items: center;
         text-decoration: none;
+        position: relative; /* Required for the dropdown arrow */
     }
     .nav-link i {
         width: 30px;
@@ -49,6 +49,27 @@
         color: #fff;
         border-left-color: #fca311; /* Accent Yellow */
     }
+
+    /* --- DROPDOWN SUBMENU STYLES --- */
+    .submenu .nav-link {
+        padding: 10px 20px 10px 45px;
+        font-size: 0.9rem;
+        background-color: rgba(0, 0, 0, 0.2);
+    }
+    .submenu .nav-link.active {
+        background-color: rgba(252, 163, 17, 0.15); /* Subtle yellow tint */
+        border-left-color: #fca311;
+    }
+    .nav-link[aria-expanded="true"] {
+        background-color: rgba(255, 255, 255, 0.05); color: #fff;
+    }
+
+    .menu-arrow {
+        position: absolute; right: 20px; top: 50%;
+        transform: translateY(-50%); transition: transform 0.3s ease;
+        font-size: 0.8rem; text-align: center; color: rgba(255, 255, 255, 0.8);
+    }
+    a[aria-expanded="true"] .menu-arrow { transform: translateY(-50%) rotate(180deg); }
     
     .sidebar-footer {
         margin-top: auto;
@@ -58,11 +79,55 @@
         color: rgba(255, 255, 255, 0.5);
         font-size: 0.85rem;
     }
+
+    /* --- MOBILE RESPONSIVE STYLES --- */
+    .mobile-menu-btn {
+        position: fixed;
+        top: 12px;
+        left: 15px;
+        z-index: 1051; /* Sits above the header */
+        background: transparent;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        padding: 5px 10px;
+        font-size: 1.5rem;
+        display: none;
+        cursor: pointer;
+        transition: 0.2s;
+    }
+    .mobile-menu-btn:hover { background: rgba(255, 255, 255, 0.1); }
+
+    .sidebar-backdrop {
+        position: fixed;
+        top: 0; left: 0; width: 100vw; height: 100vh;
+        background: rgba(0,0,0,0.5);
+        z-index: 1045; /* Below sidebar, above body */
+        display: none; opacity: 0;
+        transition: opacity 0.3s;
+    }
+    
+    .sidebar-backdrop.active { display: block; opacity: 1; }
+
+    @media (max-width: 768px) {
+        .sidebar { 
+            left: -260px; /* Hidden by default on mobile */
+            box-shadow: 5px 0 15px rgba(0,0,0,0.3);
+        }
+        .sidebar.active { left: 0; } /* Slides in when active */
+        .mobile-menu-btn { display: block; }
+    }
 </style>
 
-<div class="sidebar">
+<button class="mobile-menu-btn no-print" id="mobileMenuBtn">
+    <i class="fas fa-bars"></i>
+</button>
+
+<div class="sidebar-backdrop no-print" id="sidebarBackdrop"></div>
+
+<div class="sidebar" id="mainSidebar">
     <div class="sidebar-header">
-        <img src="{{ asset('assets/images/DepEdseal.png') }}" alt="Logo">
+        <img src="{{ asset('assets/images/depedRovCirc.png') }}" alt="Logo">
         <h5>AMS PERSONNEL</h5>
     </div>
 
@@ -71,22 +136,43 @@
             <i class="fas fa-tachometer-alt fa-fw"></i> Dashboard
         </a>
 
-        <a href="{{ url('/asset-list') }}" class="nav-link {{ request()->is('asset-list*') ? 'active' : '' }}">
-            <i class="fas fa-laptop fa-fw"></i> Assets List
-        </a>
+        <div class="nav-item">
+            @php
+                $isInventoryActive = request()->is('asset-list*') || request()->is('supplies*');
+            @endphp
+            
+            <a href="#inventorySubmenu" 
+               data-bs-toggle="collapse" 
+               role="button"
+               id="inventoryToggle"
+               class="nav-link {{ $isInventoryActive ? 'active' : '' }}" 
+               aria-expanded="{{ $isInventoryActive ? 'true' : 'false' }}">
+                <i class="fas fa-boxes fa-fw"></i> Inventory
+                <i class="fas fa-chevron-down menu-arrow"></i>
+            </a>
+            
+            <div class="collapse submenu {{ $isInventoryActive ? 'show' : '' }}" id="inventorySubmenu">
+                <a href="{{ url('/asset-list') }}" class="nav-link {{ request()->is('asset-list*') ? 'active' : '' }}">
+                    <i class="fas fa-laptop fa-fw"></i> Assets List
+                </a>
+                <a href="{{ url('/supplies') }}" class="nav-link {{ request()->is('supplies*') ? 'active' : '' }}">
+                    <i class="fas fa-box-open fa-fw"></i> Supplies List
+                </a>
+            </div>
+        </div>
 
-        <a href="{{ url('/supplies') }}" class="nav-link {{ request()->is('supplies*') ? 'active' : '' }}">
-            <i class="fas fa-box-open fa-fw"></i> Supplies List
+        <a href="{{ url('/ics') }}" class="nav-link {{ request()->is('ics*') ? 'active' : '' }}">
+            <i class="fa-solid fa-file-invoice fa-fw"></i> ICS
+        </a>
+        
+        <a href="{{ url('/po') }}" class="nav-link {{ request()->is('po*') ? 'active' : '' }}">
+            <i class="fas fa-file-invoice-dollar fa-fw"></i> Purchase Orders
         </a>
         
         <a href="{{ url('/ris') }}" class="nav-link {{ request()->is('ris*') ? 'active' : '' }}">
             <i class="fas fa-clipboard-list fa-fw"></i> Requests (RIS)
         </a>
 
-        <a href="{{ url('/po') }}" class="nav-link {{ request()->is('po*') ? 'active' : '' }}">
-            <i class="fas fa-file-invoice-dollar fa-fw"></i> Purchase Orders
-        </a>
-        
         <a href="{{ url('/barcodes') }}" class="nav-link {{ request()->is('barcodes*') ? 'active' : '' }}">
             <i class="fas fa-barcode fa-fw"></i> Barcodes List
         </a>
@@ -102,31 +188,67 @@
 </div>
 
 <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // --- Mobile Sidebar Toggle Logic ---
+        const mobileBtn = document.getElementById('mobileMenuBtn');
+        const sidebar = document.getElementById('mainSidebar');
+        const backdrop = document.getElementById('sidebarBackdrop');
+
+        if (mobileBtn && sidebar && backdrop) {
+            function toggleSidebar() {
+                sidebar.classList.toggle('active');
+                if (sidebar.classList.contains('active')) {
+                    backdrop.style.display = 'block';
+                    setTimeout(() => backdrop.style.opacity = '1', 10);
+                } else {
+                    backdrop.style.opacity = '0';
+                    setTimeout(() => backdrop.style.display = 'none', 300);
+                }
+            }
+            mobileBtn.addEventListener('click', toggleSidebar);
+            backdrop.addEventListener('click', toggleSidebar); // Close when clicking outside
+        }
+
+        // --- Submenu Memory Logic ---
+        const inventoryToggle = document.getElementById('inventoryToggle');
+        const inventorySubmenu = document.getElementById('inventorySubmenu');
+
+        if(inventoryToggle && inventorySubmenu) {
+            let isInventoryActive = {{ $isInventoryActive ? 'true' : 'false' }};
+            let savedState = sessionStorage.getItem('staffInventoryMenuOpen');
+
+            if (!isInventoryActive && savedState === 'true') {
+                inventorySubmenu.classList.add('show');
+                inventoryToggle.setAttribute('aria-expanded', 'true');
+            }
+
+            inventorySubmenu.addEventListener('shown.bs.collapse', function () {
+                inventoryToggle.setAttribute('aria-expanded', 'true');
+                sessionStorage.setItem('staffInventoryMenuOpen', 'true');
+            });
+
+            inventorySubmenu.addEventListener('hidden.bs.collapse', function () {
+                inventoryToggle.setAttribute('aria-expanded', 'false');
+                sessionStorage.setItem('staffInventoryMenuOpen', 'false');
+            });
+        }
+    });
+
+    // --- Idle Timer Logic ---
     let idleTimer;
-    
-    // =====================================================================
-    // EDIT IDLE TIME HERE:
-    // Change the number below to set the idle timeout in milliseconds.
-    // 1 Minute  = 60000
-    // 5 Minutes = 300000
-    // =====================================================================
     const idleTimeLimit = 120000; 
 
     function resetIdleTimer() {
         clearTimeout(idleTimer);
         idleTimer = setTimeout(() => {
-            // Redirect to the idle screen when the time runs out
             window.location.href = "{{ url('/idle-screen') }}";
         }, idleTimeLimit);
     }
 
-    // Listen for user interactions to reset the timer
     const activityEvents = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
-    
     activityEvents.forEach(event => {
         document.addEventListener(event, resetIdleTimer, true);
     });
 
-    // Start the timer when the page loads
     resetIdleTimer();
 </script>

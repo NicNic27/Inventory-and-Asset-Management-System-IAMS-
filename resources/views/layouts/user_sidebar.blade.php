@@ -7,9 +7,10 @@
         flex-direction: column;
         position: fixed; 
         width: 250px;
-        z-index: 100;
+        z-index: 1050;
         top: 0;
         left: 0;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     .sidebar-header {
@@ -54,10 +55,6 @@
         border-left: 4px solid #0d6efd;
     }
 
-    .logout-container {
-        padding: 20px;
-    }
-
     .sidebar-footer {
         margin-top: auto;
         padding: 20px;
@@ -66,9 +63,53 @@
         color: rgba(255, 255, 255, 0.5);
         font-size: 0.85rem;
     }
+
+    /* --- MOBILE RESPONSIVE STYLES --- */
+    .mobile-menu-btn {
+        position: fixed;
+        top: 12px;
+        left: 15px;
+        z-index: 1051; 
+        background: transparent;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        padding: 5px 10px;
+        font-size: 1.5rem;
+        display: none;
+        cursor: pointer;
+        transition: 0.2s;
+    }
+    .mobile-menu-btn:hover { background: rgba(255, 255, 255, 0.1); }
+
+    .sidebar-backdrop {
+        position: fixed;
+        top: 0; left: 0; width: 100vw; height: 100vh;
+        background: rgba(0,0,0,0.5);
+        z-index: 1045; 
+        display: none; opacity: 0;
+        transition: opacity 0.3s;
+    }
+    
+    .sidebar-backdrop.active { display: block; opacity: 1; }
+
+    @media (max-width: 768px) {
+        .sidebar { 
+            left: -260px; 
+            box-shadow: 5px 0 15px rgba(0,0,0,0.3);
+        }
+        .sidebar.active { left: 0; } 
+        .mobile-menu-btn { display: block; }
+    }
 </style>
 
-<div class="sidebar">
+<button class="mobile-menu-btn no-print" id="mobileMenuBtn">
+    <i class="fas fa-bars"></i>
+</button>
+
+<div class="sidebar-backdrop no-print" id="sidebarBackdrop"></div>
+
+<div class="sidebar" id="mainSidebar">
     <div class="sidebar-header">
         <img src="{{ asset('assets/images/depedRovCirc.png') }}" alt="Logo">
         <h5>DIVISION USER</h5>
@@ -86,10 +127,7 @@
         <a href="{{ url('/user/ris/history') }}" class="nav-link {{ request()->is('user/ris/history*') ? 'active' : '' }}">
             <i class="fa-solid fa-clock-rotate-left"></i> RIS History
         </a>
-        
-        <a href="{{ url('/user/ics') }}" class="nav-link {{ request()->is('user/ics*') ? 'active' : '' }}">
-            <i class="fa-solid fa-file-invoice"></i> ICS
-        </a>
+    
     </div>
 
     <div class="sidebar-footer">
@@ -97,33 +135,43 @@
     </div>
 </div>
 
-
 <script>
+    // --- Mobile Sidebar Toggle Logic ---
+    document.addEventListener('DOMContentLoaded', function() {
+        const mobileBtn = document.getElementById('mobileMenuBtn');
+        const sidebar = document.getElementById('mainSidebar');
+        const backdrop = document.getElementById('sidebarBackdrop');
+
+        if (mobileBtn && sidebar && backdrop) {
+            function toggleSidebar() {
+                sidebar.classList.toggle('active');
+                if (sidebar.classList.contains('active')) {
+                    backdrop.style.display = 'block';
+                    setTimeout(() => backdrop.style.opacity = '1', 10);
+                } else {
+                    backdrop.style.opacity = '0';
+                    setTimeout(() => backdrop.style.display = 'none', 300);
+                }
+            }
+            mobileBtn.addEventListener('click', toggleSidebar);
+            backdrop.addEventListener('click', toggleSidebar); 
+        }
+    });
+
     let idleTimer;
-    
-    // =====================================================================
-    // EDIT IDLE TIME HERE:
-    // Change the number below to set the idle timeout in milliseconds.
-    // 1 Minute  = 60000
-    // 5 Minutes = 300000
-    // =====================================================================
     const idleTimeLimit = 120000; 
 
     function resetIdleTimer() {
         clearTimeout(idleTimer);
         idleTimer = setTimeout(() => {
-            // Redirect to the idle screen when the time runs out
             window.location.href = "{{ url('/idle-screen') }}";
         }, idleTimeLimit);
     }
 
-    // Listen for user interactions to reset the timer
     const activityEvents = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
-    
     activityEvents.forEach(event => {
         document.addEventListener(event, resetIdleTimer, true);
     });
 
-    // Start the timer when the page loads
     resetIdleTimer();
 </script>

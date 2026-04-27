@@ -43,34 +43,34 @@
                 <h5 class="modal-title fw-bold text-primary"><i class="fas fa-file-invoice me-2"></i> Receive Purchase Order</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body bg-light" style="padding: 20px 30px;">
+            <div class="modal-body bg-light p-3 p-md-4">
                 
                 <form id="poForm">
                     <div class="custom-card">
                         <h6 class="fw-bold text-dark mb-3 border-bottom pb-2">Document Details</h6>
                         <div class="row g-3">
                             <input type="hidden" id="modal_po_id" value="">
-                            <div class="col-md-8">
+                            <div class="col-12 col-md-8">
                                 <label class="form-label">Entity Name</label>
                                 <input type="text" id="in-entity" class="form-control">
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-12 col-md-4">
                                 <label class="form-label">PO Number <span class="text-danger">*</span></label>
                                 <input type="text" id="po_no" class="form-control fw-bold" placeholder="YYYY-MM-XXXX" required>
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-12 col-md-4">
                                 <label class="form-label">Supplier Name <span class="text-danger">*</span></label>
                                 <input type="text" id="in-supplier" class="form-control" required>
                             </div>
-                            <div class="col-md-5">
+                            <div class="col-12 col-md-5">
                                 <label class="form-label">Supplier Address <span class="text-danger">*</span></label>
                                 <input type="text" id="in-address" class="form-control" required>
                             </div>
-                            <div class="col-md-3">
+                            <div class="col-12 col-md-3">
                                 <label class="form-label">PO Date <span class="text-danger">*</span></label>
                                 <input type="date" id="in-date" class="form-control" required>
                             </div>
-                            <div class="col-md-8">
+                            <div class="col-12 col-md-8">
                                 <label class="form-label">Procurement Mode <span class="text-danger">*</span></label>
                                 <select id="in-mode" class="form-select" required>
                                     <option value="">Choose...</option>
@@ -82,7 +82,7 @@
                                     <option>Negotiated SVP</option>
                                 </select>
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-12 col-md-4">
                                 <label class="form-label text-primary fw-bold">P.O. Status (Auto-Calculated)</label>
                                 <select id="in-status" class="form-select border-primary shadow-sm fw-bold" style="background-color: #f1f5f9; pointer-events: none;" required>
                                     <option value="Pending">Pending</option>
@@ -92,20 +92,20 @@
                                 <small class="text-muted" style="font-size: 11px;">Check off items below to update status.</small>
                             </div>
                             
-                            <div class="col-md-12 mt-4"><h6 class="fw-bold text-dark border-bottom pb-2">Delivery Information</h6></div>
-                            <div class="col-md-6">
+                            <div class="col-12 mt-4"><h6 class="fw-bold text-dark border-bottom pb-2">Delivery Information</h6></div>
+                            <div class="col-12 col-md-6">
                                 <label class="form-label">Place of Delivery</label>
                                 <input type="text" id="in-place-delivery" class="form-control" placeholder="e.g. Regional Office">
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-12 col-md-6">
                                 <label class="form-label">Date of Delivery</label>
                                 <input type="text" id="in-date-delivery" class="form-control" placeholder="e.g. Within 15 Days">
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-12 col-md-6">
                                 <label class="form-label">Delivery Term</label>
                                 <input type="text" id="in-delivery-term" class="form-control" placeholder="e.g. FOB Destination">
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-12 col-md-6">
                                 <label class="form-label">Payment Term</label>
                                 <input type="text" id="in-payment-term" class="form-control" placeholder="e.g. 30 Days">
                             </div>
@@ -115,28 +115,28 @@
                     <div class="custom-card">
                         <h6 class="fw-bold text-dark mb-3 border-bottom pb-2">Signatories</h6>
                         <div class="row g-3">
-                            <div class="col-md-6">
+                            <div class="col-12 col-md-6">
                                 <label class="form-label">Authorized Official <span class="text-danger">*</span></label>
                                 <input type="text" id="in-auth-name" class="form-control" placeholder="Full Name" required>
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-12 col-md-6">
                                 <label class="form-label text-primary">Official Designation <span class="text-danger">*</span></label>
                                 <input type="text" id="in-auth-designation" class="form-control fw-bold" value="REGIONAL DIRECTOR" required>
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-12 col-md-6">
                                 <label class="form-label border-top pt-3 w-100">Chief Accountant <span class="text-danger">*</span></label>
                                 <input type="text" id="in-acc-name" class="form-control" placeholder="Full Name" required>
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-12 col-md-6">
                                 <label class="form-label border-top pt-3 w-100 text-primary">Accountant Designation <span class="text-danger">*</span></label>
                                 <input type="text" id="in-acc-designation" class="form-control fw-bold" value="ACCOUNTANT II" required>
                             </div>
                         </div>
                     </div>
 
-                    <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-3 gap-2">
                         <h6 class="fw-bold mb-0">Ordered Items</h6>
-                        <button type="button" id="addItemBtn" class="btn btn-add-item"><i class="fa-solid fa-plus me-1"></i> Add Item</button>
+                        <button type="button" id="addItemBtn" class="btn btn-add-item px-4 fw-bold shadow-sm"><i class="fa-solid fa-plus me-1"></i> Add Item</button>
                     </div>
                     
                     <div id="itemsContainer"></div>
@@ -144,90 +144,11 @@
 
             </div>
             <div class="modal-footer bg-light border-top-0">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="submit" form="poForm" class="btn btn-primary"><i class="fa-solid fa-save me-2"></i>Save P.O. Record</button>
+                <button type="button" class="btn btn-secondary px-4 fw-bold shadow-sm" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" form="poForm" class="btn btn-primary px-4 fw-bold shadow-sm"><i class="fa-solid fa-save me-2"></i>Save P.O. Record</button>
             </div>
         </div>
     </div>
-</div>
-
-<div id="printableArea">
-    <div class="p-header">
-        <img src="{{ asset('assets/images/DepEdseal.png') }}" alt="Logo" onerror="this.src='https://upload.wikimedia.org/wikipedia/commons/f/f3/Department_of_Education.svg'">
-        <div>Republic of the Philippines</div>
-        <h4>Department of Education</h4>
-        <div id="p-region">REGION V - BICOL</div>
-        <hr style="border: 0.5px solid black; margin: 5px 0;">
-        <h3 style="font-weight: bold; margin: 5px 0; font-size: 18px; text-align: center;">PURCHASE ORDER</h3>
-        <div class="entity-line" id="p-entity">Entity Name</div>
-    </div>
-
-    <table class="info-table">
-        <tr>
-            <td width="55%">
-                Supplier: <span id="p-supplier" style="font-weight: bold;"></span><br>
-                Address: <span id="p-address"></span><br>
-                TIN: ___________________________
-            </td>
-            <td width="45%">
-                PO No: <span id="p-pono" style="font-weight: bold;"></span><br>
-                Date: <span id="p-date"></span><br>
-                Mode of Procurement: <span id="p-mode"></span>
-            </td>
-        </tr>
-        <tr><td colspan="2" style="font-style: italic; font-size: 10px; padding: 2px 10px;">Gentlemen: Please furnish this Office the following articles subject to the terms and conditions contained herein:</td></tr>
-        
-        <tr>
-            <td>Place of Delivery: <span id="p-place-delivery" style="font-weight: bold;"></span><br>Date of Delivery: <span id="p-date-delivery" style="font-weight: bold;"></span></td>
-            <td>Delivery Term: <span id="p-delivery-term" style="font-weight: bold;"></span><br>Payment Term: <span id="p-payment-term" style="font-weight: bold;"></span></td>
-        </tr>
-    </table>
-
-    <table class="main-table">
-        <thead>
-            <tr><th width="12%">Stocks No.</th><th width="10%">Unit</th><th width="43%">Description</th><th width="10%">Quantity</th><th width="12%">Unit Cost</th><th width="13%">Amount</th></tr>
-        </thead>
-        <tbody id="p-items"></tbody>
-        <tr style="font-weight: bold;">
-            <td colspan="5" style="text-align: left; padding-left: 10px;">(Total Amount in Words) <span id="p-words" style="text-transform: uppercase; margin-left: 10px;"></span></td>
-            <td id="p-total" style="text-align: center;">0.00</td>
-        </tr>
-    </table>
-
-    <div class="footer-note">In case of failure to make the full delivery within the time specified above, a penalty of one-tenth (1/10) of one percent for every day of delay shall be imposed on the undelivered item/s.</div>
-
-    <table style="width: 100%; border: 1px solid black; border-top: none; border-collapse: collapse;">
-        <tr>
-            <td style="width: 50%; padding: 10px; vertical-align: top; border: none;">
-                <div style="width: 85%; margin: 0 auto;">
-                    <div style="text-align: left; margin-bottom: 30px;">Conforme:</div>
-                    <div style="border-bottom: 1px solid black; width: 100%;">&nbsp;</div>
-                    <div style="text-align: center; font-size: 10px;">Signature over Printed Name of Supplier</div>
-                    <div style="text-align: center; margin-top: 10px;">DATE: ___________</div>
-                </div>
-            </td>
-            <td style="width: 50%; padding: 10px; vertical-align: top; border: none;">
-                <div style="width: 85%; margin: 0 auto;">
-                    <div style="text-align: left; margin-bottom: 30px;">Very truly yours,</div>
-                    <div id="p-auth-name-display" style="border-bottom: 1px solid black; width: 100%; font-weight: bold; text-transform: uppercase; text-align: center;"></div>
-                    <div style="text-align: center; font-size: 10px;">Signature over Printed Name of Authorized Official</div>
-                    <div id="p-auth-designation" style="text-align: center; font-size: 10px; font-weight: bold;">REGIONAL DIRECTOR</div>
-                </div>
-            </td>
-        </tr>
-    </table>
-
-    <table class="acc-table">
-        <tr>
-            <td width="55%">
-                Fund Cluster: _________________________________<br> Funds Available: _______________________________<br><br>
-                <div id="p-acc-name-display" style="border-bottom: 1px solid black; width: 70%; margin: 20px auto 2px auto; text-align: center; font-weight: bold; text-transform: uppercase;">ACCOUNTANT NAME</div>
-                <div id="p-acc-designation" style="text-align: center; font-size: 10px; font-weight: bold;">ACCOUNTANT II</div>
-                <div style="text-align: center; font-size: 9px;">Signature over Printed Name of Chief Accountant/Head of Accounting Division/Unit</div>
-            </td>
-            <td width="45%">ORS/BURS No: ______________________<br>Date of the ORS/BURS: _______________<br>Amount: __________________________</td>
-        </tr>
-    </table>
 </div>
 
 <script>
@@ -264,11 +185,11 @@
         const templateHtml = `
             <div class="card position-relative item-row p-3 mb-3 border-0 shadow-sm border-start border-4 border-success">
                 <div class="row g-3 align-items-center">
-                    <div class="col-md-1 text-center pt-2">
+                    <div class="col-4 col-md-1 text-center pt-md-2">
                         <label class="form-label d-block text-success mb-2" title="Mark as Delivered">RCVD</label>
                         <input type="checkbox" class="form-check-input item-delivered-cb shadow-sm border-secondary" style="width: 22px; height: 22px; cursor: pointer;" ${isChecked} onchange="autoUpdatePoStatus()">
                     </div>
-                    <div class="col-md-2">
+                    <div class="col-8 col-md-2">
                         <label class="form-label">Unit <span class="text-danger">*</span></label>
                         <select class="form-select unit-select" required>
                             <option value="pc" ${isSelected('pc')}>pc</option>
@@ -277,22 +198,22 @@
                             <option value="set" ${isSelected('set')}>set</option>
                         </select>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-12 col-md-4">
                         <label class="form-label">Description <span class="text-danger">*</span></label>
                         <input type="text" class="form-control desc-input" value="${data.desc}" placeholder="Enter item details..." required>
                     </div>
-                    <div class="col-md-1">
+                    <div class="col-6 col-md-1">
                         <label class="form-label">Qty <span class="text-danger">*</span></label>
                         <input type="number" class="form-control qty-input" value="${q}" required oninput="autoUpdatePoStatus()">
                     </div>
-                    <div class="col-md-2">
+                    <div class="col-6 col-md-2">
                         <label class="form-label">Unit Cost <span class="text-danger">*</span></label>
                         <div class="input-group">
                             <span class="input-group-text">₱</span>
                             <input type="number" step="0.01" class="form-control cost-input" value="${c}" required>
                         </div>
                     </div>
-                    <div class="col-md-2">
+                    <div class="col-12 col-md-2">
                         <label class="form-label">Total Amount</label>
                         <input type="text" class="form-control bg-light fw-bold total-output" readonly value="${total}">
                     </div>

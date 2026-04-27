@@ -4,14 +4,31 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Edit RIS - DepEd ROV</title>
+    
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" />
+
     <style>
+        :root {
+            --deped-blue: #1a237e;
+            --deped-gold: #fbc02d;
+        }
         body { background-color: #f0f2f5; font-family: 'Inter', sans-serif; color: #444; }
         .main-content { margin-left: 260px; padding: 20px; }
         .section-box { background: white; padding: 25px; margin-bottom: 25px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
-        .section-title { color: #1a237e; font-weight: 700; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #eee; }
+        .section-title { color: var(--deped-blue); font-weight: 700; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #eee; }
         .btn-remove-row { color: #dc3545; cursor: pointer; font-size: 0.8rem; text-decoration: none; float: right; margin-top: -5px; }
+        
+        .select2-container--bootstrap-5 .select2-selection--single {
+            border-radius: 8px !important;
+            min-height: 39px !important;
+            padding: 4px 0px !important;
+            border-color: #ced4da !important;
+        }
     </style>
 </head>
 <body>
@@ -82,23 +99,27 @@
                     </div>
                     <div class="col-md-2">
                         <label class="fw-bold small text-muted">Stock No.</label>
-                        <input type="text" name="stock_no[]" class="form-control" value="{{ $item->stock_no }}">
+                        <input type="text" name="stock_no[]" class="form-control bg-light stock-input" value="{{ $item->stock_no }}" readonly>
                     </div>
                     <div class="col-md-3">
                         <label class="fw-bold small text-muted">Unit Measure</label>
-                        <input type="text" name="unit_measure[]" class="form-control" value="{{ $item->unit }}" required>
+                        <input type="text" name="unit_measure[]" class="form-control bg-light unit-input" value="{{ $item->unit }}" readonly placeholder="Auto-filled" required>
                     </div>
                     <div class="col-md-2">
                         <label class="fw-bold small text-muted">Quantity</label>
-                        <input type="number" name="quantity[]" class="form-control" value="{{ $item->req_quantity }}">
+                        <input type="number" name="quantity[]" class="form-control" value="{{ $item->req_quantity }}" required>
                     </div>
                     <div class="col-md-5">
-                        <label class="fw-bold small text-muted">Description</label>
-                        <select name="description[]" class="form-select" required>
+                        <label class="fw-bold small text-muted">Description <span class="text-danger">*</span></label>
+                        <select name="description[]" class="form-select select2-supply" required>
                             <option value="" disabled>-- Select Supply Item --</option>
                             @foreach($supplies as $supply)
-                                <option value="{{ $supply->article }}" {{ $item->description == $supply->article ? 'selected' : '' }}>
-                                    {{ $supply->article }}
+                                @php
+                                    $supplyFullName = $supply->article . ', ' . $supply->description;
+                                    $isSelected = ($item->description == $supplyFullName || $item->description == $supply->article) ? 'selected' : '';
+                                @endphp
+                                <option value="{{ $supplyFullName }}" data-barcode="{{ $supply->barcode_id }}" data-qty="{{ $supply->quantity }}" data-unit="{{ $supply->unit_measure }}" {{ $isSelected }}>
+                                    {{ $supply->article }} - {{ $supply->description }}
                                 </option>
                             @endforeach
                         </select>
@@ -107,10 +128,6 @@
                         <label class="fw-bold small text-muted">Remarks</label>
                         <input type="text" name="remarks[]" class="form-control" value="{{ $item->remarks }}">
                     </div>
-                    <div class="col-md-6">
-                        <label class="fw-bold small text-muted">Purpose</label>
-                        <textarea name="purpose[]" class="form-control" rows="1">{{ $req->purpose }}</textarea>
-                    </div>
                 </div>
                 @endforeach
             </div>
@@ -118,11 +135,64 @@
             <div class="mt-3">
                 <button type="button" class="btn btn-outline-primary btn-sm" onclick="addItem()"><i class="fa-solid fa-plus me-1"></i> Add Item Row</button>
             </div>
+            
+            <div class="col-md-12 mt-4">
+                <label class="fw-bold small text-muted">Purpose</label>
+                <textarea name="purpose[]" class="form-control" rows="2">{{ $req->purpose }}</textarea>
+            </div>
+            
         </div>
     </form>
 </div>
 
+<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
 <script>
+    function formatSupplyOption(state) {
+        if (!state.id) { return state.text; }
+        
+        let qty = $(state.element).data('qty');
+        let badgeHtml = '';
+        
+        if (qty !== undefined) {
+            if (parseInt(qty) > 0) {
+                badgeHtml = `<span class="badge bg-success ms-2 py-1" style="font-size:0.7rem;">Available</span>`;
+            } else {
+                badgeHtml = `<span class="badge bg-danger ms-2 py-1" style="font-size:0.7rem;">Out of Stock</span>`;
+            }
+        }
+        
+        return $(`<span>${state.text} ${badgeHtml}</span>`);
+    }
+
+    function initSelect2Fields() {
+        $('.select2-supply').select2({
+            theme: 'bootstrap-5',
+            width: '100%',
+            placeholder: '-- Select Supply Item --',
+            templateResult: formatSupplyOption, 
+            templateSelection: formatSupplyOption, 
+            escapeMarkup: function(m) { return m; } 
+        });
+
+        $('.select2-supply').on('select2:select', function (e) {
+            const selectedOption = $(this).select2('data')[0].element; 
+            const barcode = $(selectedOption).data('barcode'); 
+            const unit = $(selectedOption).data('unit'); 
+            const row = $(this).closest('.item-row');
+            
+            // Auto-fill Stock No and Unit Measure
+            row.find('.stock-input').val(barcode || '');
+            row.find('.unit-input').val(unit || '');
+        });
+    }
+
+    $(document).ready(function() {
+        initSelect2Fields();
+    });
+
     // --- Office Mapping Logic ---
     const officeMapping = {
         "Administrative Division": ["Asset Management Section", "General Services Unit", "Payroll Services Unit", "Records Section", "Personnel Section", "Cash Section"],
@@ -146,7 +216,6 @@
                 option.value = unit;
                 option.textContent = unit;
                 
-                // If this unit matches what was saved in the DB, pre-select it!
                 if (unit === preSelectedUnit) {
                     option.selected = true;
                 }
@@ -158,9 +227,8 @@
         }
     }
 
-    // Run immediately when the page loads to populate the dropdown based on existing data
     document.addEventListener("DOMContentLoaded", function() {
-        const savedUnit = "{{ $req->division }}"; // The saved unit is stored in the 'division' DB column
+        const savedUnit = "{{ $req->division }}"; 
         updateUnits(savedUnit);
     });
 
@@ -169,19 +237,39 @@
         const container = document.getElementById('items-container');
         const rows = container.querySelectorAll('.item-row');
         const firstRow = rows[0].cloneNode(true);
+        
+        firstRow.querySelectorAll('.select2-container').forEach(el => el.remove());
+        
+        const selectElement = firstRow.querySelector('.select2-supply');
+        selectElement.classList.remove('select2-hidden-accessible');
+        selectElement.removeAttribute('data-select2-id');
+        selectElement.removeAttribute('aria-hidden');
+        selectElement.removeAttribute('tabindex');
+        
         firstRow.querySelectorAll('input, textarea').forEach(input => input.value = '');
+        firstRow.querySelectorAll('select').forEach(select => {
+            select.selectedIndex = 0;
+            select.querySelectorAll('option').forEach(opt => opt.removeAttribute('data-select2-id'));
+        });
+        
+        firstRow.removeAttribute('data-select2-id');
+        
         container.appendChild(firstRow);
+        
+        initSelect2Fields();
     }
 
     function removeRow(link) {
-        const rows = document.querySelectorAll('.item-row');
+        const container = document.getElementById('items-container');
+        const rows = container.querySelectorAll('.item-row');
         if (rows.length > 1) {
-            if (confirm("Remove this item?")) link.closest('.item-row').remove();
+            if (confirm("Are you sure you want to delete this item?")) {
+                link.closest('.item-row').remove();
+            }
         } else {
-            alert("You must have at least one item.");
+            alert("The form must have at least one item.");
         }
     }
 </script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

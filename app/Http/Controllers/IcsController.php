@@ -1,10 +1,9 @@
 <?php
 
-namespace App\Http\Controllers\User;
+namespace App\Http\Controllers;
 
-use App\Http\Controllers\Controller;
 use App\Models\IcsRequest;
-use App\Models\SystemSetting; // <--- ADDED
+use App\Models\SystemSetting; 
 use Illuminate\Http\Request;
 
 class IcsController extends Controller
@@ -23,7 +22,7 @@ class IcsController extends Controller
         $sphvNumber = 'SPHV-' . $yearMonth . '-' . str_pad($seqSphv, 4, '0', STR_PAD_LEFT);
         $splvNumber = 'SPLV-' . $yearMonth . '-' . str_pad($seqSplv, 4, '0', STR_PAD_LEFT);
 
-        return view('user.ics.create', compact('parNumber', 'sphvNumber', 'splvNumber'));
+        return view('ics.create', compact('parNumber', 'sphvNumber', 'splvNumber'));
     }
 
     public function store(Request $request)
@@ -92,6 +91,6 @@ class IcsController extends Controller
             'items_json' => $items,
         ]);
 
-        return redirect('/user/dashboard')->with('msg', 'Equipment Request successfully submitted! Assigned ID: ' . $generatedNo);
+        return redirect('/')->with('msg', 'Equipment Request successfully submitted! Assigned ID: ' . $generatedNo);
     }
 }
