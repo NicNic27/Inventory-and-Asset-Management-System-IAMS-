@@ -14,6 +14,47 @@
 /*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
+-- Dumping structure for table ams_inventory.activity_logs
+CREATE TABLE IF NOT EXISTS `activity_logs` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `user_id` bigint unsigned DEFAULT NULL,
+  `action` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `description` text COLLATE utf8mb4_unicode_ci NOT NULL,
+  `ip_address` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `user_agent` text COLLATE utf8mb4_unicode_ci,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=27 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Dumping data for table ams_inventory.activity_logs: ~24 rows (approximately)
+INSERT INTO `activity_logs` (`id`, `user_id`, `action`, `description`, `ip_address`, `user_agent`, `created_at`, `updated_at`) VALUES
+	(1, 3, 'Logout', 'User logged out.', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36 Edg/148.0.0.0', '2026-05-11 19:24:02', '2026-05-11 19:24:02'),
+	(2, 3, 'Login', 'User successfully logged in.', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36 Edg/148.0.0.0', '2026-05-11 19:54:21', '2026-05-11 19:54:21'),
+	(3, 1, 'Updated', 'Updated user account: hakdog@deped.gov.ph', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36', '2026-05-11 20:01:04', '2026-05-11 20:01:04'),
+	(4, 3, 'Logout', 'User logged out.', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36 Edg/148.0.0.0', '2026-05-11 20:01:18', '2026-05-11 20:01:18'),
+	(5, 6, 'Login', 'User successfully logged in.', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36 Edg/148.0.0.0', '2026-05-11 20:01:23', '2026-05-11 20:01:23'),
+	(6, 6, 'Logout', 'User logged out.', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36 Edg/148.0.0.0', '2026-05-11 20:01:36', '2026-05-11 20:01:36'),
+	(7, 3, 'Login', 'User successfully logged in.', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36 Edg/148.0.0.0', '2026-05-11 20:01:43', '2026-05-11 20:01:43'),
+	(8, 1, 'Updated', 'Updated user account: hakdog@deped.gov.ph', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36', '2026-05-11 20:01:55', '2026-05-11 20:01:55'),
+	(9, 4, 'Updated', 'Scanner updated asset status: Acer Laptop to Serviceable', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36', '2026-05-11 22:47:06', '2026-05-11 22:47:06'),
+	(10, 4, 'Updated', 'Scanner updated asset status: Acer Laptop to Serviceable', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36', '2026-05-11 22:47:30', '2026-05-11 22:47:30'),
+	(11, 4, 'Updated', 'Scanner updated asset status: Acer Laptop to Serviceable', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36', '2026-05-11 22:48:00', '2026-05-11 22:48:00'),
+	(12, 4, 'Updated', 'Scanner updated asset status: Acer Laptop to Unserviceable', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36', '2026-05-11 22:48:32', '2026-05-11 22:48:32'),
+	(13, 4, 'Updated', 'Scanner updated asset status: Acer Laptop to Serviceable', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36', '2026-05-11 22:48:40', '2026-05-11 22:48:40'),
+	(14, 4, 'Updated', 'Scanner updated asset status: Acer Laptop to Serviceable', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36', '2026-05-11 23:19:34', '2026-05-11 23:19:34'),
+	(15, 3, 'Login', 'User successfully logged in.', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36 Edg/148.0.0.0', '2026-05-12 00:30:57', '2026-05-12 00:30:57'),
+	(16, 3, 'Created', 'User submitted a new RIS request: RIS-2026-05-0024', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36 Edg/148.0.0.0', '2026-05-12 00:38:28', '2026-05-12 00:38:28'),
+	(17, 4, 'Updated', 'Processed/Updated RIS: RIS-2026-05-0024 (Status: Forwarded to Admin)', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36', '2026-05-12 00:40:01', '2026-05-12 00:40:01'),
+	(18, 1, 'Updated', 'Processed RIS Request RIS-2026-05-0024 to status: Approved', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36', '2026-05-12 00:40:49', '2026-05-12 00:40:49'),
+	(19, 4, 'Created', 'Added new supply: Bond paper', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36', '2026-05-12 00:43:08', '2026-05-12 00:43:08'),
+	(20, 3, 'Created', 'User submitted a new RIS request: RIS-2026-05-0025', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36 Edg/148.0.0.0', '2026-05-12 00:44:50', '2026-05-12 00:44:50'),
+	(21, 3, 'Updated', 'User modified their pending RIS request: RIS-2026-05-0025', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36 Edg/148.0.0.0', '2026-05-12 00:45:50', '2026-05-12 00:45:50'),
+	(22, 4, 'Updated', 'Processed/Updated RIS: RIS-2026-05-0025 (Status: Forwarded to Admin)', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36', '2026-05-12 00:46:33', '2026-05-12 00:46:33'),
+	(23, 1, 'Updated', 'Processed RIS Request RIS-2026-05-0025 to status: Approved', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36', '2026-05-12 00:46:53', '2026-05-12 00:46:53'),
+	(24, 4, 'Login', 'User successfully logged in.', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36', '2026-05-12 14:21:24', '2026-05-12 14:21:24'),
+	(25, 4, 'Login', 'User successfully logged in.', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36', '2026-05-12 18:14:27', '2026-05-12 18:14:27'),
+	(26, 1, 'Login', 'User successfully logged in.', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36 Edg/148.0.0.0', '2026-05-12 18:39:38', '2026-05-12 18:39:38');
 
 -- Dumping structure for table ams_inventory.assets
 CREATE TABLE IF NOT EXISTS `assets` (
@@ -24,18 +65,18 @@ CREATE TABLE IF NOT EXISTS `assets` (
   `unit_measure` varchar(50) COLLATE utf8mb4_general_ci DEFAULT NULL,
   `supplier` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
   `unit_value` decimal(10,2) DEFAULT '0.00',
-  `quantity` int DEFAULT '0',
+  `image` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
   `status` varchar(50) COLLATE utf8mb4_general_ci DEFAULT 'Serviceable',
   PRIMARY KEY (`id`),
   UNIQUE KEY `barcode_id` (`barcode_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=20 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=24 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- Dumping data for table ams_inventory.assets: ~5 rows (approximately)
-INSERT INTO `assets` (`id`, `barcode_id`, `article`, `description`, `unit_measure`, `supplier`, `unit_value`, `quantity`, `status`) VALUES
-	(2, NULL, 'Epson Printer', 'L3210 3-in-1', NULL, '', 12000.00, 5, 'Serviceable'),
-	(3, NULL, 'Acer Laptop', 'TravelMate', NULL, 'ABENSON', 48000.00, 10, 'Serviceable'),
-	(7, 'DEPED-2026-00007', 'Acer Laptop', 'Travelmate', 'Unit', NULL, 48900.00, 0, 'Serviceable'),
-	(9, '2026-02-0003', 'Epson Printer', 'Model L3210', 'Unit', NULL, 10000.00, 7, 'Serviceable');
+-- Dumping data for table ams_inventory.assets: ~4 rows (approximately)
+INSERT INTO `assets` (`id`, `barcode_id`, `article`, `description`, `unit_measure`, `supplier`, `unit_value`, `image`, `status`) VALUES
+	(2, NULL, 'Epson Printer', 'L3210 3-in-1', NULL, '', 12000.00, NULL, 'Serviceable'),
+	(3, NULL, 'Acer Laptop', 'TravelMate', NULL, 'ABENSON', 48000.00, NULL, 'Serviceable'),
+	(7, 'DEPED-2026-00007', 'Acer Laptop', 'Travelmate', 'Unit', NULL, 48900.00, NULL, 'Serviceable'),
+	(9, '2026-02-0003', 'Epson Printer', 'Model L3210', 'Unit', NULL, 10000.00, NULL, 'Serviceable');
 
 -- Dumping structure for table ams_inventory.cache
 CREATE TABLE IF NOT EXISTS `cache` (
@@ -107,13 +148,18 @@ CREATE TABLE IF NOT EXISTS `ics_requests` (
   `sig_by_date` date DEFAULT NULL,
   `status` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'Pending',
   `items_json` text COLLATE utf8mb4_unicode_ci,
+  `signed_document` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `ics_requests_ics_no_unique` (`ics_no`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Dumping data for table ams_inventory.ics_requests: ~0 rows (approximately)
+-- Dumping data for table ams_inventory.ics_requests: ~3 rows (approximately)
+INSERT INTO `ics_requests` (`id`, `ics_no`, `fund_cluster`, `category`, `sig_received_from_name`, `sig_received_from_pos`, `sig_from_date`, `sig_received_by_name`, `sig_received_by_pos`, `sig_by_date`, `status`, `items_json`, `signed_document`, `created_at`, `updated_at`) VALUES
+	(1, 'SPHV-2026-05-0001', NULL, 'High - Valued', 'eqwewq', 'dafa', NULL, 'dsadasdas', 'qwe', NULL, 'Pending', '[{"qty":"1","unit":"unit","desc":"Travelmate","inv_no":"DEPED-2026-00007","est_life":null,"unit_cost":"48900.00","total_cost":"48900.00"}]', '1777820449_signed_ics_1.png', '2026-05-03 05:24:48', '2026-05-03 07:00:49'),
+	(4, 'SPLV-2026-05-0001', NULL, 'Low - Valued', 'Jeffrey B. Pagatpat', 'Admin Officer V', NULL, 'AAAA', 'aaaa', NULL, 'Pending', '[{"qty":"1","unit":"unit","desc":"Travelmate","inv_no":"DEPED-2026-00007","est_life":null,"unit_cost":"48900.00","total_cost":"48900.00"}]', NULL, '2026-05-04 00:21:11', '2026-05-04 00:21:11'),
+	(5, 'PAR-2026-05-0003', NULL, 'PPE', 'SALVADOR DEYTO JR.', 'ITO', NULL, 'JEFFREY PAGATPAT', 'Administrative Officer V- AMS', NULL, 'Pending', '[{"qty":"1","unit":"unit","desc":"Travelmate","inv_no":"DEPED-2026-00007","est_life":"2026-05-04","unit_cost":"48900.00","total_cost":"49999","transfer_status":"Returned to Inventory"}]', NULL, '2026-05-04 00:23:13', '2026-05-11 23:19:34');
 
 -- Dumping structure for table ams_inventory.jobs
 CREATE TABLE IF NOT EXISTS `jobs` (
@@ -153,7 +199,7 @@ CREATE TABLE IF NOT EXISTS `migrations` (
   `migration` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
   `batch` int NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=27 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=31 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Dumping data for table ams_inventory.migrations: ~17 rows (approximately)
 INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES
@@ -182,7 +228,11 @@ INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES
 	(23, '2026_04_16_015753_add_designations_to_purchase_orders_table', 13),
 	(24, '2026_04_20_011012_add_is_delivered_to_purchase_order_items_table', 13),
 	(25, '2026_04_20_015200_fix_missing_po_columns_master', 13),
-	(26, '2026_04_21_005945_create_system_settings_table', 14);
+	(26, '2026_04_21_005945_create_system_settings_table', 14),
+	(27, '2026_04_30_013423_add_po_type_to_purchase_orders_table', 15),
+	(28, '2026_04_30_023114_add_image_to_assets_table', 16),
+	(29, '2026_04_30_055939_remove_quantity_from_assets_table', 17),
+	(30, '2026_05_03_145954_add_signed_document_to_ics_requests_table', 18);
 
 -- Dumping structure for table ams_inventory.password_reset_tokens
 CREATE TABLE IF NOT EXISTS `password_reset_tokens` (
@@ -197,6 +247,7 @@ CREATE TABLE IF NOT EXISTS `password_reset_tokens` (
 -- Dumping structure for table ams_inventory.purchase_orders
 CREATE TABLE IF NOT EXISTS `purchase_orders` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `po_type` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `entity_name` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `po_no` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
   `supplier_name` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -217,11 +268,13 @@ CREATE TABLE IF NOT EXISTS `purchase_orders` (
   `chief_accountant_designation` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'ACCOUNTANT II',
   PRIMARY KEY (`id`),
   UNIQUE KEY `purchase_orders_po_no_unique` (`po_no`)
-) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=12 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Dumping data for table ams_inventory.purchase_orders: ~1 rows (approximately)
-INSERT INTO `purchase_orders` (`id`, `entity_name`, `po_no`, `supplier_name`, `supplier_address`, `po_date`, `procurement_mode`, `auth_official`, `chief_accountant`, `total_amount`, `status`, `created_at`, `updated_at`, `place_of_delivery`, `date_of_delivery`, `delivery_term`, `payment_term`, `auth_official_designation`, `chief_accountant_designation`) VALUES
-	(1, NULL, '2026-06-143', 'Skylark Graphics Solution', 'Lakandula Drive, Gogon, Legazpi City', '2022-02-06', 'Negotiated SVP', 'Gilbert T. Sadsad', 'Zer Jethro Rodmell A. Roscuata, CPA', 11600.00, 'Complete', '2026-04-12 18:31:23', '2026-04-19 18:10:02', NULL, NULL, NULL, NULL, 'REGIONAL DIRECTOR', 'ACCOUNTANT II');
+-- Dumping data for table ams_inventory.purchase_orders: ~2 rows (approximately)
+INSERT INTO `purchase_orders` (`id`, `po_type`, `entity_name`, `po_no`, `supplier_name`, `supplier_address`, `po_date`, `procurement_mode`, `auth_official`, `chief_accountant`, `total_amount`, `status`, `created_at`, `updated_at`, `place_of_delivery`, `date_of_delivery`, `delivery_term`, `payment_term`, `auth_official_designation`, `chief_accountant_designation`) VALUES
+	(9, 'Supply', NULL, '2026-04-0003', 'Skylark Graphics Solution', 'Lakandula Drive, Gogon, Legazpi City', '2026-04-30', 'Small Value Procurement', 'Gilbert T. Sadsad', 'Zer Jethro Rodmell A. Roscuata, CPA', 9330.00, 'Complete', '2026-04-29 17:36:57', '2026-04-29 17:36:57', NULL, NULL, NULL, NULL, 'REGIONAL DIRECTOR', 'ACCOUNTANT II'),
+	(10, 'Asset', NULL, '2026-04-0004', 'Skylark Graphics Solution', 'Lakandula Drive, Gogon, Legazpi City', '2026-04-30', 'Negotiated Procurement', 'Gilbert T. Sadsad', 'Zer Jethro Rodmell A. Roscuata, CPA', 55000.00, 'Complete', '2026-04-29 17:57:57', '2026-04-29 17:57:57', NULL, NULL, NULL, NULL, 'REGIONAL DIRECTOR', 'ACCOUNTANT II'),
+	(11, 'Supply', NULL, '2026-04-0010', 'Skylark Graphics Solution', 'Lakandula Drive, Gogon, Legazpi City', '2026-05-04', 'Small Value Procurement', 'Gilbert T. Sadsad', 'Zer Jethro Rodmell A. Roscuata, CPA', 3500.00, 'Partial', '2026-05-03 22:53:15', '2026-05-03 22:53:15', NULL, NULL, NULL, NULL, 'REGIONAL DIRECTOR', 'ACCOUNTANT II');
 
 -- Dumping structure for table ams_inventory.purchase_order_items
 CREATE TABLE IF NOT EXISTS `purchase_order_items` (
@@ -238,11 +291,16 @@ CREATE TABLE IF NOT EXISTS `purchase_order_items` (
   PRIMARY KEY (`id`),
   KEY `purchase_order_items_purchase_order_id_foreign` (`purchase_order_id`),
   CONSTRAINT `purchase_order_items_purchase_order_id_foreign` FOREIGN KEY (`purchase_order_id`) REFERENCES `purchase_orders` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=19 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=26 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Dumping data for table ams_inventory.purchase_order_items: ~1 rows (approximately)
+-- Dumping data for table ams_inventory.purchase_order_items: ~6 rows (approximately)
 INSERT INTO `purchase_order_items` (`id`, `purchase_order_id`, `unit`, `description`, `qty`, `unit_cost`, `amount`, `is_delivered`, `created_at`, `updated_at`) VALUES
-	(18, 1, 'pc', 'Plaque', 8, 1450.00, 11600.00, 1, '2026-04-19 18:10:02', '2026-04-19 18:10:02');
+	(20, 9, 'pc', 'supply 1', 10, 533.00, 5330.00, 1, '2026-04-29 17:36:57', '2026-04-29 17:36:57'),
+	(21, 9, 'pc', 'supply 2', 8, 500.00, 4000.00, 1, '2026-04-29 17:36:57', '2026-04-29 17:36:57'),
+	(22, 10, 'pc', 'asset 1', 1, 5000.00, 5000.00, 1, '2026-04-29 17:57:57', '2026-04-29 17:57:57'),
+	(23, 10, 'pc', 'asset 2', 2, 25000.00, 50000.00, 1, '2026-04-29 17:57:57', '2026-04-29 17:57:57'),
+	(24, 11, 'pc', 'ballpen', 100, 10.00, 1000.00, 1, '2026-05-03 22:53:15', '2026-05-03 22:53:15'),
+	(25, 11, 'pc', 'bond paper', 500, 5.00, 2500.00, 0, '2026-05-03 22:53:15', '2026-05-03 22:53:15');
 
 -- Dumping structure for table ams_inventory.ris_items
 CREATE TABLE IF NOT EXISTS `ris_items` (
@@ -256,16 +314,27 @@ CREATE TABLE IF NOT EXISTS `ris_items` (
   `issue_quantity` int DEFAULT NULL,
   `remarks` text COLLATE utf8mb4_general_ci,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=27 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- Dumping data for table ams_inventory.ris_items: ~1 rows (approximately)
+-- Dumping data for table ams_inventory.ris_items: ~16 rows (approximately)
 INSERT INTO `ris_items` (`id`, `ris_id`, `stock_no`, `unit`, `description`, `req_quantity`, `stock_avail`, `issue_quantity`, `remarks`) VALUES
 	(5, 1, NULL, 'Ream', 'A4 bond paper', 5, 'n/a', NULL, 'zcxcxzc'),
 	(6, 2, 'SUP-2026-02-0024', 'Pc', 'Manila Paper', 5, 'n/a', 5, NULL),
 	(7, 3, 'SUP-2026-03-0063', 'Piece', 'TESTING LANGS, TESTING NGANI', 10, 'yes', 0, 'oki'),
 	(8, 4, 'SUP-2026-03-0125', 'Piece', 'Pakak, PaPa mo Blue', 2, 'yes', 2, 'zcxcxzc'),
 	(9, 5, 'SUP-2026-03-0125', 'Piece', 'AMS Tesing, tesing testing', 1, 'N/A', NULL, NULL),
-	(10, 6, 'SUP-2026-03-0125', 'Unit', 'AMS Tesing, tesing testing', 1, 'N/A', NULL, NULL);
+	(10, 6, 'SUP-2026-03-0125', 'Unit', 'AMS Tesing, tesing testing', 1, 'n/a', NULL, NULL),
+	(11, 7, 'SUP-2026-03-0125', 'Piece', 'AMS Testing, testing testing', 30, 'N/A', NULL, NULL),
+	(12, 8, 'SUP-2026-03-0026', 'Piece', 'Envelope, mailing, long , 500pcs/ box', 100, 'n/a', 101, NULL),
+	(15, 9, 'SUP-2026-03-0002', 'Gallon', 'Alcohol, Ethyl, 1 Gallon , 70% solution', 1, 'N/A', NULL, NULL),
+	(16, 9, 'SUP-2026-03-0103', 'Can', 'Air freshener, aerosol 280 ml', 3, 'N/A', NULL, NULL),
+	(17, 10, 'SUP-2026-03-0100', 'Piece(s)', 'Aircon Outlet, Wide  universal outlet with ground', 2, 'yes', 2, '₱ 400.00'),
+	(18, 10, 'SUP-2026-03-0100', 'Piece(s)', 'Aircon Outlet, Wide  universal outlet with ground', 2, 'no', 0, 'Out of Stock'),
+	(19, 10, 'SUP-2026-03-0033', 'Bottle', '336XHigh Yield Black, original HP LaserJet', 8, 'yes', 2, '₱ 13,820.00'),
+	(20, 11, 'SUP-2026-03-0125', 'Piece(s)', 'AMS Testing, testing testing', 4, 'no', 0, NULL),
+	(23, 14, NULL, 'unit', 'Tricycle', 1, 'N/A', NULL, NULL),
+	(24, 15, 'SUP-2026-03-0001', 'Bottle', 'Alcohol, Ethyl, 500ml, 70% solution', 10, 'yes', 5, '₱ 315.00'),
+	(26, 16, 'SUP-2026-05-0011', 'Ream', 'Bond paper, A4 short', 5, 'yes', 5, '₱ 1,000.00');
 
 -- Dumping structure for table ams_inventory.ris_requests
 CREATE TABLE IF NOT EXISTS `ris_requests` (
@@ -293,16 +362,24 @@ CREATE TABLE IF NOT EXISTS `ris_requests` (
   `status` enum('Pending Staff Review','Forwarded to Admin','Approved','Rejected') COLLATE utf8mb4_general_ci DEFAULT 'Pending Staff Review',
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=17 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- Dumping data for table ams_inventory.ris_requests: ~6 rows (approximately)
+-- Dumping data for table ams_inventory.ris_requests: ~14 rows (approximately)
 INSERT INTO `ris_requests` (`id`, `user_id`, `ris_no`, `entity_name`, `division`, `office`, `fund_cluster`, `rcc`, `purpose`, `sig_requested_by`, `sig_approved_by`, `sig_issued_by`, `sig_received_by`, `desig_requested`, `desig_approved`, `desig_issued`, `desig_received`, `date_requested`, `date_approved`, `date_issued`, `date_received`, `status`, `created_at`) VALUES
 	(1, NULL, 'RIS-2026-03-0001', 'Department of Education - ROV', 'Asset Management Section', 'Administrative Division', NULL, NULL, 'For Office Use', 'hjhkjg', 'JEFFREY B. PAGATPAT', 'ALDRIN RELLAMA', 'ewqeqw', 'qewqeqwe', 'Admin, Officer V (Supply Officer)', 'AA-VI (Storekeeper II)', 'weqe', NULL, NULL, NULL, NULL, 'Rejected', '2026-03-09 17:25:57'),
 	(2, 3, 'RIS-2026-03-0002', 'Department of Education - ROV', 'General Services Unit', 'Administrative Division', NULL, NULL, NULL, 'czxczx', 'JEFFREY B. PAGATPAT', 'ALDRIN RELLAMA', 'ewqeqw', 'fdsafsad', 'Admin, Officer V (Supply Officer)', 'AA-VI (Storekeeper II)', 'fdsfsdfdfs', NULL, '2026-03-17', NULL, NULL, 'Rejected', '2026-03-16 16:40:22'),
 	(3, 3, 'RIS-2026-03-0003', 'Department of Education - ROV', 'Asset Management Section', 'Administrative Division', NULL, NULL, NULL, 'Karen', 'JEFFREY B. PAGATPAT', 'ALDRIN RELLAMA', 'Karen', 'Developer', 'Admin, Officer V (Supply Officer)', 'AA-VI (Storekeeper II)', 'Developer', NULL, '2026-04-15', NULL, NULL, 'Approved', '2026-03-17 17:26:44'),
 	(4, 3, 'RIS-2026-03-0004', 'Department of Education - ROV', 'Asset Management Section', 'Administrative Division', NULL, NULL, 'fo office only', 'vbncnbc', 'JEFFREY B. PAGATPAT', 'ALDRIN RELLAMA', 'vhjhjjhj', 'fdsafsad', 'Admin, Officer V (Supply Officer)', 'AA-VI (Storekeeper II)', 'fdsfsdfdfs', NULL, '2026-03-18', NULL, NULL, 'Approved', '2026-03-17 21:53:12'),
 	(5, 3, 'RIS-2026-04-0001', 'Department of Education - ROV', 'Records Section', 'Administrative Division', NULL, NULL, '', 'adasdasd', 'JEFFREY B. PAGATPAT', 'ALDRIN RELLAMA', 'dasdasd', 'dsa', 'Admin, Officer V (Supply Officer)', 'AA-VI (Storekeeper II)', 'asda', '2026-04-07', NULL, NULL, NULL, 'Pending Staff Review', '2026-04-06 16:48:09'),
-	(6, 3, 'RIS-2026-04-0002', 'Department of Education - ROV', 'Learning Resource Management Section', 'Curriculum and Learning Management Division', NULL, NULL, 'debugging', 'qwe', 'JEFFREY B. PAGATPAT', 'ALDRIN RELLAMA', 'qwe', 'ewq', 'Admin, Officer V (Supply Officer)', 'AA-VI (Storekeeper II)', 'ewq', '2026-04-07', NULL, NULL, NULL, 'Pending Staff Review', '2026-04-06 17:24:28');
+	(6, 3, 'RIS-2026-04-0002', 'Department of Education - ROV', 'Learning Resource Management Section', 'Curriculum and Learning Management Division', NULL, NULL, 'debugging', 'qwe', 'JEFFREY B. PAGATPAT', 'ALDRIN RELLAMA', 'qwe', 'ewq', 'Admin, Officer V (Supply Officer)', 'AA-VI (Storekeeper II)', 'ewq', NULL, NULL, NULL, NULL, 'Forwarded to Admin', '2026-04-06 17:24:28'),
+	(7, 3, 'RIS-2026-04-0003', 'Department of Education - ROV', 'Asset Management Section', 'Administrative Division', NULL, NULL, 'dfgdfhdh', 'efasdfdasf', 'JEFFREY B. PAGATPAT', 'ALDRIN RELLAMA', 'hdfgd', 'ghnfghdfh', 'Admin, Officer V (Supply Officer)', 'AA-VI (Storekeeper II)', 'dgdfgdf', '2026-04-23', NULL, NULL, NULL, 'Pending Staff Review', '2026-04-22 19:00:11'),
+	(8, 3, 'RIS-2026-04-0004', 'Department of Education - ROV', 'Asset Management Section', 'Administrative Division', NULL, NULL, NULL, 'afdda', 'JEFFREY B. PAGATPAT', 'ALDRIN RELLAMA', 'afasd', 'fdafad', 'Admin, Officer V (Supply Officer)', 'AA-VI (Storekeeper II)', 'dasdsad', NULL, '2026-04-27', NULL, NULL, 'Approved', '2026-04-26 17:38:37'),
+	(9, 3, 'RIS-2026-04-0005', 'Department of Education - ROV', NULL, 'Curriculum and Learning Management Division', NULL, NULL, '', 'dsfbgnhmj', 'JEFFREY B. PAGATPAT', 'ALDRIN RELLAMA', 'sfdghj,j', 'fsdgmb', 'Admin, Officer V (Supply Officer)', 'AA-VI (Storekeeper II)', 'sgrtbdghbg', '2026-04-27', NULL, NULL, NULL, 'Pending Staff Review', '2026-04-26 23:06:35'),
+	(10, 3, 'RIS-2026-05-0006', 'Department of Education - ROV', 'Programs and Projects', 'Education Support Services Division', NULL, NULL, 'kjjhgfd', 'ghjklklkl', 'JEFFREY B. PAGATPAT', 'ALDRIN RELLAMA', 'yttytyt', 'hghjghj', 'Admin, Officer V (Supply Officer)', 'AA-VI (Storekeeper II)', 'tuyfyhf', NULL, '2026-05-12', NULL, NULL, 'Approved', '2026-05-03 21:16:12'),
+	(11, 6, 'RIS-2026-05-0014', 'Department of Education - ROV', 'Asset Management Section', 'Administrative Division', NULL, NULL, NULL, 'asdasd', 'JEFFREY B. PAGATPAT', 'ALDRIN RELLAMA', 'sadsad', 'sadsad', 'Admin, Officer V (Supply Officer)', 'AA-VI (Storekeeper II)', 'asdasd', NULL, '2026-05-12', NULL, NULL, 'Approved', '2026-05-03 23:50:21'),
+	(14, 3, 'RIS-2026-05-0023', 'Department of Education - ROV', 'Asset Management Section', 'Administrative Division', NULL, NULL, 'for service', 'test', 'JEFFREY B. PAGATPAT', 'ALDRIN RELLAMA', 'test', 'ting', 'Admin, Officer V (Supply Officer)', 'AA-VI (Storekeeper II)', 'ting', '2026-05-12', NULL, NULL, NULL, 'Pending Staff Review', '2026-05-11 16:12:05'),
+	(15, 3, 'RIS-2026-05-0024', 'Department of Education - ROV', 'Asset Management Section', 'Administrative Division', NULL, NULL, 'gjhghj', 'test', 'JEFFREY B. PAGATPAT', 'ALDRIN RELLAMA', 'test', 'ting', 'Admin, Officer V (Supply Officer)', 'AA-VI (Storekeeper II)', 'ting', NULL, '2026-05-12', NULL, NULL, 'Approved', '2026-05-12 00:38:28'),
+	(16, 3, 'RIS-2026-05-0025', 'Department of Education - ROV', 'Asset Management Section', 'Administrative Division', NULL, NULL, 'hjghj', 'asdasd', 'JEFFREY B. PAGATPAT', 'ALDRIN RELLAMA', 'lex', 'mvb', 'Admin, Officer V (Supply Officer)', 'AA-VI (Storekeeper II)', 'cvnvn', NULL, '2026-05-12', NULL, NULL, 'Approved', '2026-05-12 00:44:50');
 
 -- Dumping structure for table ams_inventory.sessions
 CREATE TABLE IF NOT EXISTS `sessions` (
@@ -317,11 +394,11 @@ CREATE TABLE IF NOT EXISTS `sessions` (
   KEY `sessions_last_activity_index` (`last_activity`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Dumping data for table ams_inventory.sessions: ~7 rows (approximately)
+-- Dumping data for table ams_inventory.sessions: ~3 rows (approximately)
 INSERT INTO `sessions` (`id`, `user_id`, `ip_address`, `user_agent`, `payload`, `last_activity`) VALUES
-	('1tEYYqui1EhgBDzQhcemB3YcvTgXkyn2HLEuHeJ7', 3, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36 Edg/147.0.0.0', 'YTo0OntzOjY6Il90b2tlbiI7czo0MDoiSHI3bVVpbTk2Q3dVV0kxbzFqaUlXdGJtNGhvZXBwUWxwQktVUGw0dyI7czo1MDoibG9naW5fd2ViXzU5YmEzNmFkZGMyYjJmOTQwMTU4MGYwMTRjN2Y1OGVhNGUzMDk4OWQiO2k6MztzOjk6Il9wcmV2aW91cyI7YToyOntzOjM6InVybCI7czozNzoiaHR0cDovL2Ftcy1pbnZlbnRvcnkudGVzdC9pZGxlLXNjcmVlbiI7czo1OiJyb3V0ZSI7Tjt9czo2OiJfZmxhc2giO2E6Mjp7czozOiJvbGQiO2E6MDp7fXM6MzoibmV3IjthOjA6e319fQ==', 1776751076),
-	('3XKd4W9UZn6V7rCAOhQ17gP7fUnQYLJZ87zmvnqM', 4, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36', 'YTo0OntzOjY6Il90b2tlbiI7czo0MDoiRVg4NmtrVnFUYldxYkZsNndySlRKS1hoa1NQdXlKRHUzc3F4NURkRiI7czo5OiJfcHJldmlvdXMiO2E6Mjp7czozOiJ1cmwiO3M6Mzc6Imh0dHA6Ly9hbXMtaW52ZW50b3J5LnRlc3QvaWRsZS1zY3JlZW4iO3M6NToicm91dGUiO047fXM6NjoiX2ZsYXNoIjthOjI6e3M6Mzoib2xkIjthOjA6e31zOjM6Im5ldyI7YTowOnt9fXM6NTA6ImxvZ2luX3dlYl81OWJhMzZhZGRjMmIyZjk0MDE1ODBmMDE0YzdmNThlYTRlMzA5ODlkIjtpOjQ7fQ==', 1776751598),
-	('DzkJTn3rEoGvV2wI5YbFA6w4SmJbbvWA50TuOlhr', 1, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36 Edg/147.0.0.0', 'YTo0OntzOjY6Il90b2tlbiI7czo0MDoiV1BrT091a2JRbG84S001enJoVEl4MGtQeVpkTFRlSFNlbTV2ZzhSaSI7czo1MDoibG9naW5fd2ViXzU5YmEzNmFkZGMyYjJmOTQwMTU4MGYwMTRjN2Y1OGVhNGUzMDk4OWQiO2k6MTtzOjk6Il9wcmV2aW91cyI7YToyOntzOjM6InVybCI7czozNzoiaHR0cDovL2Ftcy1pbnZlbnRvcnkudGVzdC9pZGxlLXNjcmVlbiI7czo1OiJyb3V0ZSI7Tjt9czo2OiJfZmxhc2giO2E6Mjp7czozOiJvbGQiO2E6MDp7fXM6MzoibmV3IjthOjA6e319fQ==', 1776751075);
+	('7n6zt2YMiM0QME09b3nBY24p2sC8vnLXKx5JFlbZ', 4, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36', 'YTo1OntzOjY6Il90b2tlbiI7czo0MDoiQmg0eVp4SzFaYjVGazU3V0o0WVlzWDZqQnM4S2pDWDVSeHFabDRlcSI7czo2OiJfZmxhc2giO2E6Mjp7czozOiJvbGQiO2E6MDp7fXM6MzoibmV3IjthOjA6e319czo5OiJfcHJldmlvdXMiO2E6Mjp7czozOiJ1cmwiO3M6Mzc6Imh0dHA6Ly9hbXMtaW52ZW50b3J5LnRlc3QvaWRsZS1zY3JlZW4iO3M6NToicm91dGUiO047fXM6MzoidXJsIjthOjE6e3M6ODoiaW50ZW5kZWQiO3M6MzQ6Imh0dHA6Ly9hbXMtaW52ZW50b3J5LnRlc3Qvc3VwcGxpZXMiO31zOjUwOiJsb2dpbl93ZWJfNTliYTM2YWRkYzJiMmY5NDAxNTgwZjAxNGM3ZjU4ZWE0ZTMwOTg5ZCI7aTo0O30=', 1778640506),
+	('hmtvthxSAlWjz3uWuGIMmGCRJwDXkHzxPilofcmA', NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36 Edg/148.0.0.0', 'YTozOntzOjY6Il90b2tlbiI7czo0MDoiUjZIMVBDS1Y1SkZQOGtpb2Fvb3lGWEdSSjVkOXF5TldBWnZpeVFISiI7czo2OiJfZmxhc2giO2E6Mjp7czozOiJvbGQiO2E6MDp7fXM6MzoibmV3IjthOjA6e319czo5OiJfcHJldmlvdXMiO2E6Mjp7czozOiJ1cmwiO3M6Mzc6Imh0dHA6Ly9hbXMtaW52ZW50b3J5LnRlc3QvaWRsZS1zY3JlZW4iO3M6NToicm91dGUiO047fX0=', 1778640080),
+	('Lt8xksTmJVQKclAQY29G18VzRNoXYF5VClPr4g2G', 1, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36 Edg/148.0.0.0', 'YTo0OntzOjY6Il90b2tlbiI7czo0MDoibUFRdkdtVkloVFVqSWFscFg5Y0VuNWhPU2ZRenlGaklpSEl4bmpLQSI7czo5OiJfcHJldmlvdXMiO2E6Mjp7czozOiJ1cmwiO3M6NDU6Imh0dHA6Ly9hbXMtaW52ZW50b3J5LnRlc3QvYWRtaW4vYWN0aXZpdHktbG9ncyI7czo1OiJyb3V0ZSI7Tjt9czo2OiJfZmxhc2giO2E6Mjp7czozOiJvbGQiO2E6MDp7fXM6MzoibmV3IjthOjA6e319czo1MDoibG9naW5fd2ViXzU5YmEzNmFkZGMyYjJmOTQwMTU4MGYwMTRjN2Y1OGVhNGUzMDk4OWQiO2k6MTt9', 1778640031);
 
 -- Dumping structure for table ams_inventory.supplies
 CREATE TABLE IF NOT EXISTS `supplies` (
@@ -338,11 +415,11 @@ CREATE TABLE IF NOT EXISTS `supplies` (
   `image` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `barcode_id` (`barcode_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=160 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=167 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Dumping data for table ams_inventory.supplies: ~123 rows (approximately)
 INSERT INTO `supplies` (`id`, `barcode_id`, `article`, `description`, `supplier`, `unit_measure`, `unit_value`, `quantity`, `low_stock_threshold`, `status`, `image`) VALUES
-	(28, 'SUP-2026-03-0001', 'Alcohol', 'Ethyl, 500ml, 70% solution', NULL, 'Bottle', 63.00, 500, 10, 'Available', NULL),
+	(28, 'SUP-2026-03-0001', 'Alcohol', 'Ethyl, 500ml, 70% solution', NULL, 'Bottle', 63.00, 495, 10, 'Available', NULL),
 	(29, 'SUP-2026-03-0002', 'Alcohol', 'Ethyl, 1 Gallon , 70% solution', NULL, 'Gallon', 219.00, 20, 10, 'Available', NULL),
 	(31, 'SUP-2026-03-0004', 'Ballpen', 'ordinary, color blue, good quality', NULL, 'Piece', 6.10, 20000, 10, 'Available', NULL),
 	(32, 'SUP-2026-03-0005', 'Ballpen', 'ordinary , color blue, good quality', NULL, 'Piece', 6.10, 1200, 10, 'Available', NULL),
@@ -366,14 +443,14 @@ INSERT INTO `supplies` (`id`, `barcode_id`, `article`, `description`, `supplier`
 	(50, 'SUP-2026-03-0023', 'Correction Tape', 'film base type UL 6m min', NULL, 'Piece', 23.00, 500, 10, 'Available', NULL),
 	(53, 'SUP-2026-03-0024', 'Data file Box', 'made of chipboard, with close ends', NULL, 'Piece', 121.00, 200, 10, 'Available', NULL),
 	(54, 'SUP-2026-03-0025', 'Data File Folder', '127x229mmx400mm, chipboard, blue', NULL, 'Piece', 89.00, 200, 10, 'Available', NULL),
-	(55, 'SUP-2026-03-0026', 'Envelope', 'mailing, long , 500pcs/ box', NULL, 'Box', 387.00, 20, 10, 'Available', NULL),
-	(56, 'SUP-2026-03-0027', 'Envelope', 'documentary, A4, 500pcs/box', NULL, 'Box', 1135.00, 21, 10, 'Available', NULL),
+	(55, 'SUP-2026-03-0026', 'Envelope', 'mailing, long , 500pcs/ box', NULL, 'Piece(s)', 387.00, 899, 10, 'Available', NULL),
+	(56, 'SUP-2026-03-0027', 'Envelope', 'documentary, A4, 500pcs/box', NULL, 'Piece(s)', 1135.00, 21, 10, 'Available', NULL),
 	(57, 'SUP-2026-03-0028', 'T6641 INK Cartridge', 'black', NULL, 'Bottle', 310.00, 100, 10, 'Available', NULL),
 	(58, 'SUP-2026-03-0029', 'T6642 INK Cartridge', 'cyan', NULL, 'Bottle', 310.00, 40, 10, 'Available', NULL),
 	(59, 'SUP-2026-03-0030', 'T6643 INK Cartridge', 'magenta', NULL, 'Bottle', 40.00, 310, 10, 'Available', NULL),
 	(60, 'SUP-2026-03-0031', 'T6644 INK Cartridge', 'yellow', NULL, 'Bottle', 310.00, 40, 10, 'Available', NULL),
 	(61, 'SUP-2026-03-0032', 'Folder', 'Ordinary, white, long 100pcs per pack', NULL, 'Pack', 498.00, 50, 10, 'Available', NULL),
-	(62, 'SUP-2026-03-0033', '336XHigh Yield Black', 'original HP LaserJet', NULL, 'Bottle', 6910.00, 4, 10, 'Available', NULL),
+	(62, 'SUP-2026-03-0033', '336XHigh Yield Black', 'original HP LaserJet', NULL, 'Bottle', 6910.00, 0, 10, 'Available', NULL),
 	(63, 'SUP-2026-03-0034', 'Printer Ink', 'GT 51/53 black, original', NULL, 'Bottle', 399.00, 50, 10, 'Available', NULL),
 	(64, 'SUP-2026-03-0035', 'Printer Ink', 'GT 52 cyan, original', NULL, 'Bottle', 399.00, 24, 10, 'Available', NULL),
 	(65, 'SUP-2026-03-0036', 'Printer Ink', 'GT 52 magenta, original', NULL, 'Bottle', 399.00, 24, 10, 'Available', NULL),
@@ -439,7 +516,7 @@ INSERT INTO `supplies` (`id`, `barcode_id`, `article`, `description`, `supplier`
 	(126, 'SUP-2026-03-0097', 'Flat Cord', '(Electrical) No. 16, 130m per roll', NULL, 'Roll', 1490.00, 2, 10, 'Available', NULL),
 	(127, 'SUP-2026-03-0098', 'Outlet', '3 gang Surface Type  universal outlet', NULL, 'Piece(s)', 169.00, 17, 10, 'Available', NULL),
 	(128, 'SUP-2026-03-0099', 'Rubber Plug', 'Heavy Duty', NULL, 'Piece(s)', 98.00, 18, 10, 'Available', NULL),
-	(129, 'SUP-2026-03-0100', 'Aircon Outlet', 'Wide  universal outlet with ground', NULL, 'Piece(s)', 200.00, 11, 10, 'Available', NULL),
+	(129, 'SUP-2026-03-0100', 'Aircon Outlet', 'Wide  universal outlet with ground', NULL, 'Piece(s)', 200.00, 5, 10, 'Available', NULL),
 	(130, 'SUP-2026-03-0101', 'Angle valve', '3 way 1/2x1/2 with dual switch', NULL, 'Piece(s)', 570.00, 10, 10, 'Available', NULL),
 	(131, 'SUP-2026-03-0102', 'Doorknob', 'HD, branded', NULL, 'Piece/s', 490.00, 20, 10, 'Available', NULL),
 	(132, 'SUP-2026-03-0103', 'Air freshener', 'aerosol 280 ml', NULL, 'Can', 280.00, 40, 10, 'Available', NULL),
@@ -464,7 +541,12 @@ INSERT INTO `supplies` (`id`, `barcode_id`, `article`, `description`, `supplier`
 	(151, 'SUP-2026-03-0122', 'Matrix Ribbon', 'Epson LX-310 Dot', NULL, 'Piece(s)', 229.00, 10, 10, 'Available', NULL),
 	(152, 'SUP-2026-03-0123', 'Cartridge', 'HP 46, Black', NULL, 'Piece(s)', 890.00, 5, 10, 'Available', NULL),
 	(153, 'SUP-2026-03-0124', 'Cartridge', 'HP 46, tricolor', NULL, 'Piece(s)', 890.00, 5, 10, 'Available', NULL),
-	(154, 'SUP-2026-03-0125', 'AMS Testing', 'testing testing', NULL, 'Piece(s)', 10.00, 50, 10, 'Available', NULL);
+	(154, 'SUP-2026-03-0125', 'AMS Testing', 'testing testing', 'Pandayan', 'Piece(s)', 10.00, 47, 10, 'Available', NULL),
+	(161, 'SUP-2026-05-0006', 'Tricycle', NULL, NULL, 'Unit', 20000.00, 0, 10, 'Available', NULL),
+	(162, 'SUP-2026-05-0007', 'Bond paper', 'A4', 'Skylark Graphics Solution', 'Piece(s)', 500.00, 500, 10, 'Available', NULL),
+	(163, 'SUP-2026-05-0008', 'Ballpen', 'Black', NULL, 'Piece(s)', 5.00, 150, 10, 'Available', NULL),
+	(164, 'SUP-2026-05-0009', 'Ballpen', NULL, NULL, 'Piece(s)', 4.00, 50, 10, 'Available', NULL),
+	(166, 'SUP-2026-05-0011', 'Bond paper', 'A4 short', 'Pandayan', 'Ream', 200.00, 0, 10, 'Available', NULL);
 
 -- Dumping structure for table ams_inventory.system_settings
 CREATE TABLE IF NOT EXISTS `system_settings` (
@@ -477,13 +559,13 @@ CREATE TABLE IF NOT EXISTS `system_settings` (
   UNIQUE KEY `system_settings_key_unique` (`key`)
 ) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Dumping data for table ams_inventory.system_settings: ~5 rows (approximately)
+-- Dumping data for table ams_inventory.system_settings: ~4 rows (approximately)
 INSERT INTO `system_settings` (`id`, `key`, `value`, `created_at`, `updated_at`) VALUES
-	(1, 'seq_ris_no', '1', '2026-04-20 17:21:59', '2026-04-20 17:32:33'),
-	(2, 'seq_par_no', '1', '2026-04-20 18:33:04', '2026-04-20 18:33:04'),
-	(3, 'seq_sphv_no', '1', '2026-04-20 18:33:04', '2026-04-20 18:33:04'),
-	(4, 'seq_splv_no', '1', '2026-04-20 18:33:04', '2026-04-20 18:33:04'),
-	(5, 'seq_stock_no', '5', '2026-04-20 21:27:57', '2026-04-20 21:53:57');
+	(1, 'seq_ris_no', '26', '2026-04-20 17:21:59', '2026-05-12 00:44:50'),
+	(2, 'seq_par_no', '4', '2026-04-20 18:33:04', '2026-05-04 00:23:13'),
+	(3, 'seq_sphv_no', '2', '2026-04-20 18:33:04', '2026-05-03 05:24:48'),
+	(4, 'seq_splv_no', '2', '2026-04-20 18:33:04', '2026-05-04 00:21:11'),
+	(5, 'seq_stock_no', '12', '2026-04-20 21:27:57', '2026-05-12 00:43:08');
 
 -- Dumping structure for table ams_inventory.transactions
 CREATE TABLE IF NOT EXISTS `transactions` (
@@ -497,9 +579,9 @@ CREATE TABLE IF NOT EXISTS `transactions` (
   `remarks` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
   `date_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=207 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=238 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- Dumping data for table ams_inventory.transactions: ~118 rows (approximately)
+-- Dumping data for table ams_inventory.transactions: ~149 rows (approximately)
 INSERT INTO `transactions` (`id`, `item_id`, `item_type`, `transaction_type`, `quantity`, `supplier`, `transaction_date`, `remarks`, `date_time`) VALUES
 	(70, 28, 'supplies', 'Added', 500, NULL, '2026-03-17', 'Opening Balance / New Item', '2026-03-17 03:24:35'),
 	(71, 28, 'supplies', 'IN', 1, NULL, '2026-03-17', 'Scanner', '2026-03-17 03:50:14'),
@@ -627,7 +709,31 @@ INSERT INTO `transactions` (`id`, `item_id`, `item_type`, `transaction_type`, `q
 	(198, 154, 'supplies', 'Added', 50, NULL, '2026-03-18', 'Opening Balance / New Item', '2026-03-18 05:49:42'),
 	(199, 154, 'supplies', 'OUT', 2, NULL, '2026-03-18', 'RIS Auto-Release: RIS-2026-03-0004', '2026-03-18 05:57:49'),
 	(203, 154, 'supplies', 'IN', 1, NULL, '2026-04-21', 'Added from duplicate check', '2026-04-21 05:49:21'),
-	(204, 154, 'supplies', 'IN', 1, NULL, '2026-04-21', 'Added from duplicate check', '2026-04-21 05:50:06');
+	(204, 154, 'supplies', 'IN', 1, NULL, '2026-04-21', 'Added from duplicate check', '2026-04-21 05:50:06'),
+	(207, 55, 'supplies', 'OUT', 101, NULL, '2026-04-27', 'RIS Auto-Release: RIS-2026-04-0004', '2026-04-27 06:05:32'),
+	(208, 154, 'supplies', 'IN', 1, NULL, '2026-04-28', 'Scanner', '2026-04-28 01:33:48'),
+	(209, 9, 'assets', 'OUT', 1, NULL, '2026-04-29', 'Marked as Defective/Unserviceable', '2026-04-28 19:25:47'),
+	(210, 9, 'assets', 'IN', 1, NULL, '2026-04-29', 'Returned (Serviceable)', '2026-04-28 19:25:58'),
+	(211, 9, 'assets', 'OUT', 1, NULL, '2026-04-29', 'Marked as Defective/Unserviceable', '2026-04-28 19:28:19'),
+	(214, 9, 'assets', 'IN', 1, NULL, '2026-04-30', 'Returned (Serviceable)', '2026-04-29 21:52:12'),
+	(215, 9, 'assets', 'OUT', 1, NULL, '2026-04-30', 'Marked as Defective/Unserviceable', '2026-04-29 22:37:21'),
+	(216, 161, 'supplies', 'Added', 20000, NULL, '2026-05-04', 'Opening Balance / New Item', '2026-05-04 06:08:42'),
+	(220, 162, 'supplies', 'Added', 500, 'Skylark Graphics Solution', '2026-05-04', 'Opening Balance / New Item', '2026-05-04 06:59:54'),
+	(221, 163, 'supplies', 'Added', 100, NULL, '2026-05-04', 'Opening Balance / New Item', '2026-05-04 07:00:27'),
+	(222, 164, 'supplies', 'Added', 50, NULL, '2026-05-04', 'Opening Balance / New Item', '2026-05-04 07:01:27'),
+	(224, 163, 'supplies', 'IN', 50, NULL, '2026-05-04', 'Added from duplicate check', '2026-05-04 07:04:47'),
+	(225, 9, 'assets', 'IN', 1, NULL, '2026-05-04', 'Returned (Serviceable)', '2026-05-03 23:16:14'),
+	(227, 129, 'supplies', 'OUT', 2, NULL, '2026-05-12', 'RIS Auto-Release: RIS-2026-05-0006', '2026-05-12 00:46:55'),
+	(228, 62, 'supplies', 'OUT', 2, NULL, '2026-05-12', 'RIS Auto-Release: RIS-2026-05-0006', '2026-05-12 00:46:55'),
+	(229, 7, 'assets', 'IN', 1, NULL, '2026-05-12', 'Returned (Serviceable)', '2026-05-11 22:47:06'),
+	(230, 7, 'assets', 'IN', 1, NULL, '2026-05-12', 'Returned (Serviceable)', '2026-05-11 22:47:30'),
+	(231, 7, 'assets', 'IN', 1, NULL, '2026-05-12', 'Returned (Serviceable)', '2026-05-11 22:48:00'),
+	(232, 7, 'assets', 'OUT', 1, NULL, '2026-05-12', 'Marked as Defective/Unserviceable', '2026-05-11 22:48:32'),
+	(233, 7, 'assets', 'IN', 1, NULL, '2026-05-12', 'Returned (Serviceable)', '2026-05-11 22:48:40'),
+	(234, 7, 'assets', 'IN', 1, NULL, '2026-05-12', 'Returned (Serviceable)', '2026-05-11 23:19:34'),
+	(235, 28, 'supplies', 'OUT', 5, NULL, '2026-05-12', 'RIS Auto-Release: RIS-2026-05-0024', '2026-05-12 08:40:49'),
+	(236, 166, 'supplies', 'Added', 5, 'Pandayan', '2026-05-12', 'Opening Balance / New Item', '2026-05-12 08:43:08'),
+	(237, 166, 'supplies', 'OUT', 5, 'Pandayan', '2026-05-12', 'RIS Auto-Release: RIS-2026-05-0025', '2026-05-12 08:46:53');
 
 -- Dumping structure for table ams_inventory.users
 CREATE TABLE IF NOT EXISTS `users` (
@@ -648,9 +754,9 @@ CREATE TABLE IF NOT EXISTS `users` (
 
 -- Dumping data for table ams_inventory.users: ~4 rows (approximately)
 INSERT INTO `users` (`id`, `firstname`, `lastname`, `department`, `image`, `email`, `password`, `role`, `status`, `created_at`, `remember_token`) VALUES
-	(1, 'Karen', 'Ocbian', 'Asset Management Section', '1776220352.jpg', 'admin@deped.gov.ph', '$2y$12$kCuXC3YHhZ3kYyNoaTDqouuDwPDaI22AIX92m1VCve/aaovC9N3rS', 'admin', 'Active', '2026-02-12 15:09:20', 'NrrDLBdidmIFBJKhmSGA9KSRYOCR8VJZyZWi3E1Zlkn7xmqzGdPHTgN44YBb'),
-	(3, 'Asset Management Supply', 'Section', 'Personnel Section', '1776670939.jpg', 'user@deped.gov.ph', '$2y$12$4XoR/gYAcHmf/96zVTQI5eoNOARXoapPYmvSnZ0a54q70N9dL1mTC', 'frontuser', 'Active', '2026-02-12 15:09:20', 'tPHDjwSCVsHqK9wUj7KeLtNClyfbyj2zJpq0VHjA1BOUGso7d9x5ONErrIoH'),
-	(4, 'Jhoanna Marie', 'Rimpola', 'Asset Management Section', '1776242408.jpg', 'staff@deped.gov.ph', '$2y$12$.f5Xurth74amozziJZI0RerBKH9TnAafVeK8mc6Q84I/gNlN/wTfS', 'staff', 'Active', '2026-02-12 15:18:56', 'uwALMHMacfAFUhemNyZzfqMp6UTuEsZWT4skCdQpMdVNJj0sXx0Kffk3XSpK'),
+	(1, 'Karen', 'Ocbian', 'Asset Management Section', '1778417265.jpg', 'admin@deped.gov.ph', '$2y$12$kCuXC3YHhZ3kYyNoaTDqouuDwPDaI22AIX92m1VCve/aaovC9N3rS', 'admin', 'Active', '2026-02-12 15:09:20', 'QKP72IyYSwJ9huVIGLxyf6oI2RzdRtwDdTk2jEBABUiBMhKAz2EjydOhmx4X'),
+	(3, 'Asset Management Supply', 'Section', 'Personnel Section', '1777871877.jpg', 'user@deped.gov.ph', '$2y$12$4XoR/gYAcHmf/96zVTQI5eoNOARXoapPYmvSnZ0a54q70N9dL1mTC', 'frontuser', 'Active', '2026-02-12 15:09:20', 'shdNU2HXVXOB7M3cAZd8sqHJLH6XiJVgS4kWCi6lwaVAGXCwf0tC84bp5c27'),
+	(4, 'Staff', 'AMS', 'Asset Management Section', '1778417291.jpg', 'staff@deped.gov.ph', '$2y$12$.f5Xurth74amozziJZI0RerBKH9TnAafVeK8mc6Q84I/gNlN/wTfS', 'staff', 'Active', '2026-02-12 15:18:56', 'OS2YWYWxRKc6mbYwrplcSsHxipWoaFHaqcdjL8I5NYElCgFKt9iobbrpTuSG'),
 	(6, 'hakdog', 'try', 'General Services Unit', NULL, 'hakdog@deped.gov.ph', '$2y$12$X2nj4CetNGDCxDxi1iNpv.Ybv5Xc.dhe/mrG9DzBkLulnl8ahtuBq', 'frontuser', 'Active', '2026-03-30 18:34:18', NULL);
 
 /*!40103 SET TIME_ZONE=IFNULL(@OLD_TIME_ZONE, 'system') */;
