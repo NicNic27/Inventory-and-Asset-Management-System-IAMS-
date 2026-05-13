@@ -1,4 +1,8 @@
 <style>
+    .sidebar::-webkit-scrollbar {
+        display: none;
+    }
+
     .sidebar {
         width: 250px;
         height: 100vh;
@@ -16,6 +20,10 @@
         padding: 20px;
         text-align: center;
         border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        transition: background-color 0.2s;
+    }
+    .sidebar-header:hover {
+        background-color: rgba(255, 255, 255, 0.05);
     }
     .sidebar-header img { width: 60px; height: 60px; margin-bottom: 10px; }
     .sidebar-header h5 { font-size: 1.1rem; font-weight: 700; margin: 0; letter-spacing: 1px; }
@@ -105,10 +113,12 @@
 <div class="sidebar-backdrop no-print" id="sidebarBackdrop"></div>
 
 <div class="sidebar" id="mainSidebar">
-    <div class="sidebar-header">
-        <img src="{{ asset('assets/images/depedRovCirc.png') }}" alt="Logo">
-        <h5>AMS HEAD</h5>
-    </div>
+    <a href="{{ url('/') }}" style="text-decoration: none; color: inherit;">
+        <div class="sidebar-header" title="Go to Landing Page">
+            <img src="{{ asset('assets/images/depedRovCirc.png') }}" alt="Logo">
+            <h5>AMS HEAD</h5>
+        </div>
+    </a>
 
     <nav class="nav flex-column mt-3">
         <a href="{{ url('/admin/dashboard') }}" class="nav-link {{ request()->is('admin/dashboard') ? 'active' : '' }}">
@@ -132,28 +142,28 @@
             
             <div class="collapse submenu {{ $isInventoryActive ? 'show' : '' }}" id="inventorySubmenu">
                 <a href="{{ url('/admin/assets') }}" class="nav-link {{ request()->is('admin/assets*') ? 'active' : '' }}">
-                    <i class="fas fa-laptop fa-fw"></i> Assets (Equipment)
+                    <i class="fas fa-laptop fa-fw"></i> Assets List
                 </a>
                 <a href="{{ url('/admin/supplies') }}" class="nav-link {{ request()->is('admin/supplies*') ? 'active' : '' }}">
-                    <i class="fas fa-box-open fa-fw"></i> Supplies (Consumable)
+                    <i class="fas fa-box-open fa-fw"></i> Supplies List
                 </a>
             </div>
         </div>
 
         <a href="{{ url('/admin/po') }}" class="nav-link {{ request()->is('admin/po*') ? 'active' : '' }}">
-            <i class="fas fa-file-invoice fa-fw"></i> Purchase Orders
+            <i class="fas fa-file-invoice fa-fw"></i> Delivery Orders
         </a>
 
         <a href="{{ url('/admin/requests') }}" class="nav-link {{ request()->is('admin/requests*') ? 'active' : '' }}">
             <i class="fas fa-file-signature fa-fw"></i> Requests (RIS)
         </a>
-
+        
+        <a href="{{ url('/admin/barcodes') }}" class="nav-link {{ request()->is('admin/barcodes*') ? 'active' : '' }}">
+            <i class="fas fa-barcode fa-fw"></i> Barcode List
+        </a>
+        
         <a href="{{ url('/admin/transactions') }}" class="nav-link {{ request()->is('admin/transactions*') ? 'active' : '' }}">
             <i class="fas fa-history fa-fw"></i> Transactions
-        </a>
-
-        <a href="{{ url('/admin/barcodes') }}" class="nav-link {{ request()->is('admin/barcodes*') ? 'active' : '' }}">
-            <i class="fas fa-barcode fa-fw"></i> Barcode Master List
         </a>
 
         <a href="{{ url('/admin/reports') }}" class="nav-link {{ request()->is('admin/reports*') ? 'active' : '' }}">
@@ -162,6 +172,10 @@
         
         <a href="{{ url('/admin/users') }}" class="nav-link {{ request()->is('admin/users*') ? 'active' : '' }}">
             <i class="fas fa-users-cog fa-fw"></i> User Management
+        </a>
+
+        <a href="{{ url('/admin/activity-logs') }}" class="nav-link {{ request()->is('admin/activity-logs*') ? 'active' : '' }}">
+            <i class="fas fa-user-clock fa-fw"></i> System Logs
         </a>
 
         <a href="{{ url('/admin/settings') }}" class="nav-link {{ request()->is('admin/settings*') ? 'active' : '' }}">
@@ -175,8 +189,8 @@
 </div>
 
 <script>
-    // --- Mobile Sidebar Toggle Logic ---
     document.addEventListener("DOMContentLoaded", function() {
+        // --- Mobile Sidebar Toggle Logic ---
         const mobileBtn = document.getElementById('mobileMenuBtn');
         const sidebar = document.getElementById('mainSidebar');
         const backdrop = document.getElementById('sidebarBackdrop');

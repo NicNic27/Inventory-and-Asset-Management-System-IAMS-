@@ -1,5 +1,7 @@
 <style>
     /* Modal & Form Styles */
+    .modal { z-index: 1060 !important; }
+    .modal-backdrop { z-index: 1055 !important; }
     .form-label { font-weight: 600; color: #475569; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; }
     .custom-card { background: #fff; border: 1px solid #cbd5e1; border-radius: 8px; padding: 25px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
     .btn-add-item { background-color: #10b981; color: white; border: none; padding: 8px 20px; border-radius: 6px; font-weight: 600; }
@@ -48,12 +50,17 @@
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header bg-light">
-                <h5 class="modal-title fw-bold text-primary"><i class="fas fa-file-invoice me-2"></i> Receive Purchase Order (Admin)</h5>
+                <h5 class="modal-title fw-bold text-primary align-items-center d-flex m-0">
+                    <i class="fas fa-file-invoice me-2"></i> Receive Purchase Order (Admin)
+                    <span id="po_type_badge" class="badge ms-3 fs-6 rounded-pill text-white" style="display: none; background-color: #101954;"></span>
+                </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body bg-light" style="padding: 20px 30px;">
                 
                 <form id="poForm">
+                    <input type="hidden" id="po_type" name="po_type" value="">
+
                     <div class="custom-card">
                         <h6 class="fw-bold text-dark mb-3 border-bottom pb-2">Document Details</h6>
                         <div class="row g-3">
@@ -159,104 +166,8 @@
     </div>
 </div>
 
-<div id="printableArea">
-    <div class="p-header">
-        <img src="{{ asset('assets/images/DepEdseal.png') }}" alt="Logo" onerror="this.src='https://upload.wikimedia.org/wikipedia/commons/f/f3/Department_of_Education.svg'">
-        <div>Republic of the Philippines</div>
-        <h4>Department of Education</h4>
-        <div id="p-region">REGION V - BICOL</div>
-        <hr style="border: 0.5px solid black; margin: 5px 0;">
-        <h3 style="font-weight: bold; margin: 5px 0; font-size: 18px; text-align: center;">PURCHASE ORDER</h3>
-        <div class="entity-line" id="p-entity">Entity Name</div>
-    </div>
-
-    <table class="info-table">
-        <tr>
-            <td width="55%">
-                Supplier: <span id="p-supplier" style="font-weight: bold;"></span><br>
-                Address: <span id="p-address"></span><br>
-                TIN: ___________________________
-            </td>
-            <td width="45%">
-                PO No: <span id="p-pono" style="font-weight: bold;"></span><br>
-                Date: <span id="p-date"></span><br>
-                Mode of Procurement: <span id="p-mode"></span>
-            </td>
-        </tr>
-        <tr>
-            <td colspan="2" style="font-style: italic; font-size: 10px; padding: 2px 10px;">
-                Gentlemen: Please furnish this Office the following articles subject to the terms and conditions contained herein:
-            </td>
-        </tr>
-        <tr>
-            <td>Place of Delivery: <span id="p-place-delivery" style="font-weight: bold;"></span><br>Date of Delivery: <span id="p-date-delivery" style="font-weight: bold;"></span></td>
-            <td>Delivery Term: <span id="p-delivery-term" style="font-weight: bold;"></span><br>Payment Term: <span id="p-payment-term" style="font-weight: bold;"></span></td>
-        </tr>
-    </table>
-
-    <table class="main-table">
-        <thead>
-            <tr>
-                <th width="12%">Stocks No.</th>
-                <th width="10%">Unit</th>
-                <th width="43%">Description</th>
-                <th width="10%">Quantity</th>
-                <th width="12%">Unit Cost</th>
-                <th width="13%">Amount</th>
-            </tr>
-        </thead>
-        <tbody id="p-items"></tbody>
-        <tr style="font-weight: bold;">
-            <td colspan="5" style="text-align: left; padding-left: 10px;">
-                (Total Amount in Words) <span id="p-words" style="text-transform: uppercase; margin-left: 10px;"></span>
-            </td>
-            <td id="p-total" style="text-align: center;">0.00</td>
-        </tr>
-    </table>
-
-    <div class="footer-note">
-        In case of failure to make the full delivery within the time specified above, a penalty of one-tenth (1/10) of one percent for every day of delay shall be imposed on the undelivered item/s.
-    </div>
-
-    <table class="sig-table-print">
-        <tr>
-            <td width="50%" style="text-align: left;">
-                Conforme:<br><br>
-                <div style="border-bottom: 1px solid black; width: 85%; margin: 30px auto 2px auto;">&nbsp;</div>
-                <div style="text-align: center; font-size: 10px;">Signature over Printed Name of Supplier</div>
-                <div style="text-align: center; margin-top: 10px;">DATE: _________________</div>
-            </td>
-            <td width="50%" class="rd-print-box">
-                Very truly yours,<br><br>
-                <div id="p-auth-name-display" style="border-bottom: 1px solid black; width: 85%; margin: 30px auto 2px auto; font-weight: bold; text-transform: uppercase; text-align: center;">AUTHORIZED OFFICIAL</div>
-                <div style="text-align: center; font-size: 10px;">Signature over Printed Name of Authorized Official</div>
-                <div id="p-auth-designation" style="text-align: center; font-size: 10px; font-weight: bold;">REGIONAL DIRECTOR</div>
-                <div style="text-align: center; font-size: 10px;">Designation</div>
-            </td>
-        </tr>
-    </table>
-
-    <table class="acc-table">
-        <tr>
-            <td width="55%">
-                Fund Cluster: _________________________________<br>
-                Funds Available: _______________________________
-                <br><br>
-                <div id="p-acc-name-display" style="border-bottom: 1px solid black; width: 70%; margin: 20px auto 2px auto; text-align: center; font-weight: bold; text-transform: uppercase;">ACCOUNTANT NAME</div>
-                <div id="p-acc-designation" style="text-align: center; font-size: 10px; font-weight: bold;">ACCOUNTANT II</div>
-                <div style="text-align: center; font-size: 9px;">Signature over Printed Name of Chief Accountant/Head of Accounting Division/Unit</div>
-            </td>
-            <td width="45%">
-                ORS/BURS No: ______________________<br>
-                Date of the ORS/BURS: _______________<br>
-                Amount: __________________________
-            </td>
-        </tr>
-    </table>
-</div>
-
 <script>
-    window.onload = () => { addEmptyItemRow(); };
+    window.onload = () => { if (typeof window.addEmptyItemRow === "function") window.addEmptyItemRow(); };
 
     window.autoUpdatePoStatus = function() {
         const rows = document.querySelectorAll('.item-row');
@@ -277,7 +188,7 @@
         }
     };
 
-    function addEmptyItemRow(data = {unit: 'pc', desc: '', qty: 0, cost: 0.00, is_delivered: false}) {
+    window.addEmptyItemRow = function(data = {unit: 'pc', desc: '', qty: 0, cost: 0.00, is_delivered: false}) {
         const container = document.getElementById('itemsContainer');
         const q = parseFloat(data.qty) || 0;
         const c = parseFloat(data.cost) || 0;
@@ -326,8 +237,9 @@
         `;
         container.insertAdjacentHTML('beforeend', templateHtml);
         autoUpdatePoStatus(); 
-    }
+    };
 
+    // Attach Calculation Listeners globally
     document.addEventListener('input', (e) => {
         if (e.target.classList.contains('qty-input') || e.target.classList.contains('cost-input')) {
             const row = e.target.closest('.item-row');
@@ -337,14 +249,21 @@
         }
     });
 
-    document.getElementById('addItemBtn').addEventListener('click', () => addEmptyItemRow());
+    document.addEventListener("DOMContentLoaded", function() {
+        // Re-attach Add Item Button Listener
+        const addItemBtn = document.getElementById('addItemBtn');
+        if (addItemBtn) {
+            addItemBtn.addEventListener('click', () => { if (typeof window.addEmptyItemRow === "function") window.addEmptyItemRow(); });
+        }
+    });
 
-    // Submit Form
+    // Submitting the Form
     document.getElementById('poForm').addEventListener('submit', function(e) {
         e.preventDefault(); 
 
         let formData = {
             _token: '{{ csrf_token() }}',
+            po_type: document.getElementById('po_type').value, // <--- Passing the PO Type
             entity_name: document.getElementById('in-entity').value,
             po_no: document.getElementById('po_no').value,
             supplier_name: document.getElementById('in-supplier').value,

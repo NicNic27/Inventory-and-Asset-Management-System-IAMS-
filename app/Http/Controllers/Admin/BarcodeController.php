@@ -14,26 +14,53 @@ class BarcodeController extends Controller
     {
         $perPage = $request->input('per_page', 5);
         $page = $request->input('page', 1);
+        
+        // Grab search and category parameters from the URL
+        $search = $request->input('search');
+        $category = $request->input('category', 'all');
+
+        $supplies = collect();
+        $assets = collect();
 
         // 1. Fetch from Supplies 
-        $supplies = Supply::whereNotNull('barcode_id')
-            ->select('id', 'barcode_id as barcode_code', 'article')
-            ->get()
-            ->map(function ($item) {
+        if ($category === 'all' || $category === 'supply') {
+            $supplyQuery = Supply::whereNotNull('barcode_id')
+                ->select('id', 'barcode_id as barcode_code', 'article', 'description', 'supplier');
+                
+            // Apply Search Filter to Database
+            if (!empty($search)) {
+                $supplyQuery->where(function($q) use ($search) {
+                    $q->where('article', 'LIKE', "%{$search}%")
+                      ->orWhere('barcode_id', 'LIKE', "%{$search}%");
+                });
+            }
+
+            $supplies = $supplyQuery->get()->map(function ($item) {
                 $item->item_type = 'supply';
                 $item->generated_at = null; 
                 return $item;
             });
+        }
 
         // 2. Fetch from Assets 
-        $assets = Asset::whereNotNull('barcode_id')
-            ->select('id', 'barcode_id as barcode_code', 'article')
-            ->get()
-            ->map(function ($item) {
+        if ($category === 'all' || $category === 'asset') {
+            $assetQuery = Asset::whereNotNull('barcode_id')
+                ->select('id', 'barcode_id as barcode_code', 'article', 'description', 'supplier');
+                
+            // Apply Search Filter to Database
+            if (!empty($search)) {
+                $assetQuery->where(function($q) use ($search) {
+                    $q->where('article', 'LIKE', "%{$search}%")
+                      ->orWhere('barcode_id', 'LIKE', "%{$search}%");
+                });
+            }
+
+            $assets = $assetQuery->get()->map(function ($item) {
                 $item->item_type = 'asset';
                 $item->generated_at = null; 
                 return $item;
             });
+        }
 
         // 3. Merge both lists and sort by ID descending (highest ID = newest added)
         $mergedBarcodes = $supplies->concat($assets)->sortByDesc('id')->values();
@@ -50,6 +77,6 @@ class BarcodeController extends Controller
             ['path' => $request->url(), 'query' => $request->query()]
         );
 
-        return view('admin.barcodes.index', compact('barcodes', 'perPage'));
+        return view('admin.barcodes.index', compact('barcodes', 'perPage', 'search', 'category'));
     }
 }

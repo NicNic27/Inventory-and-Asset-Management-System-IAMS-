@@ -82,7 +82,6 @@
             font-size: 0.9rem;
         }
 
-        .btn-print { background-color: #607d8b; color: white; }
         .btn-submit { background-color: var(--deped-blue); color: white; font-weight: 600; }
 
         .sig-line {
@@ -123,7 +122,6 @@
 
         .btn-remove-row:hover { text-decoration: underline; }
 
-        /* Style tweaks for Select2 to match Bootstrap */
         .select2-container--bootstrap-5 .select2-selection--single {
             border-radius: 8px !important;
             min-height: 39px !important;
@@ -142,53 +140,12 @@
             border-bottom: 1px solid #f1f1f1;
         }
 
-        /* =========================================
-           PRINT UI (Strict override)
-           ========================================= */
-        #print-area { display: none; }
+        /* Fix Select2 dropdown cutting off or losing focus behind Modals */
+        .select2-container { z-index: 9999 !important; }
 
-        @media print {
-            @page { size: A4 portrait; margin: 10mm; }
-
-            body * { visibility: hidden; }
-            .sidebar, .main-content { display: none !important; margin: 0 !important; padding: 0 !important; }
-
-            .main-content {
-                margin-left: 260px;
-                padding: 20px;
-                padding-top: 80px !important;
-                min-height: 100vh;
-            }
-
-            #print-area, #print-area * {
-                visibility: visible;
-            }
-
-            #print-area {
-                position: absolute;
-                left: 0;
-                top: 0;
-                width: 100%;
-                color: #000;
-                display: block;
-                font-family: 'Times New Roman', Times, serif;
-                font-size: 11pt;
-            }
-
-            #print-area table { 
-                display: table !important; 
-                width: 100% !important; 
-                border-collapse: collapse !important; 
-                table-layout: fixed !important; 
-            }
-            #print-area thead { display: table-header-group !important; }
-            #print-area tbody { display: table-row-group !important; }
-            #print-area tr { display: table-row !important; page-break-inside: avoid; }
-            #print-area th, #print-area td { 
-                display: table-cell !important; 
-                float: none !important; 
-            }
-        }
+        /* Modal Stack Fix */
+        .modal { z-index: 1060 !important; }
+        .modal-backdrop { z-index: 1055 !important; }
 
         @media (max-width: 992px) { .main-content { margin-left: 0; } }
     </style>
@@ -211,9 +168,8 @@
                 <h3 class="fw-bold m-0" style="color: var(--deped-blue);">REQUISITION AND ISSUE SLIP</h3>
                 <p class="text-muted small">RIS before Release!</p>
             </div>
-            <div class="no-print">
-                <button type="button" onclick="prepareAndPrint()" class="btn btn-print me-2 shadow-sm"><i class="fa-solid fa-print me-1"></i> Print PDF</button>
-                <button type="submit" class="btn btn-submit shadow-sm" onclick="return confirm('Submit this request?')"><i class="fa-solid fa-paper-plane me-1"></i> Submit Request</button>
+            <div>
+                <button type="button" class="btn btn-submit shadow-sm" onclick="showConfirmModal()"><i class="fa-solid fa-paper-plane me-1"></i> Submit Request</button>
             </div>
         </div>
 
@@ -252,11 +208,11 @@
                 <div class="col-md-6">
                     <div class="mb-3">
                         <label>Fund Cluster</label>
-                        <input type="text" name="fund_cluster" id="fund_cluster" class="form-control">
+                        <input type="text" name="fund_cluster" id="fund_cluster" class="form-control" readonly placeholder="Leave it blank">
                     </div>
                     <div class="mb-3">
                         <label>Responsible Center Code</label>
-                        <input type="text" name="center_code" id="center_code" class="form-control">
+                        <input type="text" name="center_code" id="center_code" class="form-control" readonly placeholder="Leave it blank">
                     </div>
                     <div>
                         <label>RIS Number</label>
@@ -272,7 +228,7 @@
             <div id="items-container">
                 <div class="row g-3 mb-4 item-row border-bottom pb-3">
                     <div class="col-md-12 text-end">
-                        <a href="javascript:void(0)" class="btn-remove-row no-print" onclick="removeRow(this)"><i class="fa-solid fa-trash-can"></i> Remove Item</a>
+                        <a href="javascript:void(0)" class="btn-remove-row" onclick="removeRow(this)"><i class="fa-solid fa-trash-can"></i> Remove Item</a>
                     </div>
                     <div class="col-md-2">
                         <label>Stock No.</label>
@@ -290,19 +246,21 @@
                         <label>Item Description <span class="text-danger">*</span></label>
                         <select name="description[]" class="form-select select2-supply" required>
                             <option value="" selected disabled>-- Select Supply Item --</option>
+                            <option value="Others" class="fw-bold text-primary">Others (Please specify)</option>
                             @foreach($supplies as $supply)
                                 <option value="{{ $supply->article }}, {{ $supply->description }}" data-barcode="{{ $supply->barcode_id }}" data-qty="{{ $supply->quantity }}" data-unit="{{ $supply->unit_measure }}">{{ $supply->article }} - {{ $supply->description }}</option>
                             @endforeach
                         </select>
+                        <input type="text" name="manual_description[]" class="form-control mt-2 manual-desc-input shadow-sm border-primary" style="display: none;" placeholder="Specify custom item name and description">
                     </div>
                     <div class="col-md-12">
                         <label>Remarks</label>
-                        <input type="text" name="remarks[]" class="form-control">
+                        <input type="text" name="remarks[]" class="form-control" readonly placeholder="Leave it blank">
                     </div>
                 </div>
             </div>
             
-            <div class="no-print mt-3">
+            <div class="mt-3">
                 <button type="button" class="btn btn-outline-primary btn-sm" onclick="addItem()">
                     <i class="fa-solid fa-plus me-1"></i> Add Item Row
                 </button>
@@ -310,8 +268,8 @@
         </div>
         <div class="section-box purpose-block">
             <div class="col-md-13">
-                <label>Purpose</label>
-                <textarea name="purpose[]" class="form-control" rows="1" placeholder="Enter your purpose..."></textarea>
+                <label>Purpose <span class="text-danger">*</span></label>
+                <textarea name="purpose[]" class="form-control" rows="1" placeholder="Enter your purpose..." required></textarea>
             </div>
         </div>
 
@@ -343,114 +301,28 @@
     </form>
 </div>
 
-<div id="print-area">
-    <div style="text-align: center; font-family: 'Times New Roman', Times, serif; margin-bottom: 5px;">
-        <img src="{{ asset('assets/images/DepEdseal.png') }}" style="width: 60px; margin: 0 auto 2px auto; display: block;">
-        <div style="font-size: 9pt;">Republic of the Philippines</div>
-        <div style="font-size: 18pt; font-family: 'Old English Text MT', 'Engravers Old English', serif; line-height: 1;">Department of Education</div>
-        <div style="font-size: 10pt;">Region V - Bicol</div>
-        <div style="font-size: 12pt; font-weight: bold; margin-top: 5px;">REQUISITION AND ISSUE SLIP</div>
+<button type="button" id="hiddenSubmitTrigger" class="d-none" data-bs-toggle="modal" data-bs-target="#submitConfirmModal"></button>
+
+<div class="modal fade" id="submitConfirmModal" tabindex="-1" aria-hidden="true" style="z-index: 1060;">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header text-white" style="background-color: var(--deped-blue);">
+                <h5 class="modal-title"><i class="fas fa-paper-plane me-2"></i>Confirm Submission</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4 text-center">
+                <div class="mb-3">
+                    <i class="fas fa-circle-question text-warning" style="font-size: 4rem;"></i>
+                </div>
+                <h5 class="fw-bold text-dark">Submit Requisition Request?</h5>
+                <p class="text-muted mb-0">Are you sure all the details and items in this RIS form are correct? Once submitted, it will be forwarded for staff review.</p>
+            </div>
+            <div class="modal-footer bg-light border-0 justify-content-center py-3">
+                <button type="button" class="btn btn-secondary px-4 fw-bold" data-bs-dismiss="modal">Review Again</button>
+                <button type="button" class="btn px-4 fw-bold text-white" style="background-color: var(--deped-blue);" id="confirmSubmitBtn" onclick="executeSubmit()">Yes, Submit Now</button>
+            </div>
+        </div>
     </div>
-
-    <table style="width: 100%; border: none; font-family: 'Times New Roman', Times, serif; font-size: 10pt; margin-bottom: 5px;">
-        <tr>
-            <td style="width: 12%; white-space: nowrap; padding: 2px;">Entity Name:</td>
-            <td style="width: 38%; border-bottom: 1px solid black; padding: 2px;" id="p-entity"></td>
-            <td style="width: 25%; text-align: right; padding-right: 10px; white-space: nowrap; padding: 2px;">Fund Cluster:</td>
-            <td style="width: 25%; border-bottom: 1px solid black; padding: 2px;" id="p-fund"></td>
-        </tr>
-        <tr>
-            <td style="white-space: nowrap; padding: 2px;">Division:</td>
-            <td style="border-bottom: 1px solid black; padding: 2px;" id="p-division"></td>
-            <td style="text-align: right; padding-right: 10px; white-space: nowrap; padding: 2px;">Responsibility Center Code:</td>
-            <td style="border-bottom: 1px solid black; padding: 2px;" id="p-center"></td>
-        </tr>
-        <tr>
-            <td style="white-space: nowrap; padding: 2px;">Office:</td>
-            <td style="border-bottom: 1px solid black; padding: 2px;" id="p-office"></td>
-            <td style="text-align: right; padding-right: 10px; white-space: nowrap; padding: 2px;">RIS No:</td>
-            <td style="border-bottom: 1px solid black; font-weight: bold; padding: 2px;" id="p-ris"></td>
-        </tr>
-    </table>
-
-    <table style="width: 100%; border-collapse: collapse; font-family: 'Times New Roman', Times, serif; font-size: 10pt; border: 1px solid black; table-layout: fixed;">
-        <colgroup>
-            <col style="width: 10%;"> 
-            <col style="width: 8%;">  
-            <col style="width: 38%;"> 
-            <col style="width: 8%;">  
-            <col style="width: 5%;">  
-            <col style="width: 5%;">  
-            <col style="width: 8%;">  
-            <col style="width: 18%;"> 
-        </colgroup>
-        <thead>
-            <tr>
-                <th colspan="4" style="border: 1px solid black; padding: 3px; text-align: center;">REQUISITION</th>
-                <th colspan="2" style="border: 1px solid black; padding: 3px; text-align: center;">Stock Available?</th>
-                <th colspan="2" style="border: 1px solid black; padding: 3px; text-align: center;">Issue</th>
-            </tr>
-            <tr>
-                <th style="border: 1px solid black; padding: 3px; text-align: center;">Stock No.</th>
-                <th style="border: 1px solid black; padding: 3px; text-align: center;">Unit</th>
-                <th style="border: 1px solid black; padding: 3px; text-align: center;">Description</th>
-                <th style="border: 1px solid black; padding: 3px; text-align: center;">Quantity</th>
-                <th style="border: 1px solid black; padding: 3px; text-align: center;">Yes</th>
-                <th style="border: 1px solid black; padding: 3px; text-align: center;">No</th>
-                <th style="border: 1px solid black; padding: 3px; text-align: center;">Quantity</th>
-                <th style="border: 1px solid black; padding: 3px; text-align: center;">Remarks</th>
-            </tr>
-        </thead>
-        <tbody id="print-items-body">
-            </tbody>
-        <tbody>
-            <tr>
-                <td colspan="8" style="border: 1px solid black; padding: 3px; text-align: left;">
-                    <b>Purpose:</b> <span id="p-purpose"></span>
-                </td>
-            </tr>
-        </tbody>
-    </table>
-
-    <table style="width: 100%; border-collapse: collapse; font-family: 'Times New Roman', Times, serif; font-size: 10pt; border: 1px solid black; border-top: none; table-layout: fixed;">
-        <tbody>
-            <tr>
-                <td style="width: 12%; border: 1px solid black; padding: 3px; border-top: none;"></td>
-                <td style="width: 22%; border: 1px solid black; padding: 3px; font-weight: bold; text-align: center; border-top: none;">Requested by:</td>
-                <td style="width: 22%; border: 1px solid black; padding: 3px; font-weight: bold; text-align: center; border-top: none;">Approved by:</td>
-                <td style="width: 22%; border: 1px solid black; padding: 3px; font-weight: bold; text-align: center; border-top: none;">Issued by:</td>
-                <td style="width: 22%; border: 1px solid black; padding: 3px; font-weight: bold; text-align: center; border-top: none;">Received by:</td>
-            </tr>
-            <tr>
-                <td style="border: 1px solid black; padding: 3px; text-align: left;">Signature</td>
-                <td style="border: 1px solid black; padding: 3px;"></td>
-                <td style="border: 1px solid black; padding: 3px;"></td>
-                <td style="border: 1px solid black; padding: 3px;"></td>
-                <td style="border: 1px solid black; padding: 3px;"></td>
-            </tr>
-            <tr>
-                <td style="border: 1px solid black; padding: 3px; text-align: left;">Printed Name</td>
-                <td style="border: 1px solid black; padding: 3px; text-align: center;"><b id="p-req-name"></b></td>
-                <td style="border: 1px solid black; padding: 3px; text-align: center;"><b id="p-app-name"></b></td>
-                <td style="border: 1px solid black; padding: 3px; text-align: center;"><b id="p-iss-name"></b></td>
-                <td style="border: 1px solid black; padding: 3px; text-align: center;"><b id="p-rec-name"></b></td>
-            </tr>
-            <tr>
-                <td style="border: 1px solid black; padding: 3px; text-align: left;">Designation</td>
-                <td style="border: 1px solid black; padding: 3px; text-align: center;" id="p-req-des"></td>
-                <td style="border: 1px solid black; padding: 3px; text-align: center;" id="p-app-des"></td>
-                <td style="border: 1px solid black; padding: 3px; text-align: center;" id="p-iss-des"></td>
-                <td style="border: 1px solid black; padding: 3px; text-align: center;" id="p-rec-des"></td>
-            </tr>
-            <tr>
-                <td style="border: 1px solid black; padding: 3px; text-align: left;">Date</td>
-                <td style="border: 1px solid black; padding: 3px; text-align: center;"><span id="p-req-date"></span></td>
-                <td style="border: 1px solid black; padding: 3px; text-align: center;"></td>
-                <td style="border: 1px solid black; padding: 3px; text-align: center;"></td>
-                <td style="border: 1px solid black; padding: 3px; text-align: center;"></td>
-            </tr>
-        </tbody>
-    </table>
 </div>
 
 <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
@@ -458,8 +330,34 @@
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
 <script>
+    // --- Safe Modal Trigger Logic ---
+    function showConfirmModal() {
+        const form = document.getElementById('requisitionForm');
+        // Validate form manually
+        if (form.checkValidity()) {
+            // If valid, click the hidden native bootstrap toggle to prevent backdrop bugs
+            document.getElementById('hiddenSubmitTrigger').click();
+        } else {
+            // Show standard HTML5 validation messages
+            form.reportValidity(); 
+        }
+    }
+
+    function executeSubmit() {
+        const btn = document.getElementById('confirmSubmitBtn');
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Submitting...';
+        btn.disabled = true;
+        // Submit the form
+        document.getElementById('requisitionForm').submit();
+    }
+
+
     function formatSupplyOption(state) {
         if (!state.id) { return state.text; }
+        
+        if (state.id === 'Others') {
+            return $(`<span class="text-primary fw-bold"><i class="fas fa-pen me-2"></i>${state.text}</span>`);
+        }
         
         let qty = $(state.element).data('qty');
         let badgeHtml = '';
@@ -476,7 +374,7 @@
     }
 
     function initSelect2Fields() {
-        $('.select2-supply').select2({
+        $('.select2-supply:not(.select2-hidden-accessible)').select2({
             theme: 'bootstrap-5',
             width: '100%',
             placeholder: '-- Select Supply Item --',
@@ -485,15 +383,29 @@
             escapeMarkup: function(m) { return m; } 
         });
 
-        $('.select2-supply').on('select2:select', function (e) {
-            const selectedOption = $(this).select2('data')[0].element; 
-            const barcode = $(selectedOption).data('barcode'); 
-            const unit = $(selectedOption).data('unit'); 
+        // Use event delegation so dynamic rows automatically inherit the event listener
+        $('#items-container').on('select2:select', '.select2-supply', function (e) {
+            const selectedVal = $(this).val();
             const row = $(this).closest('.item-row');
+            const manualInput = row.find('.manual-desc-input');
+            const unitInput = row.find('.unit-input');
+            const stockInput = row.find('.stock-input');
             
-            // Auto-fill Stock No and Unit Measure
-            row.find('.stock-input').val(barcode || '');
-            row.find('.unit-input').val(unit || '');
+            if (selectedVal === 'Others') {
+                manualInput.show().attr('required', true);
+                stockInput.val('');
+                unitInput.val('').removeAttr('readonly').attr('placeholder', 'Type unit manually').removeClass('bg-light');
+            } else {
+                manualInput.hide().attr('required', false).val('');
+                unitInput.attr('readonly', true).attr('placeholder', 'Auto-filled').addClass('bg-light');
+                
+                const selectedOption = $(this).select2('data')[0].element; 
+                const barcode = $(selectedOption).data('barcode'); 
+                const unit = $(selectedOption).data('unit'); 
+                
+                stockInput.val(barcode || '');
+                unitInput.val(unit || '');
+            }
         });
     }
 
@@ -541,26 +453,33 @@
         const container = document.getElementById('items-container');
         const firstRow = container.querySelector('.item-row');
         
+        // Destroy select2 on the original row temporarily to clone it cleanly
+        $(firstRow).find('.select2-supply').select2('destroy');
+        
         const newRow = firstRow.cloneNode(true);
         
-        newRow.querySelectorAll('.select2-container').forEach(el => el.remove());
-        
-        const selectElement = newRow.querySelector('.select2-supply');
-        selectElement.classList.remove('select2-hidden-accessible');
-        selectElement.removeAttribute('data-select2-id');
-        selectElement.removeAttribute('aria-hidden');
-        selectElement.removeAttribute('tabindex');
-        
+        // Reset dynamic fields in the cloned row
         newRow.querySelectorAll('input, textarea').forEach(input => input.value = '');
         newRow.querySelectorAll('select').forEach(select => {
             select.selectedIndex = 0;
-            select.querySelectorAll('option').forEach(opt => opt.removeAttribute('data-select2-id'));
         });
         
-        newRow.removeAttribute('data-select2-id');
+        const manualDesc = newRow.querySelector('.manual-desc-input');
+        if(manualDesc) {
+            manualDesc.style.display = 'none';
+            manualDesc.required = false;
+        }
+        
+        const unitInp = newRow.querySelector('.unit-input');
+        if(unitInp) {
+            unitInp.readOnly = true;
+            unitInp.classList.add('bg-light');
+            unitInp.placeholder = 'Auto-filled';
+        }
         
         container.appendChild(newRow);
         
+        // Re-initialize select2 on ALL select fields (both original and new)
         initSelect2Fields();
     }
 
@@ -568,103 +487,11 @@
         const container = document.getElementById('items-container');
         const rows = container.querySelectorAll('.item-row');
         if (rows.length > 1) {
-            if (confirm("Are you sure you want to delete this item?")) {
-                link.closest('.item-row').remove();
-            }
+            // Must destroy select2 instance before removing from DOM to prevent memory leaks
+            $(link).closest('.item-row').find('.select2-supply').select2('destroy');
+            link.closest('.item-row').remove();
         } else {
             alert("The form must have at least one item.");
-        }
-    }
-
-    function formatDesignation(val) {
-        if (!val) return '';
-        return val.replace(' (', '<br>(');
-    }
-
-    function prepareAndPrint() {
-        try {
-            document.getElementById('p-entity').innerText = document.getElementById('entity_name')?.value || '';
-            document.getElementById('p-office').innerText = document.getElementById('officeSelect')?.value || '';
-            document.getElementById('p-division').innerText = document.getElementById('unitSelect')?.value || '';
-            document.getElementById('p-fund').innerText = document.getElementById('fund_cluster')?.value || '';
-            document.getElementById('p-center').innerText = document.getElementById('center_code')?.value || '';
-            document.getElementById('p-ris').innerText = document.getElementById('ris_no')?.value || '';
-
-            document.getElementById('p-req-name').innerText = document.getElementById('req_by')?.value || '';
-            document.getElementById('p-app-name').innerText = document.getElementById('app_by')?.value || '';
-            document.getElementById('p-iss-name').innerText = document.getElementById('iss_by')?.value || '';
-            document.getElementById('p-rec-name').innerText = document.getElementById('rec_by')?.value || '';
-
-            document.getElementById('p-req-des').innerHTML = formatDesignation(document.getElementById('desig_req')?.value);
-            document.getElementById('p-app-des').innerHTML = formatDesignation(document.getElementById('desig_app')?.value);
-            document.getElementById('p-iss-des').innerHTML = formatDesignation(document.getElementById('desig_iss')?.value);
-            document.getElementById('p-rec-des').innerHTML = formatDesignation(document.getElementById('desig_rec')?.value);
-
-            const today = new Date();
-            const yyyy = today.getFullYear();
-            let mm = today.getMonth() + 1; 
-            let dd = today.getDate();
-            if (dd < 10) dd = '0' + dd;
-            if (mm < 10) mm = '0' + mm;
-            const formattedToday = yyyy + '-' + mm + '-' + dd;
-            
-            document.getElementById('p-req-date').innerText = formattedToday;
-
-            const printBody = document.getElementById('print-items-body');
-            printBody.innerHTML = '';
-            
-            const rows = document.querySelectorAll('.item-row');
-            let rowsAdded = 0;
-
-            rows.forEach(row => {
-                const stockInput = row.querySelector('[name="stock_no[]"]');
-                const unitInput = row.querySelector('[name="unit_measure[]"]');
-                const descInput = row.querySelector('[name="description[]"]');
-                const qtyInput = row.querySelector('[name="quantity[]"]');
-                const remarkInput = row.querySelector('[name="remarks[]"]');
-
-                if (stockInput && unitInput && descInput && qtyInput && remarkInput) {
-                    let tr = `<tr>
-                        <td style="border: 1px solid black; padding: 5px; text-align: center;">${stockInput.value || ''}</td>
-                        <td style="border: 1px solid black; padding: 5px; text-align: center;">${unitInput.value || ''}</td>
-                        <td style="border: 1px solid black; padding: 5px; text-align: left;">${descInput.value || ''}</td>
-                        <td style="border: 1px solid black; padding: 5px; text-align: center;">${qtyInput.value || ''}</td>
-                        <td style="border: 1px solid black; padding: 5px; text-align: center;">&nbsp;</td> 
-                        <td style="border: 1px solid black; padding: 5px; text-align: center;">&nbsp;</td> 
-                        <td style="border: 1px solid black; padding: 5px; text-align: center;"></td>
-                        <td style="border: 1px solid black; padding: 5px; text-align: left;">${remarkInput.value || ''}</td>
-                    </tr>`;
-                    printBody.innerHTML += tr;
-                    rowsAdded++;
-                }
-            });
-
-            for(let j=rowsAdded; j<15; j++) {
-                printBody.innerHTML += `<tr>
-                    <td style="border: 1px solid black; padding: 7px;">&nbsp;</td>
-                    <td style="border: 1px solid black; padding: 7px;"></td>
-                    <td style="border: 1px solid black; padding: 7px;"></td>
-                    <td style="border: 1px solid black; padding: 7px;"></td>
-                    <td style="border: 1px solid black; padding: 7px;"></td>
-                    <td style="border: 1px solid black; padding: 7px;"></td>
-                    <td style="border: 1px solid black; padding: 7px;"></td>
-                    <td style="border: 1px solid black; padding: 7px;"></td>
-                </tr>`;
-            }
-
-            const purposes = document.getElementsByName('purpose[]');
-            let combinedPurpose = "";
-            for(let p=0; p < purposes.length; p++) {
-                if(purposes[p] && purposes[p].value) {
-                    combinedPurpose += purposes[p].value + " ";
-                }
-            }
-            document.getElementById('p-purpose').innerText = combinedPurpose.trim();
-
-            window.print();
-        } catch (err) {
-            console.error('Print generation failed:', err);
-            alert("Could not generate print layout. Please check console for details.");
         }
     }
 </script>

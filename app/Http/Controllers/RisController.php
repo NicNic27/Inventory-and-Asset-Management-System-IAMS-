@@ -5,7 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\RisRequest;
 use App\Models\RisItem;
 use App\Models\Supply; 
+use App\Models\ActivityLog;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class RisController extends Controller
 {
@@ -14,7 +16,6 @@ class RisController extends Controller
         $perPage = $request->input('per_page', 10);
         $query = RisRequest::query();
 
-        // Apply Search Filter (by RIS No or Requester Name)
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function($q) use ($search) {
@@ -23,12 +24,10 @@ class RisController extends Controller
             });
         }
 
-        // Apply Status Filter
         if ($request->filled('status_filter') && $request->status_filter !== 'All') {
             $query->where('status', $request->status_filter);
         }
 
-        // Apply Sorting (Defaults to Latest First)
         $sort = $request->input('sort', 'latest');
         if ($sort === 'oldest') {
             $query->orderBy('created_at', 'asc');
@@ -36,7 +35,7 @@ class RisController extends Controller
             $query->orderByRaw("FIELD(status, 'Pending Staff Review', 'Forwarded to Admin', 'Approved', 'Declined', 'Rejected', 'Cancelled') asc")
                   ->orderBy('created_at', 'desc');
         } else {
-            $query->orderBy('created_at', 'desc'); // Newest first
+            $query->orderBy('created_at', 'desc');
         }
 
         $requests = $query->paginate($perPage);
@@ -48,7 +47,6 @@ class RisController extends Controller
     {
         $req = RisRequest::with('items')->findOrFail($id);
         
-        // Loop through and attach the live inventory stock using the unique Barcode!
         foreach ($req->items as $item) {
             $supply = Supply::where('barcode_id', $item->stock_no)->first();
             $item->current_stock = $supply ? $supply->quantity : 0;
@@ -61,17 +59,16 @@ class RisController extends Controller
     {
         $ris = RisRequest::findOrFail($id);
 
-        $status = $ris->status; // Default to current status
-        $msg = 'updated'; // Default message
+        $status = $ris->status; 
+        $msg = 'updated'; 
 
         if ($request->action == 'forward') {
             $status = 'Forwarded to Admin';
             $msg = 'forwarded';
         } elseif ($request->action == 'return') {
-            $status = 'Pending Staff Review'; // Revert back to staff
+            $status = 'Pending Staff Review'; 
             $msg = 'returned';
         } else {
-            // Save action - only set to pending if it hasn't been approved yet
             if ($ris->status != 'Approved') {
                 $status = 'Pending Staff Review';
             }
@@ -110,7 +107,6 @@ class RisController extends Controller
                 $stockNo = $request->stock_no[$i] ?? null;
                 $desc = $request->description[$i] ?? null;
                 
-                // FIXED: Default to N/A if the required dropdown is somehow bypassed
                 $avail = $request->input("stock_avail_$i") ?? 'N/A';
 
                 if (!empty($stockNo) || !empty($desc)) {
@@ -133,6 +129,14 @@ class RisController extends Controller
                 }
             }
         }
+
+        ActivityLog::create([
+            'user_id' => Auth::id(),
+            'action' => 'Updated',
+            'description' => "Processed/Updated RIS: {$ris->ris_no} (Status: {$status})",
+            'ip_address' => request()->ip(),
+            'user_agent' => request()->userAgent()
+        ]);
 
         return redirect('/ris')->with('msg', $msg);
     }

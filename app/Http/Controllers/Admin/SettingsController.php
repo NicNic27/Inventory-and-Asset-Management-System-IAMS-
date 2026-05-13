@@ -5,20 +5,19 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\SystemSetting;
+use App\Models\ActivityLog;
+use Illuminate\Support\Facades\Auth;
 
 class SettingsController extends Controller
 {
     public function index()
     {
-        // Fetch all settings and format them into an easy key-value array
         $settings = SystemSetting::pluck('value', 'key')->toArray();
-        
         return view('admin.settings.index', compact('settings'));
     }
 
     public function update(Request $request)
     {
-        // The keys we expect from the form
         $keys = [
             'seq_stock_no', 
             'seq_ris_no', 
@@ -35,6 +34,14 @@ class SettingsController extends Controller
                 );
             }
         }
+
+        ActivityLog::create([
+            'user_id' => Auth::id(),
+            'action' => 'Updated',
+            'description' => "Updated core system sequence settings.",
+            'ip_address' => request()->ip(),
+            'user_agent' => request()->userAgent()
+        ]);
 
         return redirect()->back()->with('msg', 'Sequence settings updated successfully!');
     }

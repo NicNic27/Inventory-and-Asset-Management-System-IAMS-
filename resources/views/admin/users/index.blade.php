@@ -16,6 +16,10 @@
         
         .clickable-row { cursor: pointer; transition: background-color 0.2s; }
         .clickable-row:hover { background-color: #f8f9fa !important; }
+
+        /* THE Z-INDEX FIX FOR MODALS */
+        .modal { z-index: 1060 !important; }
+        .modal-backdrop { z-index: 1055 !important; }
         
         @media (max-width: 768px) { .main-content { margin-left: 0; } }
     </style>
@@ -128,7 +132,7 @@
         </div>
     </div>
 
-    <div class="modal fade" id="addUserModal" tabindex="-1">
+    <div class="modal fade" id="addUserModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header bg-primary text-white">
@@ -219,7 +223,7 @@
         </div>
     </div>
 
-    <div class="modal fade" id="editUserModal" tabindex="-1">
+    <div class="modal fade" id="editUserModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header bg-success text-white">
@@ -312,7 +316,7 @@
         </div>
     </div>
 
-    <div class="modal fade" id="deleteUserModal" tabindex="-1">
+    <div class="modal fade" id="deleteUserModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header bg-danger text-white">
@@ -335,7 +339,7 @@
         </div>
     </div>
 
-    <div class="modal fade" id="viewUserModal" tabindex="-1">
+    <div class="modal fade" id="viewUserModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content shadow-lg border-0" id="view_details_content" style="border-radius: 12px; overflow: hidden;">
                 </div>
@@ -356,7 +360,6 @@
             "Office of the Regional Director": ["Procurement Unit", "Information and Communications Technology Unit", "Public Affairs Unit", "Legal Unit"]
         };
 
-        // Populate Division Dropdowns on load
         function populateDivisions(selectElementId) {
             const select = document.getElementById(selectElementId);
             for (let division in officeMapping) {
@@ -370,7 +373,6 @@
         populateDivisions("add_division");
         populateDivisions("edit_division");
 
-        // Event Listeners to update Sections when Division changes
         document.getElementById('add_division').addEventListener('change', function() {
             const division = this.value;
             const sectionSelect = document.getElementById('add_section');
@@ -405,11 +407,14 @@
             }
         });
 
-        // --- View Modal AJAX ---
+        // --- View Modal AJAX FIX ---
         function loadViewModal(id) {
             const contentArea = document.getElementById('view_details_content');
             
-            new bootstrap.Modal(document.getElementById('viewUserModal')).show();
+            // USE getOrCreateInstance TO PREVENT BACKDROP STACKING BUG
+            const myModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('viewUserModal'));
+            myModal.show();
+            
             contentArea.innerHTML = '<div class="p-5 text-center"><div class="spinner-border text-primary"></div><p class="mt-2 mb-0">Loading Profile...</p></div>';
 
             fetch(`/admin/users/${id}/details`)
@@ -444,24 +449,19 @@
                 document.getElementById('edit_role').value = this.getAttribute('data-role'); 
                 document.getElementById('edit_status').value = this.getAttribute('data-status');
 
-                // Advanced Logic to auto-select the correct Division and Section
                 const userDept = this.getAttribute('data-dept');
                 const divisionSelect = document.getElementById('edit_division');
                 const sectionSelect = document.getElementById('edit_section');
                 
-                // Reset Selects
                 divisionSelect.value = "";
                 sectionSelect.innerHTML = '<option value="" selected disabled>Select Division first</option>';
                 sectionSelect.disabled = true;
 
-                // Find which Division this Department belongs to
                 if (userDept) {
                     for (let division in officeMapping) {
                         if (officeMapping[division].includes(userDept)) {
-                            // 1. Set Division
                             divisionSelect.value = division;
                             
-                            // 2. Populate corresponding sections
                             sectionSelect.innerHTML = '<option value="" disabled>Select Section</option>';
                             officeMapping[division].forEach(function(section) {
                                 let option = document.createElement("option");
@@ -470,7 +470,6 @@
                                 sectionSelect.appendChild(option);
                             });
                             
-                            // 3. Select the actual section & enable
                             sectionSelect.value = userDept;
                             sectionSelect.disabled = false;
                             break;
@@ -478,7 +477,6 @@
                     }
                 }
 
-                // Handle Image Preview
                 const currentImage = this.getAttribute('data-image');
                 const preview = document.getElementById('imagePreviewEdit');
                 const placeholder = document.getElementById('imagePlaceholderEdit');
@@ -496,7 +494,6 @@
             });
         });
 
-        // --- Populate Delete Form ---
         document.querySelectorAll('.delete-btn').forEach(btn => {
             btn.addEventListener('click', function() {
                 const id = this.getAttribute('data-id');
@@ -504,7 +501,6 @@
             });
         });
 
-        // --- Add Form Image Preview JS ---
         document.getElementById('imageInputAdd').addEventListener('change', function(event) {
             const preview = document.getElementById('imagePreviewAdd');
             const placeholder = document.getElementById('imagePlaceholderAdd');
@@ -525,7 +521,6 @@
             }
         });
 
-        // --- Edit Form Image Preview JS ---
         document.getElementById('imageInputEdit').addEventListener('change', function(event) {
             const preview = document.getElementById('imagePreviewEdit');
             const placeholder = document.getElementById('imagePlaceholderEdit');
@@ -542,7 +537,6 @@
             }
         });
 
-        // --- Toggle Password Visibility JS ---
         document.querySelectorAll('.toggle-password').forEach(button => {
             button.addEventListener('click', function() {
                 const targetId = this.getAttribute('data-target');

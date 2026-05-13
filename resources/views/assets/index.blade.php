@@ -1,21 +1,116 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
     <title>Assets Inventory - Staff</title>
-    <meta name="csrf-token" content="{{ csrf_token() }}">
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     
     <style>
-        body { background-color: #f4f6f9; font-family: 'Segoe UI', sans-serif; }
-        .main-content { margin-left: 250px; padding: 20px; transition: all 0.3s; }
-        .table-container { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-        .clickable-row { cursor: pointer; transition: background-color 0.2s; }
-        .clickable-row:hover { background-color: #f8f9fa !important; }
-        @media (max-width: 768px) { .main-content { margin-left: 0; } }
+        body { 
+            background-color: #f4f6f9; 
+            font-family: 'Segoe UI', sans-serif; 
+            overflow: hidden; 
+            height: 100vh;
+            margin: 0;
+        }
+
+        .main-content { 
+            margin-left: 250px; 
+            padding: 20px; 
+            padding-top: 80px !important; 
+            transition: all 0.3s; 
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .table-container { 
+            background: white; 
+            padding: 20px; 
+            border-radius: 8px; 
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05); 
+            flex-grow: 1; 
+            display: flex;
+            flex-direction: column;
+            min-height: 0; 
+        }
+
+        .table-responsive {
+            flex-grow: 1;
+            overflow-y: auto; 
+            margin-bottom: 10px;
+        }
+
+        .table thead th {
+            position: sticky;
+            top: 0;
+            background-color: #f8f9fa;
+            z-index: 1;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+
+        .status-serviceable { background-color: #198754; color: #fff; } /* Green Available */
+        .status-assigned { background-color: #101954; color: #fff; } /* Blue Assigned */
+        .status-defective { background-color: #dc3545; color: #fff; } /* Red Defective */
+        
+        .clickable-row { cursor: pointer; }
+        .clickable-row td { transition: background-color 0.2s ease-in-out; }
+        .clickable-row:hover td { background-color: #dde2e6 !important; }
+
+        /* --- Advanced Scrollable Pagination (Sticky Arrows) --- */
+        #styled-pagination nav > div:not(:last-child),
+        #styled-pagination p { display: none !important; }
+
+        .custom-pagination-wrapper ul.pagination {
+            position: relative; 
+            display: flex; 
+            flex-wrap: nowrap;
+            max-width: 250px; 
+            overflow-x: auto; 
+            overflow-y: hidden;
+            scrollbar-width: thin; 
+            scrollbar-color: #101954 #f4f6f9;
+            padding-bottom: 4px;
+            margin-bottom: 0;
+        }
+        
+        .custom-pagination-wrapper ul.pagination::-webkit-scrollbar { height: 6px; }
+        .custom-pagination-wrapper ul.pagination::-webkit-scrollbar-track { background: #f4f6f9; border-radius: 10px; }
+        .custom-pagination-wrapper ul.pagination::-webkit-scrollbar-thumb { background: #101954; border-radius: 10px; }
+
+        .custom-pagination-wrapper ul.pagination > li:first-child { position: sticky; left: 0; z-index: 5; }
+        .custom-pagination-wrapper ul.pagination > li:last-child { position: sticky; right: 0; z-index: 5; }
+        
+        .custom-pagination-wrapper ul.pagination > li:first-child .page-link,
+        .custom-pagination-wrapper ul.pagination > li:last-child .page-link {
+            background-color: white !important;
+            box-shadow: 0 0 5px rgba(0,0,0,0.15); 
+        }
+
+        .page-item.active .page-link { background-color: #f4f6f9; color: #101954; font-weight: 700; border-color: #dee2e6; }
+        .page-link { color: #6c757d; }
+        .page-link:hover { color: #101954; background-color: #f4f6f9; }
+
+        .modal { z-index: 1060 !important; }
+        .modal-backdrop { z-index: 1055 !important; }
+        
+        @media (max-width: 768px) { 
+            body { overflow: visible; height: auto; }
+            .main-content { 
+                margin-left: 0; 
+                height: auto; 
+                overflow: visible; 
+                display: block; 
+                padding: 15px; 
+                padding-top: 80px !important; 
+            } 
+            .table-container { display: block; min-height: auto; padding: 15px; }
+            .mobile-stack { width: 100% !important; max-width: 100% !important; }
+        }
     </style>
 </head>
 <body>
@@ -24,230 +119,325 @@
     @include('layouts.sidebar')
 
     <div class="main-content">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <div>
-                <h3 class="fw-bold text-dark mb-0"><i class="fas fa-laptop text-primary me-2"></i>Assets Inventory</h3>
-                <small class="text-muted">Manage equipment, stock in/out, and details.</small>
+        
+        <div class="row align-items-center mb-3 g-3">
+            <div class="col-12 col-md-6 text-center text-md-start">
+                <h3 class="fw-bold text-dark mb-0" style="color: #003366 !important;"><i class="fas fa-laptop text-primary me-2"></i>Assets Inventory</h3>
+                <small class="text-muted">Manage equipment, status tracking, and details.</small>
             </div>
-            
-            <div class="d-flex gap-2">
-                <div class="btn-group">
-                    <button type="button" class="btn btn-outline-dark dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-                        <i class="fas fa-barcode"></i> Scan Barcode
-                    </button>
-                    <ul class="dropdown-menu">
-                        <li><a class="dropdown-item text-success fw-bold" href="javascript:void(0);" onclick="openScanner('IN', 'assets')"><i class="fas fa-plus-circle me-2"></i> Stock IN</a></li>
-                        <li><a class="dropdown-item text-danger fw-bold" href="javascript:void(0);" onclick="openScanner('OUT', 'assets')"><i class="fas fa-minus-circle me-2"></i> Stock OUT</a></li>
-                    </ul>
-                </div>
-
-                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addAssetModal">
+            <div class="col-12 col-md-6 d-flex flex-column flex-md-row gap-2 justify-content-md-end">
+                <button class="btn btn-outline-dark fw-bold shadow-sm mobile-stack" onclick="scanAssetStatus()">
+                    <i class="fas fa-barcode me-1"></i> Scan Asset (Status Update)
+                </button>
+                <button class="btn btn-primary shadow-sm mobile-stack" data-bs-toggle="modal" data-bs-target="#addAssetModal">
                     <i class="fas fa-plus me-2"></i> Add New Asset
                 </button>
             </div>
         </div>
 
-        @if(session('msg'))
-            <div class="alert alert-success alert-dismissible fade show">
-                Action Successful! <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        @if(session('msg') == 'saved')
+            <div class="alert alert-success alert-dismissible fade show py-2 border-0 shadow-sm">
+                <i class="fas fa-check-circle me-2"></i> Asset successfully saved/updated! 
+                <button type="button" class="btn-close btn-sm pt-3" data-bs-dismiss="alert"></button>
             </div>
-        @endif
-        @if(session('error'))
-            <div class="alert alert-danger alert-dismissible fade show">
-                {{ session('error') }} <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        @elseif(session('msg') == 'deleted')
+            <div class="alert alert-success alert-dismissible fade show py-2 border-0 shadow-sm">
+                <i class="fas fa-trash-alt me-2"></i> Asset successfully deleted! 
+                <button type="button" class="btn-close btn-sm pt-3" data-bs-dismiss="alert"></button>
             </div>
         @endif
 
         <div class="table-container">
+            
+            <form action="{{ url('/asset-list') }}" method="GET" id="filterForm" class="row g-2 mb-3 align-items-center">
+                <div class="col-12 col-md-5">
+                    <div class="input-group shadow-sm mobile-stack">
+                        <span class="input-group-text bg-white border-end-0"><i class="fas fa-search text-muted"></i></span>
+                        <input type="text" name="search" id="assetSearchInput" class="form-control border-start-0 ps-0" placeholder="Search Property No., Article, or Desc..." value="{{ request('search') }}">
+                    </div>
+                </div>
+                
+                <div class="col-12 col-md-3">
+                    <select name="status_filter" class="form-select shadow-sm mobile-stack" onchange="document.getElementById('filterForm').submit();">
+                        <option value="All" {{ request('status_filter') == 'All' ? 'selected' : '' }}>All Statuses</option>
+                        <option value="Serviceable" {{ request('status_filter') == 'Serviceable' ? 'selected' : '' }}>Serviceable</option>
+                        <option value="Unserviceable" {{ request('status_filter') == 'Unserviceable' ? 'selected' : '' }}>Unserviceable / Defective</option>
+                    </select>
+                </div>
+
+                <div class="col-12 col-md-4 text-md-end">
+                    @if(request('search') || request('status_filter') && request('status_filter') !== 'All')
+                        <a href="{{ url('/asset-list') }}" class="btn btn-outline-danger btn-sm fw-bold shadow-sm mobile-stack">
+                            <i class="fas fa-times me-1"></i> Clear Filters
+                        </a>
+                    @endif
+                </div>
+            </form>
+
             <div class="table-responsive">
-                <table class="table table-hover align-middle">
+                <table class="table align-middle mb-0">
                     <thead class="table-light">
                         <tr>
-                            <th>P.O. No. (Barcode ID)</th>
-                            <th>Article</th>
-                            <th>Description</th>
-                            <th>Supplier</th> 
+                            <th class="text-nowrap">Property No.</th>
+                            <th class="text-nowrap">Article / Item</th>
+                            <th class="text-nowrap" style="min-width: 200px;">Description</th>
+                            <th>Unit</th>
+                            <th>Value</th>
                             <th>Status</th>
-                            <th>Stock</th>
                             <th class="text-center">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse($assets as $row)
-                        <tr>
-                            <td class="fw-bold font-monospace text-primary">
-                                {!! !empty($row->barcode_id) ? $row->barcode_id : '<span class="text-muted small">No Barcode ID</span>' !!}
-                            </td>
-                            <td class="fw-bold">{{ $row->article }}</td>
-                            <td><small class="text-muted">{{ $row->description }}</small></td>
-                            <td><small>{{ $row->supplier }}</small></td>
-                            <td>
-                                <span class="badge bg-{{ $row->status == 'Serviceable' ? 'success' : 'danger' }}">
-                                    {{ $row->status }}
-                                </span>
-                            </td>
-                            <td class="fw-bold fs-5">{{ $row->quantity }}</td>
-                            <td class="text-center">
-                                <div class="btn-group me-2">
-                                    <button class="btn btn-outline-success btn-sm stock-btn" 
-                                            data-id="{{ $row->id }}"
-                                            data-name="{{ $row->article }}"
-                                            data-type="IN"
-                                            title="Stock IN">
-                                        <i class="fas fa-plus"></i>
-                                    </button>
-                                    <button class="btn btn-outline-danger btn-sm stock-btn" 
-                                            data-id="{{ $row->id }}"
-                                            data-name="{{ $row->article }}"
-                                            data-type="OUT"
-                                            title="Stock OUT">
-                                        <i class="fas fa-minus"></i>
-                                    </button>
-                                </div>
-
-                                <div class="btn-group">
-                                    <button class="btn btn-secondary btn-sm edit-btn" 
-                                            data-bs-toggle="modal" 
-                                            data-bs-target="#editAssetModal"
-                                            data-id="{{ $row->id }}"
-                                            data-article="{{ $row->article }}"
-                                            data-desc="{{ $row->description }}"
-                                            data-supplier="{{ $row->supplier }}"
-                                            data-unit="{{ $row->unit_measure }}"
-                                            data-value="{{ $row->unit_value }}"
-                                            data-barcode="{{ $row->barcode_id }}"
-                                            data-status="{{ $row->status }}">
-                                        <i class="fas fa-edit"></i>
-                                    </button>
-                                    <button class="btn btn-danger btn-sm delete-btn" 
-                                            data-id="{{ $row->id }}"
-                                            data-bs-toggle="modal" 
-                                            data-bs-target="#deleteAssetModal">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
+                            @php
+                                $stockNo = !empty($row->barcode_id) ? $row->barcode_id : '<span class="text-muted small">No Property No.</span>';
+                                
+                                // SMART STATUS BADGE LOGIC
+                                if ($row->status != 'Serviceable') {
+                                    $statusHtml = '<span class="badge rounded-pill status-defective px-3 py-1">'.$row->status.'</span>';
+                                } elseif ($row->assigned_to) {
+                                    $statusHtml = '<span class="badge rounded-pill status-assigned shadow-sm px-3 py-1" title="Issued to: '.$row->assigned_to.'"><i class="fas fa-user-check me-1"></i> Assigned</span>';
+                                } else {
+                                    $statusHtml = '<span class="badge rounded-pill status-serviceable shadow-sm px-3 py-1"><i class="fas fa-check-circle me-1"></i> Available</span>';
+                                }
+                            @endphp
+                            <tr class="clickable-row" data-id="{{ $row->id }}">
+                                <td class="fw-bold text-primary font-monospace">{!! $stockNo !!}</td>
+                                <td class="fw-bold text-nowrap">{{ $row->article }}</td>
+                                <td>{{ Str::limit($row->description, 40) }}</td>
+                                <td>{{ $row->unit_measure }}</td>
+                                <td class="text-nowrap">₱{{ number_format($row->unit_value, 2) }}</td>
+                                <td>{!! $statusHtml !!}</td>
+                                <td>
+                                    <div class="d-flex justify-content-center gap-1">
+                                        <button class="btn btn-sm btn-light border text-primary view-btn" title="View" data-id="{{ $row->id }}">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        
+                                        <button class="btn btn-sm btn-light border text-success edit-btn" title="Edit"
+                                                data-bs-toggle="modal" 
+                                                data-bs-target="#editAssetModal"
+                                                data-id="{{ $row->id }}"
+                                                data-article="{{ $row->article }}"
+                                                data-stock="{{ $row->barcode_id }}" 
+                                                data-desc="{{ $row->description }}"
+                                                data-supplier="{{ $row->supplier }}"
+                                                data-unit="{{ $row->unit_measure }}"
+                                                data-value="{{ $row->unit_value }}"
+                                                data-status="{{ $row->status }}"
+                                                data-image="{{ $row->image }}">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        
+                                        <button class="btn btn-sm btn-light border text-danger delete-btn" title="Delete"
+                                                data-id="{{ $row->id }}"
+                                                data-bs-toggle="modal" 
+                                                data-bs-target="#deleteAssetModal">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
                         @empty
-                        <tr>
-                            <td colspan="7" class="text-center py-4 text-muted">No assets found.</td>
-                        </tr>
+                            <tr>
+                                <td colspan="7" class="text-center py-5 text-muted border-bottom-0">
+                                    <i class="fas fa-laptop fa-3x mb-3 opacity-25 d-block"></i>
+                                    No assets match your search filters.
+                                </td>
+                            </tr>
                         @endforelse
                     </tbody>
                 </table>
             </div>
-        </div>
-    </div>
 
-    <div class="modal fade" id="addAssetModal" tabindex="-1">
-        <div class="modal-dialog">
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-center border-top pt-3 mt-2 gap-3">
+                <div class="text-muted small text-center text-md-start">
+                    Showing {{ $assets->firstItem() ?? 0 }} to {{ $assets->lastItem() ?? 0 }} of {{ $assets->total() }} results
+                </div>
+
+                <div class="d-flex align-items-center justify-content-center">
+                    <span class="text-muted small me-2">Per page</span>
+                    <form action="{{ url('/asset-list') }}" method="GET" id="perPageForm">
+                        @if(request('search')) <input type="hidden" name="search" value="{{ request('search') }}"> @endif
+                        @if(request('status_filter')) <input type="hidden" name="status_filter" value="{{ request('status_filter') }}"> @endif
+                        <select name="per_page" class="form-select form-select-sm shadow-none" style="width: 70px; border-color: #101954; color: #101954; font-weight: 500;" onchange="document.getElementById('perPageForm').submit();">
+                            <option value="5" {{ $perPage == 5 ? 'selected' : '' }}>5</option>
+                            <option value="10" {{ $perPage == 10 ? 'selected' : '' }}>10</option>
+                            <option value="25" {{ $perPage == 25 ? 'selected' : '' }}>25</option>
+                            <option value="50" {{ $perPage == 50 ? 'selected' : '' }}>50</option>
+                        </select>
+                    </form>
+                </div>
+
+                <div class="custom-pagination-wrapper d-flex justify-content-center" id="styled-pagination">
+                    {{ $assets->onEachSide(1)->appends(request()->query())->links() }}
+                </div>
+            </div>
+        </div>
+    </div> <div class="modal fade" id="addAssetModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
             <div class="modal-content">
                 <div class="modal-header bg-primary text-white">
                     <h5 class="modal-title"><i class="fas fa-plus-circle me-2"></i> Add New Asset</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
-                <form action="{{ url('/asset-list') }}" method="POST">
+                <form id="addAssetForm" action="{{ url('/asset-list') }}" method="POST" enctype="multipart/form-data">
                     @csrf
-                    <div class="modal-body">
-                        <div class="mb-3">
-                            <label class="form-label">Article (Name) <span class="text-danger">*</span></label>
-                            <input type="text" name="article" class="form-control" required>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Description</label>
-                            <textarea name="description" class="form-control" rows="2"></textarea>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Supplier</label>
-                            <input type="text" name="supplier" class="form-control">
-                        </div>
+                    <div class="modal-body p-4">
                         <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">P.O. No. (Barcode ID) <span class="text-danger">*</span></label>
-                                <input type="text" name="barcode_id" class="form-control" required>
+                            <div class="col-md-3 text-center border-end pe-md-4 mb-4 mb-md-0">
+                                <label class="form-label fw-bold d-block text-start">Asset Image</label>
+                                <div class="border rounded bg-light d-flex justify-content-center align-items-center mx-auto mb-3 overflow-hidden shadow-sm" 
+                                     style="width: 100%; max-width: 200px; aspect-ratio: 1/1; position: relative;">
+                                    <img id="imagePreviewAdd" src="" alt="Preview" style="display: none; width: 100%; height: 100%; object-fit: cover;">
+                                    <i id="imagePlaceholderAdd" class="fas fa-image fa-4x text-muted opacity-50"></i>
+                                </div>
+                                <input type="file" name="image" id="imageInputAdd" class="form-control form-control-sm" accept="image/*">
+                                <small class="text-muted text-start d-block mt-2">Recommended: Square format (JPG, PNG)</small>
                             </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Unit Measure</label>
-                                <input type="text" name="unit_measure" class="form-control" placeholder="e.g. Unit, Set">
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Unit Value (₱)</label>
-                                <input type="number" name="unit_value" class="form-control" step="0.01" min="0">
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label fw-bold text-success">Initial Qty <span class="text-danger">*</span></label>
-                                <input type="number" name="initial_quantity" class="form-control" min="0" value="0" required>
+                            
+                            <div class="col-md-9 ps-md-4">
+                                @if(isset($deliveredPoItems) && count($deliveredPoItems) > 0)
+                                    <div class="mb-4 bg-light p-3 rounded border">
+                                        <label class="form-label text-primary fw-bold mb-2"><i class="fas fa-magic me-1"></i> Auto-Fill from Delivered P.O. (Optional)</label>
+                                        <select id="po_autofill_select" class="form-select border-primary shadow-sm" onchange="autoFillAssetForm(this)">
+                                            <option value="">Select a delivered item to auto-fill the form...</option>
+                                                @php
+                                                    $groupedItems = $deliveredPoItems->groupBy(function($item) {
+                                                        return $item->purchaseOrder->po_no ?? 'Unknown PO';
+                                                    });
+                                                @endphp
+                                                @foreach($groupedItems as $poNo => $items)
+                                                    <optgroup label="P.O. {{ $poNo }}">
+                                                        @foreach($items as $item)
+                                                            <option value="{{ $item->id }}" 
+                                                                    data-desc="{{ $item->description }}"
+                                                                    data-supplier="{{ $item->purchaseOrder->supplier_name ?? '' }}"
+                                                                    data-unit="{{ $item->unit }}"
+                                                                    data-val="{{ $item->unit_cost }}">
+                                                                {{ Str::limit($item->description, 45) }}
+                                                            </option>
+                                                        @endforeach
+                                                    </optgroup>
+                                                @endforeach
+                                        </select>
+                                    </div>
+                                @endif
+
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">Article (Name) <span class="text-danger">*</span></label>
+                                        <input type="text" name="article" id="add_article" class="form-control" required placeholder="e.g. Dell Laptop">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">Supplier</label>
+                                        <input type="text" name="supplier" id="add_supplier" class="form-control" placeholder="e.g. PC Express">
+                                    </div>
+                                    
+                                    <div class="col-12">
+                                        <label class="form-label fw-bold">Description</label>
+                                        <textarea name="description" id="add_desc" class="form-control" rows="2" placeholder="e.g. Core i5, 8GB RAM, 256GB SSD"></textarea>
+                                    </div>
+                                    
+                                    <div class="col-md-12">
+                                        <label class="form-label fw-bold text-primary">Property No. (Barcode ID) <span class="text-danger">*</span></label>
+                                        <input type="text" name="barcode_id" class="form-control border-primary border-2" required placeholder="Enter Property Number manually...">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">Unit Measure <span class="text-danger">*</span></label>
+                                        <input type="text" name="unit_measure" id="add_unit" class="form-control" placeholder="e.g. Unit, Set" required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">Unit Value (₱) <span class="text-danger">*</span></label>
+                                        <input type="number" name="unit_value" id="add_val" class="form-control" step="0.01" min="0" placeholder="0.00" required>
+                                    </div>
+                                </div>
+                                <input type="hidden" name="status" value="Serviceable">
                             </div>
                         </div>
                     </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary">Save Asset</button>
+                    <div class="modal-footer bg-light border-top-0">
+                        <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary px-4 fw-bold">Save Asset</button>
                     </div>
                 </form>
             </div>
         </div>
     </div>
 
-    <div class="modal fade" id="editAssetModal" tabindex="-1">
-        <div class="modal-dialog">
+    <div class="modal fade" id="editAssetModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
             <div class="modal-content">
-                <div class="modal-header bg-secondary text-white">
+                <div class="modal-header bg-success text-white">
                     <h5 class="modal-title"><i class="fas fa-edit me-2"></i> Edit Asset</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
-                <form id="editForm" method="POST">
+                <form id="editForm" method="POST" enctype="multipart/form-data">
                     @csrf
                     @method('PUT')
-                    <div class="modal-body">
-                        <div class="mb-3">
-                            <label class="form-label">Article (Name) <span class="text-danger">*</span></label>
-                            <input type="text" name="article" id="edit_article" class="form-control" required>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Description</label>
-                            <textarea name="description" id="edit_desc" class="form-control" rows="2"></textarea>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Supplier</label>
-                            <input type="text" name="supplier" id="edit_supplier" class="form-control">
-                        </div>
+                    <div class="modal-body p-4">
                         <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">P.O. No. (Barcode ID)</label>
-                                <input type="text" name="barcode_id" id="edit_barcode" class="form-control" required>
+                            <div class="col-md-3 text-center border-end pe-md-4 mb-4 mb-md-0">
+                                <label class="form-label fw-bold d-block text-start">Update Image (Optional)</label>
+                                <div class="border rounded bg-light d-flex justify-content-center align-items-center mx-auto mb-3 overflow-hidden shadow-sm" 
+                                     style="width: 100%; max-width: 200px; aspect-ratio: 1/1; position: relative;">
+                                    <img id="imagePreviewEdit" src="" alt="Preview" style="display: none; width: 100%; height: 100%; object-fit: cover;">
+                                    <i id="imagePlaceholderEdit" class="fas fa-image fa-4x text-muted opacity-50"></i>
+                                </div>
+                                <input type="file" name="image" id="imageInputEdit" class="form-control form-control-sm" accept="image/*">
+                                <small class="text-muted text-start d-block mt-2">Leave blank to keep current image.</small>
                             </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Unit Measure</label>
-                                <input type="text" name="unit_measure" id="edit_unit" class="form-control">
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Unit Value (₱)</label>
-                                <input type="number" name="unit_value" id="edit_value" class="form-control" step="0.01" min="0">
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Status</label>
-                                <select name="status" id="edit_status" class="form-select">
-                                    <option value="Serviceable">Serviceable</option>
-                                    <option value="Unserviceable">Unserviceable</option>
-                                </select>
+                            
+                            <div class="col-md-9 ps-md-4">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">Property No. (Barcode ID) <span class="text-danger">*</span></label>
+                                        <input type="text" name="barcode_id" id="edit_stock" class="form-control border-primary border-2 bg-light" required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">Status <span class="text-danger">*</span></label>
+                                        <select name="status" id="edit_status" class="form-select border-secondary border-2" required>
+                                            <option value="Serviceable">Serviceable</option>
+                                            <option value="Unserviceable">Unserviceable / Defective</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">Article (Name) <span class="text-danger">*</span></label>
+                                        <input type="text" name="article" id="edit_article" class="form-control" required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">Supplier</label>
+                                        <input type="text" name="supplier" id="edit_supplier" class="form-control">
+                                    </div>
+                                    
+                                    <div class="col-12">
+                                        <label class="form-label fw-bold">Description</label>
+                                        <textarea name="description" id="edit_desc" class="form-control" rows="2"></textarea>
+                                    </div>
+                                    
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">Unit Measure <span class="text-danger">*</span></label>
+                                        <input type="text" name="unit_measure" id="edit_unit" class="form-control" required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">Unit Value (₱) <span class="text-danger">*</span></label>
+                                        <input type="number" name="unit_value" id="edit_value" class="form-control" step="0.01" min="0" required>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-success">Update Asset</button>
+                    <div class="modal-footer bg-light border-top-0">
+                        <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-success px-4 fw-bold">Update Asset</button>
                     </div>
                 </form>
             </div>
         </div>
     </div>
-
-    <div class="modal fade" id="deleteAssetModal" tabindex="-1">
+    
+    <div class="modal fade" id="deleteAssetModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header bg-danger text-white">
@@ -270,65 +460,229 @@
         </div>
     </div>
 
-    <div class="modal fade" id="stockModal" tabindex="-1">
+    <div class="modal fade" id="viewAssetModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header" id="stockModalHeader">
-                    <h5 class="modal-title" id="stockModalTitle">Stock Transaction</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            <div class="modal-content shadow-lg border-0" id="view_details_content" style="border-radius: 10px;">
                 </div>
-                <form id="stockForm" method="POST">
-                    @csrf
-                    <input type="hidden" name="transaction_type" id="stock_type">
-                    <div class="modal-body p-4">
-                        <div class="text-center mb-4">
-                            <h5 id="stock_asset_name" class="fw-bold text-dark mb-0"></h5>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">Quantity</label>
-                            <input type="number" name="qty" class="form-control form-control-lg text-center" min="1" value="1" required>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label" id="stock_supplier_label">Reference / Note</label>
-                            <input type="text" name="remarks" class="form-control" placeholder="e.g. RIS-2026-001">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Transaction Date</label>
-                            <input type="date" name="transaction_date" class="form-control" value="{{ date('Y-m-d') }}" required>
-                        </div>
-                    </div>
-                    <div class="modal-footer border-0 justify-content-center">
-                        <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary px-4" id="stockSubmitBtn">Confirm</button>
-                    </div>
-                </form>
-            </div>
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
-    @include('layouts.modal_scanner')
-
     <script>
-        // Edit Modal Population (Updated action URL)
+        // --- DUPLICATE ITEM CHECK INTERCEPTOR FOR ASSETS ---
+        function attachDuplicateCheck(formId) {
+            const formEl = document.getElementById(formId);
+            if(!formEl) return;
+
+            formEl.addEventListener('submit', function(e) {
+                e.preventDefault(); 
+                const form = this;
+                const formData = new FormData(form);
+
+                const submitBtn = form.querySelector('button[type="submit"]');
+                const originalText = submitBtn.innerHTML;
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing...';
+                submitBtn.disabled = true;
+
+                fetch(form.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'duplicate') {
+                        submitBtn.innerHTML = originalText;
+                        submitBtn.disabled = false;
+                        
+                        Swal.fire({
+                            title: 'Duplicate Asset Found!',
+                            text: 'This Property No. (Barcode ID) already exists in the inventory. Individual assets must have unique Property Numbers. Please change it to proceed.',
+                            icon: 'warning',
+                            confirmButtonText: 'Okay, let me change it',
+                            confirmButtonColor: '#101954'
+                        });
+                    } else if (data.status === 'success') {
+                        window.location.reload();
+                    }
+                })
+                .catch(error => {
+                    submitBtn.innerHTML = originalText;
+                    submitBtn.disabled = false;
+                    Swal.fire('Error', 'An error occurred while saving the asset.', 'error');
+                });
+            });
+        }
+
+        // Attach to both add and edit forms
+        attachDuplicateCheck('addAssetForm');
+        attachDuplicateCheck('editForm');
+
+
+        function scanAssetStatus() {
+            Swal.fire({
+                title: 'Scan Asset Barcode',
+                html: '<p class="text-muted mb-3">Scan or type the Property No. (Barcode ID) below:</p>',
+                input: 'text',
+                inputPlaceholder: 'e.g. AST-2026-0001',
+                showCancelButton: true,
+                confirmButtonText: 'Search Asset <i class="fas fa-search ms-1"></i>',
+                confirmButtonColor: '#101954',
+                customClass: { popup: 'rounded-4 shadow' }
+            }).then((result) => {
+                if (result.isConfirmed && result.value) {
+                    const barcode = result.value.trim();
+                    
+                    Swal.fire({
+                        title: 'Update Asset Status',
+                        html: `<p>What is the new status for Property No: <b>${barcode}</b>?</p>`,
+                        showDenyButton: true,
+                        showCancelButton: true,
+                        confirmButtonText: '<i class="fas fa-check-circle me-1"></i> Returned (Serviceable)',
+                        confirmButtonColor: '#198754',
+                        denyButtonText: '<i class="fas fa-times-circle me-1"></i> Defective / Unserviceable',
+                        denyButtonColor: '#dc3545',
+                        cancelButtonText: 'Cancel',
+                        customClass: { popup: 'rounded-4 shadow' }
+                    }).then((statusResult) => {
+                        if (statusResult.isConfirmed || statusResult.isDenied) {
+                            const newStatus = statusResult.isConfirmed ? 'Serviceable' : 'Unserviceable';
+                            
+                            fetch('{{ url("/asset-list/scan-update") }}', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                                },
+                                body: JSON.stringify({ barcode_id: barcode, status: newStatus })
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.status === 'success') {
+                                    Swal.fire({
+                                        icon: 'success',
+                                        title: 'Updated!',
+                                        text: data.message,
+                                        confirmButtonColor: '#101954'
+                                    }).then(() => window.location.reload());
+                                } else {
+                                    Swal.fire({
+                                        icon: 'error',
+                                        title: 'Error',
+                                        text: data.message,
+                                        confirmButtonColor: '#101954'
+                                    });
+                                }
+                            })
+                            .catch(error => {
+                                Swal.fire('Error', 'Something went wrong.', 'error');
+                            });
+                        }
+                    });
+                }
+            });
+        }
+
+        document.addEventListener("DOMContentLoaded", function() {
+            const searchInput = document.getElementById('assetSearchInput');
+            const filterForm = document.getElementById('filterForm');
+            let typingTimer;
+
+            if(searchInput) {
+                searchInput.addEventListener('input', function() {
+                    clearTimeout(typingTimer);
+                    typingTimer = setTimeout(() => { filterForm.submit(); }, 600); 
+                });
+
+                if (searchInput.value.length > 0) {
+                    searchInput.focus();
+                    const val = searchInput.value;
+                    searchInput.value = '';
+                    searchInput.value = val;
+                }
+            }
+        });
+
+        function autoFillAssetForm(selectElement) {
+            const selectedOption = selectElement.options[selectElement.selectedIndex];
+            
+            if (!selectedOption.value) {
+                document.getElementById('add_article').value = '';
+                document.getElementById('add_desc').value = '';
+                document.getElementById('add_supplier').value = '';
+                document.getElementById('add_unit').value = '';
+                document.getElementById('add_val').value = '';
+                return;
+            }
+
+            document.getElementById('add_article').value = selectedOption.getAttribute('data-desc').split(' ')[0]; 
+            document.getElementById('add_desc').value = selectedOption.getAttribute('data-desc');
+            document.getElementById('add_supplier').value = selectedOption.getAttribute('data-supplier');
+            document.getElementById('add_unit').value = selectedOption.getAttribute('data-unit') || 'Unit';
+            document.getElementById('add_val').value = selectedOption.getAttribute('data-val');
+        }
+
+        function loadViewModal(id) {
+            const contentArea = document.getElementById('view_details_content');
+            contentArea.innerHTML = '<div class="p-5 text-center"><div class="spinner-border text-primary"></div><p class="mt-2 mb-0">Loading...</p></div>';
+            
+            var myModal = new bootstrap.Modal(document.getElementById('viewAssetModal'));
+            myModal.show();
+
+            fetch(`/asset-list/${id}/details`)
+                .then(response => response.text())
+                .then(data => { contentArea.innerHTML = data; });
+        }
+
+        document.querySelectorAll('.clickable-row').forEach(row => {
+            row.addEventListener('click', function(e) {
+                if(e.target.closest('button') || e.target.closest('a')) { return; }
+                const id = this.getAttribute('data-id');
+                loadViewModal(id);
+            });
+        });
+
+        document.querySelectorAll('.view-btn').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.stopPropagation(); 
+                const id = this.getAttribute('data-id');
+                loadViewModal(id);
+            });
+        });
+
         document.querySelectorAll('.edit-btn').forEach(btn => {
             btn.addEventListener('click', function() {
                 const id = this.getAttribute('data-id');
                 document.getElementById('editForm').action = `/asset-list/${id}`;
                 
                 document.getElementById('edit_article').value = this.getAttribute('data-article');
+                document.getElementById('edit_stock').value = this.getAttribute('data-stock'); 
                 document.getElementById('edit_desc').value = this.getAttribute('data-desc');
                 document.getElementById('edit_supplier').value = this.getAttribute('data-supplier');
-                document.getElementById('edit_barcode').value = this.getAttribute('data-barcode');
                 document.getElementById('edit_unit').value = this.getAttribute('data-unit');
                 document.getElementById('edit_value').value = this.getAttribute('data-value');
                 document.getElementById('edit_status').value = this.getAttribute('data-status');
+
+                const currentImage = this.getAttribute('data-image');
+                const preview = document.getElementById('imagePreviewEdit');
+                const placeholder = document.getElementById('imagePlaceholderEdit');
+                
+                if (currentImage && currentImage !== '') {
+                    preview.src = `/storage/assets/${currentImage}`;
+                    preview.style.display = 'block';
+                    placeholder.style.display = 'none';
+                } else {
+                    preview.src = '';
+                    preview.style.display = 'none';
+                    placeholder.style.display = 'block';
+                }
+                document.getElementById('imageInputEdit').value = '';
             });
         });
 
-        // Delete Modal Population (Updated action URL)
         document.querySelectorAll('.delete-btn').forEach(btn => {
             btn.addEventListener('click', function() {
                 const id = this.getAttribute('data-id');
@@ -336,38 +690,68 @@
             });
         });
 
-        // Manual Stock IN/OUT Modal Logic (Updated action URL)
-        document.querySelectorAll('.stock-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-                const id = this.getAttribute('data-id');
-                const name = this.getAttribute('data-name');
-                const type = this.getAttribute('data-type');
-                
-                document.getElementById('stockForm').action = `/asset-list/${id}/transaction`;
-                document.getElementById('stock_asset_name').innerText = name;
-                document.getElementById('stock_type').value = type;
+        // ADD MODAL IMAGE PREVIEW
+        document.getElementById('imageInputAdd').addEventListener('change', function(event) {
+            const preview = document.getElementById('imagePreviewAdd');
+            const placeholder = document.getElementById('imagePlaceholderAdd');
+            const file = event.target.files[0];
 
-                const header = document.getElementById('stockModalHeader');
-                const title = document.getElementById('stockModalTitle');
-                const submitBtn = document.getElementById('stockSubmitBtn');
-                const label = document.getElementById('stock_supplier_label');
-
-                if (type === 'IN') {
-                    header.className = 'modal-header bg-success text-white';
-                    title.innerHTML = '<i class="fas fa-arrow-circle-down me-2"></i>Stock IN (Receive)';
-                    submitBtn.className = 'btn btn-success px-4';
-                    submitBtn.innerText = 'Confirm Receive';
-                    label.innerText = 'Supplier / Source';
-                } else {
-                    header.className = 'modal-header bg-danger text-white';
-                    title.innerHTML = '<i class="fas fa-arrow-circle-up me-2"></i>Stock OUT (Release)';
-                    submitBtn.className = 'btn btn-danger px-4';
-                    submitBtn.innerText = 'Confirm Release';
-                    label.innerText = 'RIS / Purpose';
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    preview.src = e.target.result;
+                    preview.style.display = 'block';
+                    placeholder.style.display = 'none';
                 }
+                reader.readAsDataURL(file);
+            } else {
+                preview.src = '';
+                preview.style.display = 'none';
+                placeholder.style.display = 'block';
+            }
+        });
 
-                new bootstrap.Modal(document.getElementById('stockModal')).show();
-            });
+        // EDIT MODAL IMAGE PREVIEW
+        document.getElementById('imageInputEdit').addEventListener('change', function(event) {
+            const preview = document.getElementById('imagePreviewEdit');
+            const placeholder = document.getElementById('imagePlaceholderEdit');
+            const file = event.target.files[0];
+
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    preview.src = e.target.result;
+                    preview.style.display = 'block';
+                    placeholder.style.display = 'none';
+                }
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // PERFECTED PAGINATION LOGIC
+        window.addEventListener('load', function() {
+            const paginationUl = document.querySelector('.custom-pagination-wrapper ul.pagination');
+            
+            if (paginationUl) {
+                paginationUl.addEventListener('wheel', function(e) {
+                    if (e.deltaY !== 0) {
+                        e.preventDefault();
+                        this.scrollLeft += (e.deltaY * 1.5);
+                    }
+                }, { passive: false });
+
+                setTimeout(() => {
+                    const activeLi = paginationUl.querySelector('.page-item.active');
+                    if (activeLi) {
+                        const ulRect = paginationUl.getBoundingClientRect();
+                        const liRect = activeLi.getBoundingClientRect();
+                        const scrollPos = paginationUl.scrollLeft + (liRect.left - ulRect.left) - (ulRect.width / 2) + (liRect.width / 2);
+                        
+                        paginationUl.scrollLeft = scrollPos;
+                        setTimeout(() => { paginationUl.style.scrollBehavior = 'smooth'; }, 50);
+                    }
+                }, 150); 
+            }
         });
     </script>
 </body>

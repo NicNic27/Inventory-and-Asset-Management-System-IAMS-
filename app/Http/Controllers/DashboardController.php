@@ -28,7 +28,8 @@ class DashboardController extends Controller
         $firstname = $user ? $user->firstname : 'Personnel';
         $lastname = $user ? $user->lastname : '';
         
-        $totalAssets = Asset::sum('quantity') ?? 0;
+        // FIXED: Asset uses count() because quantity was removed
+        $totalAssets = Asset::count() ?? 0;
         $totalSupplies = Supply::sum('quantity') ?? 0;
         $assetItemCount = Asset::count() ?? 0;
         $supplyItemCount = Supply::count() ?? 0;

@@ -40,12 +40,17 @@
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header bg-light">
-                <h5 class="modal-title fw-bold text-primary"><i class="fas fa-file-invoice me-2"></i> Receive Purchase Order</h5>
+                <h5 class="modal-title fw-bold text-primary align-items-center d-flex m-0">
+                    <i class="fas fa-file-invoice me-2"></i> Receive Purchase Order
+                    <span id="po_type_badge" class="badge ms-3 fs-6 rounded-pill text-white" style="display: none; background-color: #101954;"></span>
+                </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body bg-light p-3 p-md-4">
                 
                 <form id="poForm">
+                    <input type="hidden" id="po_type" name="po_type" value="">
+
                     <div class="custom-card">
                         <h6 class="fw-bold text-dark mb-3 border-bottom pb-2">Document Details</h6>
                         <div class="row g-3">
@@ -150,165 +155,3 @@
         </div>
     </div>
 </div>
-
-<script>
-    window.onload = () => { addEmptyItemRow(); };
-
-    // Auto-Updates the select box visually based on checked boxes
-    window.autoUpdatePoStatus = function() {
-        const rows = document.querySelectorAll('.item-row');
-        if (rows.length === 0) return;
-        
-        let checkedCount = 0;
-        rows.forEach(row => {
-            if (row.querySelector('.item-delivered-cb').checked) checkedCount++;
-        });
-        
-        const statusSelect = document.getElementById('in-status');
-        if (checkedCount === 0) {
-            statusSelect.value = 'Pending';
-        } else if (checkedCount === rows.length) {
-            statusSelect.value = 'Complete';
-        } else {
-            statusSelect.value = 'Partial';
-        }
-    };
-
-    function addEmptyItemRow(data = {unit: 'pc', desc: '', qty: 0, cost: 0.00, is_delivered: false}) {
-        const container = document.getElementById('itemsContainer');
-        const q = parseFloat(data.qty) || 0;
-        const c = parseFloat(data.cost) || 0;
-        const total = (q * c).toLocaleString(undefined, {minimumFractionDigits: 2});
-        const isSelected = (val) => data.unit === val ? 'selected' : '';
-        const isChecked = data.is_delivered ? 'checked' : '';
-
-        const templateHtml = `
-            <div class="card position-relative item-row p-3 mb-3 border-0 shadow-sm border-start border-4 border-success">
-                <div class="row g-3 align-items-center">
-                    <div class="col-4 col-md-1 text-center pt-md-2">
-                        <label class="form-label d-block text-success mb-2" title="Mark as Delivered">RCVD</label>
-                        <input type="checkbox" class="form-check-input item-delivered-cb shadow-sm border-secondary" style="width: 22px; height: 22px; cursor: pointer;" ${isChecked} onchange="autoUpdatePoStatus()">
-                    </div>
-                    <div class="col-8 col-md-2">
-                        <label class="form-label">Unit <span class="text-danger">*</span></label>
-                        <select class="form-select unit-select" required>
-                            <option value="pc" ${isSelected('pc')}>pc</option>
-                            <option value="pcs" ${isSelected('pcs')}>pcs</option>
-                            <option value="unit" ${isSelected('unit')}>unit</option>
-                            <option value="set" ${isSelected('set')}>set</option>
-                        </select>
-                    </div>
-                    <div class="col-12 col-md-4">
-                        <label class="form-label">Description <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control desc-input" value="${data.desc}" placeholder="Enter item details..." required>
-                    </div>
-                    <div class="col-6 col-md-1">
-                        <label class="form-label">Qty <span class="text-danger">*</span></label>
-                        <input type="number" class="form-control qty-input" value="${q}" required oninput="autoUpdatePoStatus()">
-                    </div>
-                    <div class="col-6 col-md-2">
-                        <label class="form-label">Unit Cost <span class="text-danger">*</span></label>
-                        <div class="input-group">
-                            <span class="input-group-text">₱</span>
-                            <input type="number" step="0.01" class="form-control cost-input" value="${c}" required>
-                        </div>
-                    </div>
-                    <div class="col-12 col-md-2">
-                        <label class="form-label">Total Amount</label>
-                        <input type="text" class="form-control bg-light fw-bold total-output" readonly value="${total}">
-                    </div>
-                </div>
-                <button type="button" class="btn btn-sm btn-danger position-absolute" style="top: 10px; right: 10px; border-radius: 50%; width: 30px; height: 30px;" onclick="this.closest('.item-row').remove(); autoUpdatePoStatus();"><i class="fa-solid fa-trash"></i></button>
-            </div>
-        `;
-        container.insertAdjacentHTML('beforeend', templateHtml);
-        autoUpdatePoStatus(); 
-    }
-
-    document.addEventListener('input', (e) => {
-        if (e.target.classList.contains('qty-input') || e.target.classList.contains('cost-input')) {
-            const row = e.target.closest('.item-row');
-            const q = parseFloat(row.querySelector('.qty-input').value) || 0;
-            const c = parseFloat(row.querySelector('.cost-input').value) || 0;
-            row.querySelector('.total-output').value = (q * c).toLocaleString(undefined, {minimumFractionDigits: 2});
-        }
-    });
-
-    document.getElementById('addItemBtn').addEventListener('click', () => addEmptyItemRow());
-
-    // Submit Form
-    document.getElementById('poForm').addEventListener('submit', function(e) {
-        e.preventDefault(); 
-
-        let formData = {
-            _token: '{{ csrf_token() }}',
-            entity_name: document.getElementById('in-entity').value,
-            po_no: document.getElementById('po_no').value,
-            supplier_name: document.getElementById('in-supplier').value,
-            supplier_address: document.getElementById('in-address').value,
-            po_date: document.getElementById('in-date').value,
-            procurement_mode: document.getElementById('in-mode').value,
-            
-            auth_official: document.getElementById('in-auth-name').value,
-            auth_official_designation: document.getElementById('in-auth-designation').value,
-            chief_accountant: document.getElementById('in-acc-name').value,
-            chief_accountant_designation: document.getElementById('in-acc-designation').value,
-            
-            place_of_delivery: document.getElementById('in-place-delivery').value,
-            date_of_delivery: document.getElementById('in-date-delivery').value,
-            delivery_term: document.getElementById('in-delivery-term').value,
-            payment_term: document.getElementById('in-payment-term').value,
-            
-            status: document.getElementById('in-status').value,
-            total_amount: 0,
-            items: []
-        };
-
-        let po_id = document.getElementById('modal_po_id').value;
-        let method = po_id ? 'PUT' : 'POST';
-        let url = po_id ? `/po/${po_id}` : '{{ route('po.store') }}';
-
-        const rows = document.querySelectorAll('.item-row');
-        if(rows.length === 0) {
-            Swal.fire('Warning', 'You must add at least one item.', 'warning');
-            return;
-        }
-
-        rows.forEach(row => {
-            let q = parseFloat(row.querySelector('.qty-input').value) || 0;
-            let c = parseFloat(row.querySelector('.cost-input').value) || 0;
-            let isD = row.querySelector('.item-delivered-cb').checked;
-            let subtotal = q * c;
-            formData.total_amount += subtotal;
-
-            formData.items.push({
-                unit: row.querySelector('.unit-select').value,
-                description: row.querySelector('.desc-input').value,
-                qty: q,
-                cost: c,
-                is_delivered: isD
-            });
-        });
-
-        fetch(url, {
-            method: method,
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-            },
-            body: JSON.stringify(formData)
-        })
-        .then(response => response.json())
-        .then(data => {
-            if(data.success) {
-                Swal.fire('Saved!', data.message, 'success').then(() => { window.location.reload(); });
-            } else {
-                Swal.fire('Error', data.message, 'error');
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            Swal.fire('Error', 'Failed to save to database.', 'error');
-        });
-    });
-</script>

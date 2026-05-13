@@ -13,7 +13,7 @@ class IcsRequest extends Model
         'ics_no', 'fund_cluster', 'category', 
         'sig_received_from_name', 'sig_received_from_pos', 'sig_from_date',
         'sig_received_by_name', 'sig_received_by_pos', 'sig_by_date',
-        'status', 'items_json'
+        'status', 'items_json', 'signed_document'
     ];
 
     protected $casts = [

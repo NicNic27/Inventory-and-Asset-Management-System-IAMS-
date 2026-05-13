@@ -18,7 +18,7 @@ class Asset extends Model
         'unit_measure',
         'supplier',
         'unit_value',
-        'quantity',
-        'status'
+        'status',
+        'image'
     ];
 }

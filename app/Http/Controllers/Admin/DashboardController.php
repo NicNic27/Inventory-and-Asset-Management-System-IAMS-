@@ -29,8 +29,8 @@ class DashboardController extends Controller
         $user = auth()->user();
         $user_name = $user ? $user->firstname : 'Admin';
 
-        // 1. Basic Counters
-        $total_assets = Asset::sum('quantity') ?? 0;
+        // 1. Basic Counters (FIXED: Asset uses count() because quantity was removed)
+        $total_assets = Asset::count() ?? 0;
         $total_supplies = Supply::sum('quantity') ?? 0;
         $total_users = User::count() ?? 0;
         

@@ -88,16 +88,48 @@
         </div>
         
         <div class="d-flex gap-2">
+            @if($req->status == 'Approved')
             <button type="button" class="btn btn-secondary fw-bold shadow-sm" onclick="window.print()">
                 <i class="fa-solid fa-print me-1"></i> Print PDF
             </button>
-            @if($req->status == 'Pending Staff Review' || strtolower($req->status) == 'declined' || strtolower($req->status) == 'rejected')
+            @endif
+            
+            @if($req->status == 'Pending' || $req->status == 'Pending Staff Review' || strtolower($req->status) == 'declined' || strtolower($req->status) == 'rejected')
             <a href="{{ url('/user/ris/' . $req->id . '/edit') }}" class="btn btn-primary fw-bold shadow-sm">
                 <i class="fa-solid fa-pen-to-square me-1"></i> Edit Request
             </a>
+            
+            <button class="btn btn-danger fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#deleteRisModalView">
+                <i class="fa-solid fa-trash-can me-1"></i> Delete
+            </button>
             @endif
         </div>
     </div>
+
+    @if($req->status == 'Pending' || $req->status == 'Pending Staff Review' || strtolower($req->status) == 'declined' || strtolower($req->status) == 'rejected')
+    <div class="modal fade" id="deleteRisModalView" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title"><i class="fas fa-exclamation-triangle me-2"></i>Delete Request</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <form action="{{ url('/user/ris/' . $req->id) }}" method="POST">
+                    @csrf
+                    @method('DELETE')
+                    <div class="modal-body p-4 text-center">
+                        <p class="fs-5 mb-0 text-dark">Are you sure you want to delete <strong>{{ $req->ris_no }}</strong>?</p>
+                        <p class="small text-muted mt-2">This action cannot be undone.</p>
+                    </div>
+                    <div class="modal-footer bg-light border-0 justify-content-center">
+                        <button type="button" class="btn btn-secondary px-4 fw-bold" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-danger px-4 fw-bold"><i class="fas fa-trash-alt me-1"></i> Delete Request</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    @endif
 
     <div class="section-box">
         <h6 class="section-title"><i class="fa-solid fa-circle-info me-2 text-warning"></i>General Information</h6>
@@ -163,6 +195,7 @@
 
 </div>
 
+@if($req->status == 'Approved')
 <div id="print-area">
     <div style="text-align: center; font-family: 'Times New Roman', Times, serif; margin-bottom: 5px;">
         <img src="{{ asset('assets/images/DepEdseal.png') }}" style="width: 60px; margin: 0 auto 2px auto; display: block;">
@@ -224,32 +257,22 @@
         <tbody>
             @php $rowsAdded = 0; @endphp
             @foreach($req->items as $item)
-                @php
-                    $isYes = strtolower($item->stock_avail) == 'yes' ? '✔' : '&nbsp;';
-                    $isNo = strtolower($item->stock_avail) == 'no' ? '✔' : '&nbsp;';
-                @endphp
                 <tr>
-                    <td style="border: 1px solid black; padding: 4px; text-align: center;">{{ $item->stock_no ?: '&nbsp;' }}</td>
-                    <td style="border: 1px solid black; padding: 4px; text-align: center;">{{ $item->unit ?: '&nbsp;' }}</td>
-                    <td style="border: 1px solid black; padding: 4px; text-align: left;">{{ $item->description ?: '&nbsp;' }}</td>
-                    <td style="border: 1px solid black; padding: 4px; text-align: center;">{{ $item->req_quantity ?: '&nbsp;' }}</td>
-                    <td style="border: 1px solid black; padding: 4px; text-align: center;">{!! $isYes !!}</td>
-                    <td style="border: 1px solid black; padding: 4px; text-align: center;">{!! $isNo !!}</td>
-                    <td style="border: 1px solid black; padding: 4px; text-align: center;">{{ $item->issue_quantity ?: '&nbsp;' }}</td>
-                    <td style="border: 1px solid black; padding: 4px; text-align: left;">{{ $item->remarks ?: '&nbsp;' }}</td>
+                    <td style="border: 1px solid black; padding: 4px; text-align: center;">{{ $item->stock_no }}</td>
+                    <td style="border: 1px solid black; padding: 4px; text-align: center;">{{ $item->unit }}</td>
+                    <td style="border: 1px solid black; padding: 4px; text-align: left;">{{ $item->description }}</td>
+                    <td style="border: 1px solid black; padding: 4px; text-align: center;">{{ $item->req_quantity }}</td>
+                    <td style="border: 1px solid black; padding: 4px; text-align: center;">{{ strtolower($item->stock_avail) == 'yes' ? '✔' : '' }}</td>
+                    <td style="border: 1px solid black; padding: 4px; text-align: center;">{{ strtolower($item->stock_avail) == 'no' ? '✔' : '' }}</td>
+                    <td style="border: 1px solid black; padding: 4px; text-align: center;">{{ $item->issue_quantity }}</td>
+                    <td style="border: 1px solid black; padding: 4px; text-align: left;">{{ $item->remarks }}</td>
                 </tr>
                 @php $rowsAdded++; @endphp
             @endforeach
 
             @for($j = $rowsAdded; $j < 10; $j++)
-                @php
-                    $isLast = ($j === 9);
-                    $borderStyle = $isLast 
-                        ? "border-left: 1px solid black; border-right: 1px solid black; border-top: none; border-bottom: 1px solid black;" 
-                        : "border-left: 1px solid black; border-right: 1px solid black; border-top: none; border-bottom: none;";
-                @endphp
                 <tr>
-                    <td style="border: 1px solid black; padding: 7px;">&nbsp;</td>
+                    <td style="border: 1px solid black; padding: 7px;"></td>
                     <td style="border: 1px solid black; padding: 7px;"></td>
                     <td style="border: 1px solid black; padding: 7px;"></td>
                     <td style="border: 1px solid black; padding: 7px;"></td>
@@ -307,6 +330,7 @@
         </tbody>
     </table>
 </div>
+@endif
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>

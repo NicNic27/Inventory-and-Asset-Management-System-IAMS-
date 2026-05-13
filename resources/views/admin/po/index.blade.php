@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Purchase Orders - Admin AMS</title>
+    <title>Delivery Orders - Admin AMS</title>
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -45,6 +45,10 @@
         .po-paper .rd-left-box { text-align: left !important; padding-left: 30px !important; }
         
         .po-paper .empty-row td { height: 22px; }
+
+        /* MODAL FIXES */
+        .modal { z-index: 1060 !important; }
+        .modal-backdrop { z-index: 1055 !important; }
     </style>
 </head>
 <body>
@@ -56,12 +60,12 @@
         <div class="d-flex justify-content-between align-items-end mb-4 border-bottom pb-2" style="border-color: #003366 !important;">
             <div>
                 <h2 style="color: #003366; margin: 0;">
-                    <i class="fas fa-file-invoice me-2"></i> Purchase Orders
+                    <i class="fas fa-file-invoice me-2"></i> Delivery Orders
                 </h2>
-                <p class="text-muted small mb-0">Manage, track status, and view official DepEd Purchase Orders</p>
+                <p class="text-muted small mb-0">Manage, track status, and view official DepEd Delivery Orders</p>
             </div>
             <button class="btn btn-primary px-4 fw-bold" onclick="openCreateModal()">
-                <i class="fas fa-plus me-2"></i> Create New P.O.
+                <i class="fas fa-plus me-2"></i> Add P.O. to Inventory
             </button>
         </div>
 
@@ -103,6 +107,7 @@
                     <thead>
                         <tr>
                             <th>P.O. Number</th>
+                            <th>Category</th>
                             <th>Supplier</th>
                             <th>Date</th>
                             <th>Total Amount</th>
@@ -114,6 +119,15 @@
                         @forelse($purchaseOrders as $po)
                         <tr class="clickable-row" data-id="{{ $po->id }}">
                             <td class="fw-bold text-primary">{{ $po->po_no }}</td>
+                            <td>
+                                @if($po->po_type == 'Supply')
+                                    <span class="badge" style="background-color: #101954; color: white;"><i class="fas fa-box-open me-1"></i> Supply</span>
+                                @elseif($po->po_type == 'Asset')
+                                    <span class="badge" style="background-color: #101954; color: white;"><i class="fas fa-laptop me-1"></i> Asset</span>
+                                @else
+                                    <span class="text-muted small">-</span>
+                                @endif
+                            </td>
                             <td>{{ $po->supplier_name }}</td>
                             <td>{{ \Carbon\Carbon::parse($po->po_date)->format('M d, Y') }}</td>
                             <td class="fw-bold">₱{{ number_format($po->total_amount, 2) }}</td>
@@ -144,7 +158,7 @@
                             </td>
                         </tr>
                         @empty
-                        <tr><td colspan="6" class="text-center py-4">No Purchase Orders found.</td></tr>
+                        <tr><td colspan="7" class="text-center py-4">No Purchase Orders found.</td></tr>
                         @endforelse
                     </tbody>
                 </table>
@@ -152,6 +166,7 @@
         </div>
     </div>
 
+    <!-- PREVIEW MODAL -->
     <div class="modal fade no-print" id="viewPoPreviewModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-xl modal-dialog-scrollable">
             <div class="modal-content border-0 bg-transparent">
@@ -227,13 +242,33 @@
                 </div>
                 <div class="modal-footer border-0">
                     <button type="button" class="btn btn-light border px-4" data-bs-dismiss="modal">Close</button>
-                    <button type="button" class="btn btn-primary px-4 fw-bold shadow" onclick="triggerActualPrint()"><i class="fas fa-print me-2"></i> Print Document</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="modal fade" id="deletePoModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header bg-danger text-white"><h5 class="modal-title"><i class="fas fa-trash-alt me-2"></i> Confirm Delete</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><form id="deletePoForm" method="POST">@csrf @method('DELETE')<div class="modal-body text-center py-4"><p class="fs-5 mb-1">Are you sure you want to delete this Purchase Order?</p></div><div class="modal-footer justify-content-center"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-danger">Delete</button></div></form></div></div></div>
+    <!-- DELETE MODAL -->
+    <div class="modal fade" id="deletePoModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title"><i class="fas fa-trash-alt me-2"></i> Confirm Delete</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="deletePoForm" method="POST">
+                    @csrf 
+                    @method('DELETE')
+                    <div class="modal-body text-center py-4">
+                        <p class="fs-5 mb-1">Are you sure you want to delete this Purchase Order?</p>
+                    </div>
+                    <div class="modal-footer justify-content-center">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-danger">Delete</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 
     @include('admin.po.receive_modal')
 
@@ -252,10 +287,9 @@
                     clearTimeout(typingTimer);
                     typingTimer = setTimeout(() => {
                         filterForm.submit();
-                    }, 600); // Waits 600ms after user stops typing to submit
+                    }, 600); 
                 });
 
-                // Keep cursor focused and at the end of the text after reload
                 if (poSearchInput.value.length > 0) {
                     poSearchInput.focus();
                     const val = poSearchInput.value;
@@ -345,7 +379,10 @@
                 document.getElementById('v-total').innerText = finalTotal.toLocaleString(undefined,{minimumFractionDigits:2});
                 document.getElementById('v-words').innerText = numberToWords(finalTotal) + " PESOS ONLY";
 
-                new bootstrap.Modal(document.getElementById('viewPoPreviewModal')).show();
+                // Ensure single instance to prevent duplicate backdrops
+                let previewModal = bootstrap.Modal.getInstance(document.getElementById('viewPoPreviewModal'));
+                if (!previewModal) previewModal = new bootstrap.Modal(document.getElementById('viewPoPreviewModal'));
+                previewModal.show();
             })
             .catch(err => {
                 console.error(err);
@@ -396,38 +433,90 @@
             window.print();
         }
 
+        // --- FIXED: CATEGORY PROMPT LOGIC ---
+        function openCreateModal() {
+            Swal.fire({
+                title: 'Select P.O. Category',
+                text: 'Is this Purchase Order for Supplies or Assets?',
+                icon: 'question',
+                showCancelButton: false, 
+                showCloseButton: true,   
+                showDenyButton: true,
+                confirmButtonText: '<i class="fas fa-box-open me-1"></i> Supply',
+                denyButtonText: '<i class="fas fa-laptop me-1"></i> Asset',
+                confirmButtonColor: '#101954', 
+                denyButtonColor: '#101954',    
+                allowOutsideClick: false
+            }).then((result) => {
+                // Important Fix: Use setTimeout to allow SweetAlert to fully close and restore the body padding
+                // before opening the Bootstrap Modal. This prevents the dark unclickable backdrop bug!
+                if (result.isConfirmed) {
+                    setTimeout(() => launchPoModal('Supply'), 350); 
+                } else if (result.isDenied) {
+                    setTimeout(() => launchPoModal('Asset'), 350);
+                }
+            });
+        }
+
+        function launchPoModal(type) {
+            resetModalState();
+            document.getElementById('poForm').reset();
+            document.getElementById('itemsContainer').innerHTML = '';
+            document.getElementById('modal_po_id').value = ''; 
+            
+            document.getElementById('po_type').value = type;
+            let badge = document.getElementById('po_type_badge');
+            if(badge) {
+                badge.innerHTML = type === 'Supply' ? '<i class="fas fa-box-open me-1"></i> Supply P.O.' : '<i class="fas fa-laptop me-1"></i> Asset P.O.';
+                badge.style.display = 'inline-block';
+            }
+
+            if (typeof window.addEmptyItemRow === "function") window.addEmptyItemRow();
+            
+            // Ensure single instance to prevent duplicate backdrops
+            let receiveModal = bootstrap.Modal.getInstance(document.getElementById('receivePoModal'));
+            if (!receiveModal) receiveModal = new bootstrap.Modal(document.getElementById('receivePoModal'));
+            receiveModal.show();
+        }
+
         function editPO(id) {
             resetModalState();
             document.querySelector('.modal-title').innerHTML = '<i class="fas fa-edit me-2"></i> Edit Purchase Order (Admin)';
             fetch(`/admin/po/${id}`).then(res => res.json()).then(data => {
                 populateModalData(data);
-                new bootstrap.Modal(document.getElementById('receivePoModal')).show();
+                let receiveModal = bootstrap.Modal.getInstance(document.getElementById('receivePoModal'));
+                if (!receiveModal) receiveModal = new bootstrap.Modal(document.getElementById('receivePoModal'));
+                receiveModal.show();
             });
         }
 
         function deletePO(id) {
             document.getElementById('deletePoForm').action = `/admin/po/${id}`;
-            new bootstrap.Modal(document.getElementById('deletePoModal')).show();
-        }
-
-        function openCreateModal() {
-            resetModalState();
-            document.getElementById('poForm').reset();
-            document.getElementById('itemsContainer').innerHTML = '';
-            document.getElementById('modal_po_id').value = ''; 
-            if (typeof addEmptyItemRow === "function") addEmptyItemRow();
-            new bootstrap.Modal(document.getElementById('receivePoModal')).show();
+            let deleteModal = bootstrap.Modal.getInstance(document.getElementById('deletePoModal'));
+            if (!deleteModal) deleteModal = new bootstrap.Modal(document.getElementById('deletePoModal'));
+            deleteModal.show();
         }
 
         function resetModalState() {
             document.querySelectorAll('#poForm input, #poForm select').forEach(input => input.disabled = false);
             document.getElementById('addItemBtn').style.display = 'inline-block';
             document.querySelector('button[form="poForm"]').style.display = 'inline-block'; 
-            document.querySelector('.modal-title').innerHTML = '<i class="fas fa-file-invoice me-2"></i> Receive Purchase Order (Admin)';
+            
+            let badge = document.getElementById('po_type_badge');
+            if (badge) badge.style.display = 'none';
         }
 
         function populateModalData(data) {
             document.getElementById('modal_po_id').value = data.id;
+            
+            let type = data.po_type || 'Supply';
+            document.getElementById('po_type').value = type;
+            let badge = document.getElementById('po_type_badge');
+            if(badge) {
+                badge.innerHTML = type === 'Supply' ? '<i class="fas fa-box-open me-1"></i> Supply P.O.' : '<i class="fas fa-laptop me-1"></i> Asset P.O.';
+                badge.style.display = 'inline-block';
+            }
+
             document.getElementById('in-entity').value = data.entity_name || '';
             document.getElementById('po_no').value = data.po_no || '';
             document.getElementById('in-supplier').value = data.supplier_name || '';
@@ -456,8 +545,8 @@
                     let uCost = parseFloat(item.unit_cost !== undefined ? item.unit_cost : (item.cost || 0));
                     let isD = item.is_delivered == 1 || item.is_delivered == true;
                     
-                    if (typeof addEmptyItemRow === "function") {
-                        addEmptyItemRow({
+                    if (typeof window.addEmptyItemRow === "function") {
+                        window.addEmptyItemRow({
                             unit: item.unit || 'pc', 
                             desc: item.description || '', 
                             qty: item.qty || 0, 
@@ -467,7 +556,7 @@
                     }
                 });
             } else {
-                if (typeof addEmptyItemRow === "function") addEmptyItemRow();
+                if (typeof window.addEmptyItemRow === "function") window.addEmptyItemRow();
             }
         }
     </script>

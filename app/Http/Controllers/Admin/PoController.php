@@ -6,15 +6,17 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderItem;
+use App\Models\ActivityLog;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Auth;
 
 class PoController extends Controller
 {
-    // Load Table with Search & Filter
     public function index(Request $request)
     {
         $user_name = auth()->user() ? auth()->user()->firstname : 'Admin';
-        
         $query = PurchaseOrder::with('items');
 
         if ($request->filled('search')) {
@@ -44,13 +46,17 @@ class PoController extends Controller
         return view('admin.po.index', compact('purchaseOrders', 'user_name'));
     }
 
-    // Save a new PO
     public function store(Request $request)
     {
+        if (!Schema::hasColumn('purchase_orders', 'po_type')) {
+            Schema::table('purchase_orders', function (Blueprint $table) {
+                $table->string('po_type')->nullable()->default('Supply')->after('id');
+            });
+        }
+
         try {
             DB::beginTransaction();
 
-            // AUTO CALCULATE STATUS BASED ON CHECKBOXES
             $totalItems = count($request->items ?? []);
             $deliveredItems = 0;
             foreach ($request->items ?? [] as $item) {
@@ -67,25 +73,23 @@ class PoController extends Controller
             }
 
             $po = PurchaseOrder::create([
+                'po_type' => $request->po_type,
                 'entity_name' => $request->entity_name,
                 'po_no' => $request->po_no,
                 'supplier_name' => $request->supplier_name,
                 'supplier_address' => $request->supplier_address,
                 'po_date' => $request->po_date,
                 'procurement_mode' => $request->procurement_mode,
-                
                 'auth_official' => $request->auth_official,
                 'auth_official_designation' => $request->auth_official_designation,
-                
                 'chief_accountant' => $request->chief_accountant,
                 'chief_accountant_designation' => $request->chief_accountant_designation,
-                
                 'place_of_delivery' => $request->place_of_delivery,
                 'date_of_delivery' => $request->date_of_delivery,
                 'delivery_term' => $request->delivery_term,
                 'payment_term' => $request->payment_term,
                 'total_amount' => $request->total_amount,
-                'status' => $calculatedStatus, 
+                'status' => $calculatedStatus,
             ]);
 
             foreach ($request->items as $item) {
@@ -100,6 +104,14 @@ class PoController extends Controller
                 ]);
             }
 
+            ActivityLog::create([
+                'user_id' => Auth::id(),
+                'action' => 'Created',
+                'description' => "Created Purchase Order: {$po->po_no}",
+                'ip_address' => request()->ip(),
+                'user_agent' => request()->userAgent()
+            ]);
+
             DB::commit();
             return response()->json(['success' => true, 'message' => 'Purchase Order successfully created.']);
         } catch (\Exception $e) {
@@ -108,20 +120,23 @@ class PoController extends Controller
         }
     }
 
-    // Fetch PO Data for Editing/Previewing
     public function show($id)
     {
         $po = PurchaseOrder::with('items')->findOrFail($id);
         return response()->json($po);
     }
 
-    // Update existing PO
     public function update(Request $request, $id)
     {
+        if (!Schema::hasColumn('purchase_orders', 'po_type')) {
+            Schema::table('purchase_orders', function (Blueprint $table) {
+                $table->string('po_type')->nullable()->default('Supply')->after('id');
+            });
+        }
+
         try {
             DB::beginTransaction();
 
-            // AUTO CALCULATE STATUS BASED ON CHECKBOXES
             $totalItems = count($request->items ?? []);
             $deliveredItems = 0;
             foreach ($request->items ?? [] as $item) {
@@ -139,19 +154,17 @@ class PoController extends Controller
 
             $po = PurchaseOrder::findOrFail($id);
             $po->update([
+                'po_type' => $request->po_type,
                 'entity_name' => $request->entity_name,
                 'po_no' => $request->po_no,
                 'supplier_name' => $request->supplier_name,
                 'supplier_address' => $request->supplier_address,
                 'po_date' => $request->po_date,
                 'procurement_mode' => $request->procurement_mode,
-                
                 'auth_official' => $request->auth_official,
                 'auth_official_designation' => $request->auth_official_designation,
-                
                 'chief_accountant' => $request->chief_accountant,
                 'chief_accountant_designation' => $request->chief_accountant_designation,
-                
                 'place_of_delivery' => $request->place_of_delivery,
                 'date_of_delivery' => $request->date_of_delivery,
                 'delivery_term' => $request->delivery_term,
@@ -160,7 +173,6 @@ class PoController extends Controller
                 'status' => $calculatedStatus,
             ]);
 
-            // Wipe old items and recreate new ones
             $po->items()->delete();
 
             foreach ($request->items as $item) {
@@ -175,6 +187,14 @@ class PoController extends Controller
                 ]);
             }
 
+            ActivityLog::create([
+                'user_id' => Auth::id(),
+                'action' => 'Updated',
+                'description' => "Updated Purchase Order: {$po->po_no}",
+                'ip_address' => request()->ip(),
+                'user_agent' => request()->userAgent()
+            ]);
+
             DB::commit();
             return response()->json(['success' => true, 'message' => 'Purchase Order successfully updated.']);
         } catch (\Exception $e) {
@@ -186,6 +206,15 @@ class PoController extends Controller
     public function destroy($id)
     {
         $po = PurchaseOrder::findOrFail($id);
+        
+        ActivityLog::create([
+            'user_id' => Auth::id(),
+            'action' => 'Deleted',
+            'description' => "Deleted Purchase Order: {$po->po_no}",
+            'ip_address' => request()->ip(),
+            'user_agent' => request()->userAgent()
+        ]);
+
         $po->delete(); 
         return redirect()->back()->with('success', 'Purchase Order Deleted');
     }

@@ -4,9 +4,11 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Models\ActivityLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Auth;
 
 class UserController extends Controller
 {
@@ -25,21 +27,24 @@ class UserController extends Controller
         ]);
 
         $data = $request->except(['password', 'image', 'designation', 'employee_id']);
-        
-        // Hash the password for security
         $data['password'] = Hash::make($request->password); 
-        
-        // Add the remember token upon user creation
         $data['remember_token'] = Str::random(10);
 
-        // Upload directly to public/uploads/users
         if ($request->hasFile('image')) {
             $imageName = time() . '.' . $request->image->extension();
             $request->image->move(public_path('uploads/users'), $imageName);
             $data['image'] = $imageName;
         }
 
-        User::create($data);
+        $user = User::create($data);
+
+        ActivityLog::create([
+            'user_id' => Auth::id(),
+            'action' => 'Created',
+            'description' => "Created new user account for: {$user->email}",
+            'ip_address' => request()->ip(),
+            'user_agent' => request()->userAgent()
+        ]);
 
         return redirect('/admin/users')->with('msg', 'User added successfully!');
     }
@@ -56,24 +61,28 @@ class UserController extends Controller
         $data = $request->except(['password', 'image', 'designation', 'employee_id']);
 
         if ($request->filled('password')) {
-            // Hash the new password if the admin provided one
             $data['password'] = Hash::make($request->password); 
         }
 
-        // Upload directly to public/uploads/users
         if ($request->hasFile('image')) {
-            // Delete old image from public folder
             if ($user->image && file_exists(public_path('uploads/users/' . $user->image))) {
                 unlink(public_path('uploads/users/' . $user->image));
             }
             
-            // Save new image
             $imageName = time() . '.' . $request->image->extension();
             $request->image->move(public_path('uploads/users'), $imageName);
             $data['image'] = $imageName;
         }
 
         $user->update($data);
+
+        ActivityLog::create([
+            'user_id' => Auth::id(),
+            'action' => 'Updated',
+            'description' => "Updated user account: {$user->email}",
+            'ip_address' => request()->ip(),
+            'user_agent' => request()->userAgent()
+        ]);
 
         return redirect('/admin/users')->with('msg', 'User updated successfully!');
     }
@@ -82,10 +91,17 @@ class UserController extends Controller
     {
         $user = User::findOrFail($id);
 
-        // Delete associated profile picture from public folder
         if ($user->image && file_exists(public_path('uploads/users/' . $user->image))) {
             unlink(public_path('uploads/users/' . $user->image));
         }
+
+        ActivityLog::create([
+            'user_id' => Auth::id(),
+            'action' => 'Deleted',
+            'description' => "Deleted user account: {$user->email}",
+            'ip_address' => request()->ip(),
+            'user_agent' => request()->userAgent()
+        ]);
 
         $user->delete();
         return redirect('/admin/users')->with('msg', 'User deleted successfully!');

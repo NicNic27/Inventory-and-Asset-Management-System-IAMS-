@@ -1,4 +1,8 @@
 <style>
+    .sidebar::-webkit-scrollbar {
+        display: none;
+    }
+
     .sidebar {
         width: 250px;
         height: 100vh;
@@ -17,6 +21,10 @@
         padding: 20px;
         text-align: center;
         border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        transition: background-color 0.2s;
+    }
+    .sidebar-header:hover {
+        background-color: rgba(255, 255, 255, 0.05);
     }
     .sidebar-header img {
         width: 60px;
@@ -38,7 +46,7 @@
         display: flex;
         align-items: center;
         text-decoration: none;
-        position: relative; /* Required for the dropdown arrow */
+        position: relative; 
     }
     .nav-link i {
         width: 30px;
@@ -85,7 +93,7 @@
         position: fixed;
         top: 12px;
         left: 15px;
-        z-index: 1051; /* Sits above the header */
+        z-index: 1051; 
         background: transparent;
         color: white;
         border: none;
@@ -102,7 +110,7 @@
         position: fixed;
         top: 0; left: 0; width: 100vw; height: 100vh;
         background: rgba(0,0,0,0.5);
-        z-index: 1045; /* Below sidebar, above body */
+        z-index: 1045; 
         display: none; opacity: 0;
         transition: opacity 0.3s;
     }
@@ -111,10 +119,10 @@
 
     @media (max-width: 768px) {
         .sidebar { 
-            left: -260px; /* Hidden by default on mobile */
+            left: -260px; 
             box-shadow: 5px 0 15px rgba(0,0,0,0.3);
         }
-        .sidebar.active { left: 0; } /* Slides in when active */
+        .sidebar.active { left: 0; } 
         .mobile-menu-btn { display: block; }
     }
 </style>
@@ -126,13 +134,15 @@
 <div class="sidebar-backdrop no-print" id="sidebarBackdrop"></div>
 
 <div class="sidebar" id="mainSidebar">
-    <div class="sidebar-header">
-        <img src="{{ asset('assets/images/depedRovCirc.png') }}" alt="Logo">
-        <h5>AMS PERSONNEL</h5>
-    </div>
+    <a href="{{ url('/') }}" style="text-decoration: none; color: inherit;">
+        <div class="sidebar-header" title="Go to Landing Page">
+            <img src="{{ asset('assets/images/depedRovCirc.png') }}" alt="Logo">
+            <h5>AMS PERSONNEL</h5>
+        </div>
+    </a>
 
     <nav class="nav flex-column mt-3">
-        <a href="{{ url('/') }}" class="nav-link {{ request()->is('/') ? 'active' : '' }}">
+        <a href="{{ url('/dashboard') }}" class="nav-link {{ request()->is('dashboard') ? 'active' : '' }}">
             <i class="fas fa-tachometer-alt fa-fw"></i> Dashboard
         </a>
 
@@ -161,12 +171,31 @@
             </div>
         </div>
 
-        <a href="{{ url('/ics') }}" class="nav-link {{ request()->is('ics*') ? 'active' : '' }}">
-            <i class="fa-solid fa-file-invoice fa-fw"></i> ICS
-        </a>
+        <div class="nav-item">
+            @php
+                $isIcsActive = request()->is('ics*');
+            @endphp
+            <a href="#icsSubmenu" 
+               data-bs-toggle="collapse" 
+               role="button"
+               id="icsToggle"
+               class="nav-link {{ $isIcsActive ? 'active' : '' }}" 
+               aria-expanded="{{ $isIcsActive ? 'true' : 'false' }}">
+                <i class="fa-solid fa-file-invoice fa-fw"></i> ICS & PAR
+                <i class="fas fa-chevron-down menu-arrow"></i>
+            </a>
+            <div class="collapse submenu {{ $isIcsActive ? 'show' : '' }}" id="icsSubmenu">
+                <a href="{{ url('/ics') }}" class="nav-link {{ request()->is('ics') ? 'active' : '' }}">
+                    <i class="fas fa-pen-to-square fa-fw"></i> Create Form
+                </a>
+                <a href="{{ url('/ics/history') }}" class="nav-link {{ request()->is('ics/history') ? 'active' : '' }}">
+                    <i class="fas fa-file-signature fa-fw"></i> History & Stickers
+                </a>
+            </div>
+        </div>
         
         <a href="{{ url('/po') }}" class="nav-link {{ request()->is('po*') ? 'active' : '' }}">
-            <i class="fas fa-file-invoice-dollar fa-fw"></i> Purchase Orders
+            <i class="fas fa-file-invoice-dollar fa-fw"></i> Delivery Orders
         </a>
         
         <a href="{{ url('/ris') }}" class="nav-link {{ request()->is('ris*') ? 'active' : '' }}">
@@ -206,32 +235,38 @@
                 }
             }
             mobileBtn.addEventListener('click', toggleSidebar);
-            backdrop.addEventListener('click', toggleSidebar); // Close when clicking outside
+            backdrop.addEventListener('click', toggleSidebar); 
         }
 
         // --- Submenu Memory Logic ---
         const inventoryToggle = document.getElementById('inventoryToggle');
         const inventorySubmenu = document.getElementById('inventorySubmenu');
+        const icsToggle = document.getElementById('icsToggle');
+        const icsSubmenu = document.getElementById('icsSubmenu');
 
-        if(inventoryToggle && inventorySubmenu) {
-            let isInventoryActive = {{ $isInventoryActive ? 'true' : 'false' }};
-            let savedState = sessionStorage.getItem('staffInventoryMenuOpen');
+        function setupSubmenuMemory(toggleBtn, submenuDiv, storageKey, isActive) {
+            if(toggleBtn && submenuDiv) {
+                let savedState = sessionStorage.getItem(storageKey);
 
-            if (!isInventoryActive && savedState === 'true') {
-                inventorySubmenu.classList.add('show');
-                inventoryToggle.setAttribute('aria-expanded', 'true');
+                if (!isActive && savedState === 'true') {
+                    submenuDiv.classList.add('show');
+                    toggleBtn.setAttribute('aria-expanded', 'true');
+                }
+
+                submenuDiv.addEventListener('shown.bs.collapse', function () {
+                    toggleBtn.setAttribute('aria-expanded', 'true');
+                    sessionStorage.setItem(storageKey, 'true');
+                });
+
+                submenuDiv.addEventListener('hidden.bs.collapse', function () {
+                    toggleBtn.setAttribute('aria-expanded', 'false');
+                    sessionStorage.setItem(storageKey, 'false');
+                });
             }
-
-            inventorySubmenu.addEventListener('shown.bs.collapse', function () {
-                inventoryToggle.setAttribute('aria-expanded', 'true');
-                sessionStorage.setItem('staffInventoryMenuOpen', 'true');
-            });
-
-            inventorySubmenu.addEventListener('hidden.bs.collapse', function () {
-                inventoryToggle.setAttribute('aria-expanded', 'false');
-                sessionStorage.setItem('staffInventoryMenuOpen', 'false');
-            });
         }
+
+        setupSubmenuMemory(inventoryToggle, inventorySubmenu, 'staffInventoryMenuOpen', {{ $isInventoryActive ? 'true' : 'false' }});
+        setupSubmenuMemory(icsToggle, icsSubmenu, 'staffIcsMenuOpen', {{ isset($isIcsActive) && $isIcsActive ? 'true' : 'false' }});
     });
 
     // --- Idle Timer Logic ---

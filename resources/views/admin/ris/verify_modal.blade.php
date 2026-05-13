@@ -78,7 +78,7 @@
                             @foreach($req->items as $item)
                                 @php
                                     $isYes = strtolower($item->stock_avail) == 'yes' ? '✔' : '&nbsp;';
-                                    $isNo = strtolower($item->stock_avail) == 'no' ? '✔' : '&nbsp;';
+                                    $isNo = strtolower($item->stock_avail) == 'no' ? '✘' : '&nbsp;';
                                 @endphp
                                 <tr>
                                     <td style="border: 1px solid black; padding: 4px; text-align: center;">{{ $item->stock_no ?: '' }}</td>

@@ -7,18 +7,20 @@ use App\Models\Supply;
 use App\Models\Transaction;
 use App\Models\PurchaseOrderItem;
 use App\Models\SystemSetting;
+use App\Models\ActivityLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Auth;
 
 class SupplyController extends Controller
 {
     public function index(Request $request)
     {
-        // Default to 10 items per page
         $perPage = $request->input('per_page', 10);
-        $query = Supply::query();
+        
+        $query = Supply::select('supplies.*')
+            ->selectRaw('(SELECT COALESCE(SUM(quantity), 0) FROM transactions WHERE transactions.item_id = supplies.id AND transactions.item_type = "supplies" AND transactions.transaction_type IN ("IN", "Added")) as total_input');
 
-        // Apply Search Filter (Stock No, Article, or Description)
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function($q) use ($search) {
@@ -28,7 +30,6 @@ class SupplyController extends Controller
             });
         }
 
-        // Apply Status Filter
         if ($request->filled('status_filter') && $request->status_filter !== 'All') {
             if ($request->status_filter === 'Available') {
                 $query->whereColumn('quantity', '>', 'low_stock_threshold');
@@ -40,13 +41,25 @@ class SupplyController extends Controller
             }
         }
 
-        // Fetch the data paginated and sorted by newest
         $supplies = $query->orderBy('id', 'desc')->paginate($perPage);
         
-        // Fetch ALL delivered PO items, eager loading their parent PO for supplier info
-        $deliveredPoItems = PurchaseOrderItem::with('purchaseOrder')
-            ->where('is_delivered', true)
-            ->get();
+        $deliveredPoItems = collect();
+        if (class_exists(PurchaseOrderItem::class)) {
+            $existingSupplyDescriptions = Supply::pluck('description')->map(function($desc) {
+                return strtolower(trim($desc));
+            })->toArray();
+
+            $rawPoItems = PurchaseOrderItem::with('purchaseOrder')
+                ->whereHas('purchaseOrder', function($q) {
+                    $q->where('po_type', 'Supply'); 
+                })
+                ->where('is_delivered', true)
+                ->get();
+
+            $deliveredPoItems = $rawPoItems->reject(function($item) use ($existingSupplyDescriptions) {
+                return in_array(strtolower(trim($item->description)), $existingSupplyDescriptions);
+            });
+        }
         
         return view('admin.supplies.index', compact('supplies', 'perPage', 'deliveredPoItems'));
     }
@@ -55,14 +68,12 @@ class SupplyController extends Controller
     {
         $status = ($request->initial_quantity > 0) ? 'Available' : 'Out of Stock';
 
-        // 1. DUPLICATE CHECK (Only runs if 'force_save' is not present)
         if (!$request->has('force_save')) {
             $existing = Supply::where('article', trim($request->article))
                 ->where('description', trim($request->description))
                 ->where('unit_measure', trim($request->unit_measure))
                 ->where('unit_value', $request->unit_value);
                 
-            // Check supplier (which might be null/empty)
             if ($request->filled('supplier')) {
                 $existing->where('supplier', trim($request->supplier));
             } else {
@@ -73,7 +84,6 @@ class SupplyController extends Controller
 
             $duplicate = $existing->first();
 
-            // If an exact duplicate is found, return JSON to trigger the SweetAlert popup
             if ($duplicate) {
                 if ($request->ajax() || $request->wantsJson()) {
                     return response()->json([
@@ -84,8 +94,6 @@ class SupplyController extends Controller
             }
         }
 
-        // --- CONTINUE SAVING LOGIC ---
-        // Get the current sequence from settings (default to 1 if empty)
         $seqSetting = SystemSetting::firstOrCreate(
             ['key' => 'seq_stock_no'], 
             ['value' => '1']
@@ -96,10 +104,8 @@ class SupplyController extends Controller
         $sequenceFormatted = str_pad($currentNumber, 4, '0', STR_PAD_LEFT); 
         $generatedBarcode = 'SUP-' . $yearMonth . '-' . $sequenceFormatted;
 
-        // Increment the setting by 1 for the next item
         $seqSetting->update(['value' => $currentNumber + 1]);
 
-        // Handle Image Upload
         $imageName = null;
         if ($request->hasFile('image')) {
             $imageName = time() . '.' . $request->image->extension();
@@ -129,7 +135,14 @@ class SupplyController extends Controller
             'remarks' => 'Opening Balance / New Item',
         ]);
 
-        // If AJAX request, return a success JSON so the page can reload smoothly
+        ActivityLog::create([
+            'user_id' => Auth::id(),
+            'action' => 'Created',
+            'description' => "Added new supply item: {$supply->article}",
+            'ip_address' => request()->ip(),
+            'user_agent' => request()->userAgent()
+        ]);
+
         if ($request->ajax() || $request->wantsJson()) {
             return response()->json(['status' => 'success']);
         }
@@ -141,14 +154,11 @@ class SupplyController extends Controller
     {
         $supply = Supply::findOrFail($id);
         
-        // Handle Image Update
         $imageName = $supply->image;
         if ($request->hasFile('image')) {
-            // Delete old image if exists
             if ($supply->image && Storage::exists('public/supplies/' . $supply->image)) {
                 Storage::delete('public/supplies/' . $supply->image);
             }
-            // Save new image
             $imageName = time() . '.' . $request->image->extension();
             $request->image->storeAs('public/supplies', $imageName);
         }
@@ -166,6 +176,14 @@ class SupplyController extends Controller
             'image' => $imageName
         ]);
 
+        ActivityLog::create([
+            'user_id' => Auth::id(),
+            'action' => 'Updated',
+            'description' => "Updated supply details: {$supply->article}",
+            'ip_address' => request()->ip(),
+            'user_agent' => request()->userAgent()
+        ]);
+
         return redirect('/admin/supplies')->with('msg', 'Supply successfully updated!');
     }
 
@@ -173,13 +191,19 @@ class SupplyController extends Controller
     {
         $supply = Supply::findOrFail($id);
         
-        // Delete associated image
         if ($supply->image && Storage::exists('public/supplies/' . $supply->image)) {
             Storage::delete('public/supplies/' . $supply->image);
         }
         
-        $supply->delete();
+        ActivityLog::create([
+            'user_id' => Auth::id(),
+            'action' => 'Deleted',
+            'description' => "Deleted supply item: {$supply->article}",
+            'ip_address' => request()->ip(),
+            'user_agent' => request()->userAgent()
+        ]);
 
+        $supply->delete();
         Transaction::where('item_id', $id)->where('item_type', 'supplies')->delete();
 
         return redirect('/admin/supplies')->with('msg', 'Supply successfully deleted!');
@@ -194,23 +218,37 @@ class SupplyController extends Controller
         }
 
         $stockNo = !empty($supply->barcode_id) ? $supply->barcode_id : 'N/A';
-        $qty = intval($supply->quantity);
+        $currentQty = intval($supply->quantity);
         $unitValue = floatval($supply->unit_value);
         $threshold = intval($supply->low_stock_threshold ?? 10);
         
         $formattedUnitValue = number_format($unitValue, 2);
-        $formattedTotalValue = number_format($qty * $unitValue, 2);
+        
+        $totalInput = Transaction::where('item_id', $id)
+                        ->where('item_type', 'supplies')
+                        ->whereIn('transaction_type', ['IN', 'Added'])
+                        ->sum('quantity');
+
+        $totalInventory = max($totalInput, $currentQty);
+        $formattedTotalValue = number_format($totalInventory * $unitValue, 2);
+
         $supplierName = !empty($supply->supplier) ? htmlspecialchars($supply->supplier) : 'N/A';
 
-        $status_class = 'status-available';
+        $status_class = 'status-available bg-success text-white';
         $status_text = 'Available';
-        if ($qty == 0) {
-            $status_class = 'status-out text-danger';
+        $stockBarColor = 'bg-success';
+        
+        if ($currentQty == 0) {
+            $status_class = 'status-out bg-danger text-white';
             $status_text = 'Out of Stock';
-        } elseif ($qty <= $threshold) {
-            $status_class = 'status-low text-warning';
+            $stockBarColor = 'bg-danger';
+        } elseif ($currentQty <= $threshold) {
+            $status_class = 'status-low bg-warning text-dark';
             $status_text = 'Low Stock';
+            $stockBarColor = 'bg-warning';
         }
+
+        $percentageLeft = $totalInventory > 0 ? round(($currentQty / $totalInventory) * 100) : 0;
 
         $imageHtml = '<i class="fas fa-image fa-2x text-muted"></i>';
         $lightboxHtml = '';
@@ -233,70 +271,30 @@ class SupplyController extends Controller
 
         return <<<HTML
         {$lightboxHtml}
-        
         <div class="modal-header d-block text-center border-0 p-3" style="background-color: #0b1c3f; border-top-left-radius: 10px; border-top-right-radius: 10px;">
-            <h5 class="modal-title text-white fw-bold mb-0">Supply Details</h5>
+            <h5 class="modal-title text-white fw-bold mb-0">Supply Overview</h5>
         </div>
-        
         <div class="modal-body px-4 pt-4 pb-0">
             <div class="d-flex align-items-center mb-4">
-                <div class="me-4 border rounded d-flex justify-content-center align-items-center bg-light shadow-sm overflow-hidden position-relative" style="width: 100px; height: 100px; flex-shrink: 0;" title="Click to enlarge image">
-                    {$imageHtml}
-                </div>
-                <div class="flex-grow-1">
-                    <div class="text-muted small text-uppercase tracking-wide mb-1" style="font-size: 0.75rem;">STOCK ID:</div>
-                    {$barcodeHtml}
-                </div>
+                <div class="me-4 border rounded d-flex justify-content-center align-items-center bg-light shadow-sm overflow-hidden position-relative" style="width: 100px; height: 100px; flex-shrink: 0;" title="Click to enlarge image">{$imageHtml}</div>
+                <div class="flex-grow-1"><div class="text-muted small text-uppercase tracking-wide mb-1" style="font-size: 0.75rem;">STOCK ID:</div>{$barcodeHtml}</div>
             </div>
-
-            <div class="d-flex justify-content-between border-bottom py-2 mb-2">
-                <span class="text-muted">Article:</span>
-                <span class="fw-bold text-dark">{$supply->article}</span>
+            <div class="mb-4 bg-light rounded p-3 border">
+                <div class="d-flex justify-content-between mb-1"><span class="text-muted small fw-bold text-uppercase">Inventory Status</span><span class="badge {$status_class}">{$status_text}</span></div>
+                <div class="d-flex justify-content-between align-items-end mb-1 mt-2"><span class="fs-3 fw-bold text-dark" style="line-height: 1;">{$currentQty} <span class="fs-6 text-muted fw-normal">Remaining</span></span><span class="text-muted small fw-bold">/ {$totalInventory} Total</span></div>
+                <div class="progress" style="height: 10px;"><div class="progress-bar {$stockBarColor}" role="progressbar" style="width: {$percentageLeft}%;" aria-valuenow="{$percentageLeft}" aria-valuemin="0" aria-valuemax="100"></div></div>
             </div>
-            
-            <div class="d-flex justify-content-between border-bottom py-2 mb-2">
-                <span class="text-muted">Description:</span>
-                <span class="fw-bold text-dark">{$supply->description}</span>
-            </div>
-            
-            <div class="d-flex justify-content-between border-bottom py-2 mb-2">
-                <span class="text-muted">Quantity:</span>
-                <span class="fw-bold text-dark">{$qty} {$supply->unit_measure}</span>
-            </div>
-            
-            <div class="d-flex justify-content-between border-bottom py-2 mb-2">
-                <span class="text-muted">Unit Value:</span>
-                <span class="fw-bold text-dark">₱{$formattedUnitValue}</span>
-            </div>
-            
-            <div class="d-flex justify-content-between border-bottom py-2 mb-2">
-                <span class="text-muted">Total Value:</span>
-                <span class="fw-bold text-dark">₱{$formattedTotalValue}</span>
-            </div>
-            
-            <div class="d-flex justify-content-between border-bottom py-2 mb-2">
-                <span class="text-muted">Low Stock Threshold:</span>
-                <span class="fw-bold text-dark">{$threshold}</span>
-            </div>
-
-            <div class="d-flex justify-content-between border-bottom py-2 mb-2">
-                <span class="text-muted">Supplier:</span>
-                <span class="fw-bold text-dark">{$supplierName}</span>
-            </div>
-            
-            <div class="d-flex justify-content-between border-bottom py-3 mb-4">
-                <span class="text-muted mt-1">Status:</span>
-                <span class="badge {$status_class} rounded-pill px-3 py-2 border">{$status_text}</span>
-            </div>
+            <div class="d-flex justify-content-between border-bottom py-2 mb-2"><span class="text-muted">Article:</span><span class="fw-bold text-dark">{$supply->article}</span></div>
+            <div class="d-flex justify-content-between border-bottom py-2 mb-2"><span class="text-muted">Description:</span><span class="fw-bold text-dark text-end" style="max-width: 65%;">{$supply->description}</span></div>
+            <div class="d-flex justify-content-between border-bottom py-2 mb-2"><span class="text-muted">Unit Value:</span><span class="fw-bold text-dark">₱{$formattedUnitValue}</span></div>
+            <div class="d-flex justify-content-between border-bottom py-2 mb-2"><span class="text-muted">Total Stock Value:</span><span class="fw-bold text-dark">₱{$formattedTotalValue}</span></div>
+            <div class="d-flex justify-content-between border-bottom py-2 mb-2"><span class="text-muted">Low Stock Threshold:</span><span class="fw-bold text-dark">{$threshold}</span></div>
+            <div class="d-flex justify-content-between border-bottom py-2 mb-4"><span class="text-muted">Supplier:</span><span class="fw-bold text-dark">{$supplierName}</span></div>
         </div>
-        
-        <div class="modal-footer border-0 pt-0 pb-4 px-4 justify-content-center">
-            <button type="button" class="btn btn-outline-primary w-100 py-2 rounded-3" data-bs-dismiss="modal">Close</button>
-        </div>
+        <div class="modal-footer border-0 pt-0 pb-4 px-4 justify-content-center bg-white"><button type="button" class="btn btn-outline-primary w-100 py-2 rounded-3 fw-bold" data-bs-dismiss="modal">Close Window</button></div>
 HTML;
     }
 
-    // --- ADDED THIS SO ADMINS CAN PROCESS DUPLICATE TRANSACTIONS ---
     public function stockTransaction(Request $request, $id)
     {
         $supply = Supply::findOrFail($id);
@@ -321,6 +319,14 @@ HTML;
             'supplier' => $request->supplier,
             'transaction_date' => $request->transaction_date,
             'remarks' => $request->remarks,
+        ]);
+
+        ActivityLog::create([
+            'user_id' => Auth::id(),
+            'action' => 'Updated',
+            'description' => "Logged {$type} transaction for {$supply->article} (Qty: {$qty})",
+            'ip_address' => request()->ip(),
+            'user_agent' => request()->userAgent()
         ]);
 
         return redirect('/admin/supplies')->with('msg', 'Supply stock updated successfully!');

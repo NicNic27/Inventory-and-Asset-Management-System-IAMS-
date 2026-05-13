@@ -79,11 +79,11 @@
 
                 <div class="col-md-4">
                     <label class="fw-bold small text-muted">Fund Cluster</label>
-                    <input type="text" name="fund_cluster" class="form-control" value="{{ $req->fund_cluster }}">
+                    <input type="text" name="fund_cluster" class="form-control" value="{{ $req->fund_cluster }}" readonly placeholder="Leave it blank">
                 </div>
                 <div class="col-md-6">
                     <label class="fw-bold small text-muted">Responsible Center Code</label>
-                    <input type="text" name="center_code" class="form-control" value="{{ $req->rcc }}">
+                    <input type="text" name="center_code" class="form-control" value="{{ $req->rcc }}" readonly placeholder="Leave it blank">
                 </div>
             </div>
         </div>
@@ -101,9 +101,23 @@
                         <label class="fw-bold small text-muted">Stock No.</label>
                         <input type="text" name="stock_no[]" class="form-control bg-light stock-input" value="{{ $item->stock_no }}" readonly>
                     </div>
+                    
+                    @php 
+                        $isMatched = false; 
+                    @endphp
+                    
+                    @foreach($supplies as $supply)
+                        @php
+                            $supplyFullName = $supply->article . ', ' . $supply->description;
+                            if($item->description == $supplyFullName || $item->description == $supply->article) {
+                                $isMatched = true;
+                            }
+                        @endphp
+                    @endforeach
+
                     <div class="col-md-3">
                         <label class="fw-bold small text-muted">Unit Measure</label>
-                        <input type="text" name="unit_measure[]" class="form-control bg-light unit-input" value="{{ $item->unit }}" readonly placeholder="Auto-filled" required>
+                        <input type="text" name="unit_measure[]" class="form-control unit-input {{ $isMatched ? 'bg-light' : '' }}" value="{{ $item->unit }}" {{ $isMatched ? 'readonly' : '' }} placeholder="Auto-filled / Enter unit" required>
                     </div>
                     <div class="col-md-2">
                         <label class="fw-bold small text-muted">Quantity</label>
@@ -113,6 +127,8 @@
                         <label class="fw-bold small text-muted">Description <span class="text-danger">*</span></label>
                         <select name="description[]" class="form-select select2-supply" required>
                             <option value="" disabled>-- Select Supply Item --</option>
+                            <option value="Others" class="fw-bold text-primary" {{ !$isMatched ? 'selected' : '' }}>Others (Please specify)</option>
+                            
                             @foreach($supplies as $supply)
                                 @php
                                     $supplyFullName = $supply->article . ', ' . $supply->description;
@@ -123,6 +139,7 @@
                                 </option>
                             @endforeach
                         </select>
+                        <input type="text" name="manual_description[]" class="form-control mt-2 manual-desc-input shadow-sm border-primary" style="{{ !$isMatched ? '' : 'display:none;' }}" value="{{ !$isMatched ? $item->description : '' }}" placeholder="Specify custom item name and description" {{ !$isMatched ? 'required' : '' }}>
                     </div>
                     <div class="col-md-6">
                         <label class="fw-bold small text-muted">Remarks</label>
@@ -152,6 +169,9 @@
 <script>
     function formatSupplyOption(state) {
         if (!state.id) { return state.text; }
+        if (state.id === 'Others') {
+            return $(`<span class="text-primary fw-bold"><i class="fas fa-pen me-2"></i>${state.text}</span>`);
+        }
         
         let qty = $(state.element).data('qty');
         let badgeHtml = '';
@@ -178,14 +198,27 @@
         });
 
         $('.select2-supply').on('select2:select', function (e) {
-            const selectedOption = $(this).select2('data')[0].element; 
-            const barcode = $(selectedOption).data('barcode'); 
-            const unit = $(selectedOption).data('unit'); 
+            const selectedVal = $(this).val();
             const row = $(this).closest('.item-row');
+            const manualInput = row.find('.manual-desc-input');
+            const unitInput = row.find('.unit-input');
+            const stockInput = row.find('.stock-input');
             
-            // Auto-fill Stock No and Unit Measure
-            row.find('.stock-input').val(barcode || '');
-            row.find('.unit-input').val(unit || '');
+            if (selectedVal === 'Others') {
+                manualInput.show().attr('required', true);
+                stockInput.val('');
+                unitInput.val('').removeAttr('readonly').attr('placeholder', 'Type unit manually').removeClass('bg-light');
+            } else {
+                manualInput.hide().attr('required', false).val('');
+                unitInput.attr('readonly', true).attr('placeholder', 'Auto-filled').addClass('bg-light');
+                
+                const selectedOption = $(this).select2('data')[0].element; 
+                const barcode = $(selectedOption).data('barcode'); 
+                const unit = $(selectedOption).data('unit'); 
+                
+                stockInput.val(barcode || '');
+                unitInput.val(unit || '');
+            }
         });
     }
 
@@ -251,6 +284,20 @@
             select.selectedIndex = 0;
             select.querySelectorAll('option').forEach(opt => opt.removeAttribute('data-select2-id'));
         });
+        
+        // Reset dynamic fields
+        const manualDesc = firstRow.querySelector('.manual-desc-input');
+        if(manualDesc) {
+            manualDesc.style.display = 'none';
+            manualDesc.required = false;
+        }
+        
+        const unitInp = firstRow.querySelector('.unit-input');
+        if(unitInp) {
+            unitInp.readOnly = true;
+            unitInp.classList.add('bg-light');
+            unitInp.placeholder = 'Auto-filled';
+        }
         
         firstRow.removeAttribute('data-select2-id');
         

@@ -121,7 +121,9 @@
                 
                 <div class="text-center mb-4">
                     <img src="{{ asset('assets/images/DepEdseal.png') }}" alt="DepEd Logo" style="width: 75px; height: 75px;" class="mb-3">
-                    <h4 class="fw-bold mb-0 text-theme">DepEd ROV AMS</h4>
+                    <a href="{{ url('/') }}" class="text-decoration-none">
+                        <h4 class="fw-bold mb-0 text-theme">DepEd ROV AMS</h4>
+                    </a>
                 </div>
 
                 <div class="text-center mb-4">

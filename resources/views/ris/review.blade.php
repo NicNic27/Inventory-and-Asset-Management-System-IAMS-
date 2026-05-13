@@ -110,6 +110,14 @@
             margin: 0 auto;
         }
 
+        .overall-total-box {
+            background-color: var(--light-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 15px 20px;
+            text-align: right;
+        }
+
         /* --- PRINT IMPROVEMENTS --- */
         #print-area { display: none; }
 
@@ -249,8 +257,8 @@
                                 if($item->current_stock >= $item->req_quantity) $stockColor = 'success';
                                 elseif($item->current_stock > 0) $stockColor = 'warning text-dark';
                                 
-                                // Calculate initial remaining stock for display
                                 $currentRemaining = $item->current_stock - ($item->issue_quantity ?: 0);
+                                $unitPrice = \App\Models\Supply::where('barcode_id', $item->stock_no)->value('unit_value') ?? 0;
                             @endphp
                             <tr class="v-item-row">
                                 <td>
@@ -267,23 +275,18 @@
                                     <input type="number" name="req_quantity[{{ $i }}]" class="form-control form-control-sm text-center v-req" value="{{ $item->req_quantity }}" required>
                                 </td>
                                 <td class="bg-warning bg-opacity-10">
-                                    <select name="stock_avail_{{ $i }}" class="form-select form-select-sm border-warning v-avail" required>
+                                    <select name="stock_avail_{{ $i }}" class="form-select form-select-sm border-warning v-avail" onchange="autoFillIssueQty(this, {{ $i }})" required>
                                         <option value="" disabled {{ $availVal == '' || $availVal == 'n/a' ? 'selected' : '' }}>Select</option>
                                         <option value="yes" {{ $availVal == 'yes' ? 'selected' : '' }}>Yes</option>
                                         <option value="no" {{ $availVal == 'no' ? 'selected' : '' }}>No</option>
                                     </select>
                                 </td>
                                 <td class="bg-success bg-opacity-10">
-                                    <input type="number" name="issue_quantity[{{ $i }}]" class="form-control form-control-sm border-success text-center fw-bold v-issue"
+                                    <input type="number" id="issue_qty_{{ $i }}" name="issue_quantity[{{ $i }}]" class="form-control form-control-sm border-success text-center fw-bold v-issue"
                                         style="margin-top: 1.29rem;"
+                                        data-price="{{ $unitPrice }}"
                                         value="{{ $item->issue_quantity }}" min="0" max="{{ $item->current_stock }}" 
-                                        oninput="
-                                            let max = {{ $item->current_stock }};
-                                            let val = parseInt(this.value) || 0;
-                                            if(val > max) { this.value = max; val = max; }
-                                            if(val < 0) { this.value = 0; val = 0; }
-                                            document.getElementById('rem_stock_{{ $i }}').innerText = (max - val);
-                                        " 
+                                        oninput="calculateTotalAmount(this, {{ $i }})" 
                                         placeholder="0" title="Max available: {{ $item->current_stock }}" required>
                                     
                                     <div class="mt-1 text-center" style="font-size: 0.75rem; white-space: nowrap;">
@@ -293,12 +296,17 @@
                                     </div>
                                 </td>
                                 <td>
-                                    <input type="text" name="remarks[{{ $i }}]" class="form-control form-control-sm v-rem" placeholder="e.g. Price of the item..." value="{{ $item->remarks }}">
+                                    <input type="text" id="remarks_{{ $i }}" name="remarks[{{ $i }}]" class="form-control form-control-sm v-rem" placeholder="e.g. Total Price..." value="{{ $item->remarks }}">
                                 </td>
                             </tr>
                         @endforeach
                     </tbody>
                 </table>
+            </div>
+
+            <div class="overall-total-box mt-2">
+                <span class="text-muted fw-bold me-2 text-uppercase" style="font-size: 0.85rem;">Overall Total Amount:</span>
+                <span class="text-success fw-bold fs-5" id="overall_grand_total">₱ 0.00</span>
             </div>
         </div>
 
@@ -391,6 +399,10 @@
         <tbody id="print-items-body">
             </tbody>
         <tbody>
+            <tr id="print-grand-total-row">
+                <td colspan="7" style="border: 1px solid black; padding: 4px; text-align: right; font-weight: bold;">TOTAL:</td>
+                <td style="border: 1px solid black; padding: 4px; text-align: left; font-weight: bold;" id="p-grand-total"></td>
+            </tr>
             <tr>
                 <td colspan="8" style="border: 1px solid black; padding: 3px; text-align: left;">
                     <b>Purpose:</b> <span id="p-purpose"></span>
@@ -445,13 +457,87 @@
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
+    // --- Auto Calculate Overall Total Function ---
+    function updateOverallTotal() {
+        let overallTotal = 0;
+        document.querySelectorAll('.v-item-row').forEach(row => {
+            const issueInput = row.querySelector('.v-issue');
+            const availSelect = row.querySelector('.v-avail');
+            
+            if (availSelect.value === 'yes' && issueInput) {
+                let qty = parseInt(issueInput.value) || 0;
+                let price = parseFloat(issueInput.getAttribute('data-price')) || 0;
+                overallTotal += (qty * price);
+            }
+        });
+        document.getElementById('overall_grand_total').innerText = '₱ ' + overallTotal.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        return overallTotal;
+    }
+
+    // Call on load to calculate pre-existing values
+    document.addEventListener("DOMContentLoaded", function() {
+        updateOverallTotal();
+    });
+
+    // --- New Issue Qty Auto-Fill & Remarks Calculation Logic ---
+    function autoFillIssueQty(selectElement, index) {
+        const issueInput = document.getElementById('issue_qty_' + index);
+        const reqInput = document.getElementsByName('req_quantity[' + index + ']')[0];
+        const remStockSpan = document.getElementById('rem_stock_' + index);
+        const remarksInput = document.getElementById('remarks_' + index);
+        
+        let maxStock = parseInt(issueInput.getAttribute('max')) || 0;
+        let reqQty = parseInt(reqInput.value) || 0;
+        let unitPrice = parseFloat(issueInput.getAttribute('data-price')) || 0;
+
+        if (selectElement.value === 'yes') {
+            let fillQty = Math.min(reqQty, maxStock);
+            issueInput.value = fillQty;
+            remStockSpan.innerText = (maxStock - fillQty);
+
+            if (fillQty > 0 && unitPrice > 0) {
+                let totalAmount = fillQty * unitPrice;
+                remarksInput.value = '₱ ' + totalAmount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            }
+
+        } else if (selectElement.value === 'no') {
+            issueInput.value = 0;
+            remStockSpan.innerText = maxStock;
+            remarksInput.value = 'Out of Stock';
+        }
+        
+        updateOverallTotal();
+    }
+
+    // Handles manual edits to Issue Quantity field
+    function calculateTotalAmount(inputElement, index) {
+        let max = parseInt(inputElement.getAttribute('max')) || 0;
+        let val = parseInt(inputElement.value) || 0;
+        let unitPrice = parseFloat(inputElement.getAttribute('data-price')) || 0;
+        const remarksInput = document.getElementById('remarks_' + index);
+        const availSelect = document.getElementsByName('stock_avail_' + index)[0];
+
+        if(val > max) { inputElement.value = max; val = max; }
+        if(val < 0) { inputElement.value = 0; val = 0; }
+        
+        document.getElementById('rem_stock_' + index).innerText = (max - val);
+
+        if (availSelect.value === 'yes' && val > 0 && unitPrice > 0) {
+            let totalAmount = val * unitPrice;
+            remarksInput.value = '₱ ' + totalAmount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        } else if (val === 0) {
+            remarksInput.value = '';
+        }
+        
+        updateOverallTotal();
+    }
+
     // --- SweetAlert2 Interactive Action Confirmation ---
     function confirmAction(actionType, title, text, icon, confirmText, confirmColor) {
         const form = document.getElementById('reviewForm');
         
-        // Enforce HTML5 Form Validation before popping the SWAL
         if (!form.checkValidity()) {
-            form.reportValidity(); // Shows the native browser tooltips for empty fields
+            form.reportValidity(); 
             return;
         }
 
@@ -466,7 +552,6 @@
             reverseButtons: true
         }).then((result) => {
             if (result.isConfirmed) {
-                // Dynamically inject the chosen action into the form before submitting
                 const input = document.createElement('input');
                 input.type = 'hidden';
                 input.name = 'action';
@@ -517,6 +602,10 @@
         document.getElementById('p-iss-des').innerHTML = formatDesignation(document.getElementById('v_iss_des').value);
         document.getElementById('p-rec-des').innerHTML = formatDesignation(document.getElementById('v_rec_des').value);
 
+        // Calculate and Set Grand Total for Print
+        let overallTotalForPrint = updateOverallTotal();
+        document.getElementById('p-grand-total').innerText = '₱ ' + overallTotalForPrint.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+
         // Map Dynamic Table
         const printBody = document.getElementById('print-items-body');
         printBody.innerHTML = '';
@@ -533,16 +622,16 @@
             const issue = row.querySelector('.v-issue').value;
             const rem = row.querySelector('.v-rem').value;
 
-            const isYes = avail.toLowerCase() === "yes" ? "✔" : "";
-            const isNo = avail.toLowerCase() === "no" ? "✔" : "";
+            const isYes = avail.toLowerCase() === "yes" ? "✔" : "&nbsp;";
+            const isNo = avail.toLowerCase() === "no" ? "✘" : "&nbsp;";
 
             let newRow = `<tr>
                 <td style="border: 1px solid black; padding: 4px; text-align: center;">${stock || '&nbsp;'}</td>
                 <td style="border: 1px solid black; padding: 4px; text-align: center;">${unit || '&nbsp;'}</td>
                 <td style="border: 1px solid black; padding: 4px; text-align: left;">${desc || '&nbsp;'}</td>
                 <td style="border: 1px solid black; padding: 4px; text-align: center;">${req || '&nbsp;'}</td>
-                <td style="border: 1px solid black; padding: 4px; text-align: center;">${isYes || '&nbsp;'}</td>
-                <td style="border: 1px solid black; padding: 4px; text-align: center;">${isNo || '&nbsp;'}</td>
+                <td style="border: 1px solid black; padding: 4px; text-align: center;">${isYes}</td>
+                <td style="border: 1px solid black; padding: 4px; text-align: center;">${isNo}</td>
                 <td style="border: 1px solid black; padding: 4px; text-align: center;">${issue || '&nbsp;'}</td>
                 <td style="border: 1px solid black; padding: 4px; text-align: left;">${rem || '&nbsp;'}</td>
             </tr>`;
@@ -552,10 +641,7 @@
 
         let minRows = 10; 
         for(let j=rowsAdded; j < minRows; j++) {
-            let isLast = (j === minRows - 1);
-            let borderStyle = isLast 
-                ? "border-left: 1px solid black; border-right: 1px solid black; border-top: none; border-bottom: 1px solid black;" 
-                : "border-left: 1px solid black; border-right: 1px solid black; border-top: none; border-bottom: none;";
+            let borderStyle = "border-left: 1px solid black; border-right: 1px solid black; border-top: none; border-bottom: none;";
 
             printBody.innerHTML += `<tr>
                 <td style="${borderStyle} padding: 6px;">&nbsp;</td>

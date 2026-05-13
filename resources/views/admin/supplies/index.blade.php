@@ -10,7 +10,6 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     
     <style>
-        /* Lock body scroll */
         body { 
             background-color: #f4f6f9; 
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
@@ -19,7 +18,6 @@
             margin: 0;
         }
 
-        /* Flexbox Layout to utilize 100vh properly */
         .main-content { 
             margin-left: 250px; 
             padding: 20px; 
@@ -30,7 +28,6 @@
             flex-direction: column;
         }
 
-        /* Table Card matches flex height */
         .table-container { 
             background: white; 
             padding: 20px 20px 10px 20px; 
@@ -42,14 +39,12 @@
             min-height: 0; 
         }
 
-        /* Scrollable table body */
         .table-responsive {
             flex-grow: 1;
             overflow-y: auto; 
             margin-bottom: 10px;
         }
 
-        /* Sticky Table Headers */
         .table thead th {
             position: sticky;
             top: 0;
@@ -58,14 +53,13 @@
             box-shadow: 0 1px 2px rgba(0,0,0,0.1);
         }
 
-        .status-available { background-color: #d1e7dd; color: #0f5132; }
-        .status-low { background-color: #fff3cd; color: #856404; }
-        .status-out { background-color: #f8d7da; color: #842029; }
+        .status-available { background-color: #d1e7dd; color: #0f5132; border: 1px solid #badbcc;}
+        .status-low { background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba;}
+        .status-out { background-color: #f8d7da; color: #842029; border: 1px solid #f5c2c7;}
         
         .clickable-row { cursor: pointer; transition: background-color 0.2s; }
         .clickable-row:hover { background-color: #f8f9fa !important; }
 
-        /* --- Advanced Scrollable Pagination (Sticky Arrows) --- */
         #scrollablePagination nav > div:not(:last-child),
         #scrollablePagination p { display: none !important; }
 
@@ -98,6 +92,9 @@
         .page-item.active .page-link { background-color: #f4f6f9; color: #101954; font-weight: 700; border-color: #dee2e6; }
         .page-link { color: #6c757d; }
         .page-link:hover { color: #101954; background-color: #f4f6f9; }
+
+        .modal { z-index: 1060 !important; }
+        .modal-backdrop { z-index: 1055 !important; }
         
         @media (max-width: 768px) { 
             .main-content { margin-left: 0; height: auto; overflow: visible; } 
@@ -156,13 +153,12 @@
                 <table class="table align-middle mb-0">
                     <thead class="table-light">
                         <tr>
-                            <th>Stock No.</th>
-                            <th>Article / Item</th>
-                            <th>Description</th>
-                            <th>Unit</th>
-                            <th>Value</th>
-                            <th>Qty</th>
-                            <th>Status</th>
+                            <th class="text-nowrap">Stock No.</th>
+                            <th class="text-nowrap">Article / Item</th>
+                            <th class="text-nowrap" style="min-width: 200px;">Description</th>
+                            <th>Unit Value</th>
+                            <th class="text-center">Remaining Stock</th>
+                            <th class="text-center">Status</th>
                             <th class="text-center">Actions</th>
                         </tr>
                     </thead>
@@ -172,17 +168,35 @@
                                 $threshold = $row->low_stock_threshold ?? 10;
                                 $status_class = 'status-available';
                                 $status_text = 'Available';
-                                if($row->quantity == 0) { $status_class = 'status-out'; $status_text = 'Out of Stock'; }
-                                elseif($row->quantity <= $threshold) { $status_class = 'status-low'; $status_text = 'Low Stock'; }
+                                $qtyColor = 'text-dark';
+
+                                if($row->quantity == 0) { 
+                                    $status_class = 'status-out'; 
+                                    $status_text = 'Out of Stock'; 
+                                    $qtyColor = 'text-danger';
+                                } elseif($row->quantity <= $threshold) { 
+                                    $status_class = 'status-low'; 
+                                    $status_text = 'Low Stock'; 
+                                    $qtyColor = 'text-warning text-dark';
+                                }
+
+                                $totalInventory = max((int)$row->total_input, (int)$row->quantity);
                             @endphp
                             <tr class="clickable-row" data-id="{{ $row->id }}">
                                 <td class="fw-bold text-primary font-monospace">{{ $row->barcode_id ?: 'N/A' }}</td>
                                 <td class="fw-bold">{{ $row->article }}</td>
                                 <td><small class="text-muted">{{ Str::limit($row->description, 40) }}</small></td>
-                                <td>{{ $row->unit_measure }}</td>
                                 <td>₱{{ number_format($row->unit_value, 2) }}</td>
-                                <td class="fw-bold fs-5">{{ $row->quantity }}</td>
-                                <td><span class="badge rounded-pill {{ $status_class }} px-2 py-1">{{ $status_text }}</span></td>
+                                
+                                <td class="text-center" style="min-width: 120px;">
+                                    <div class="d-flex align-items-center justify-content-center gap-1">
+                                        <span class="fw-bold fs-5 {{ $qtyColor }}">{{ $row->quantity }}</span>
+                                        <span class="text-muted small">/ {{ $totalInventory }}</span>
+                                    </div>
+                                    <div class="text-muted" style="font-size: 0.7rem;">({{ $row->unit_measure }})</div>
+                                </td>
+
+                                <td class="text-center"><span class="badge rounded-pill {{ $status_class }} px-2 py-1">{{ $status_text }}</span></td>
                                 <td>
                                     <div class="d-flex justify-content-center gap-1">
                                         <button class="btn btn-sm btn-light border text-primary view-btn" 
@@ -257,7 +271,7 @@
         </div>
     </div>
 
-    <div class="modal fade" id="addSupplyModal" tabindex="-1">
+    <div class="modal fade" id="addSupplyModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-xl">
             <div class="modal-content">
                 <div class="modal-header bg-primary text-white">
@@ -280,33 +294,33 @@
                             </div>
                             
                             <div class="col-md-9 ps-4">
-                                <div class="mb-4 bg-light p-3 rounded border">
-                                    <label class="form-label text-primary fw-bold mb-2"><i class="fas fa-magic me-1"></i> Auto-Fill from Delivered P.O. (Optional)</label>
-                                    <select id="po_autofill_select" class="form-select border-primary shadow-sm" onchange="autoFillSupplyForm(this)">
-                                        <option value="">Select a delivered item to auto-fill the form...</option>
-                                        @if(isset($deliveredPoItems) && count($deliveredPoItems) > 0)
-                                            @php
-                                                $groupedItems = $deliveredPoItems->groupBy(function($item) {
-                                                    return $item->purchaseOrder->po_no ?? 'Unknown PO';
-                                                });
-                                            @endphp
-                                            @foreach($groupedItems as $poNo => $items)
-                                                <optgroup label="P.O. {{ $poNo }}">
-                                                    @foreach($items as $item)
-                                                        <option value="{{ $item->id }}" 
-                                                                data-desc="{{ $item->description }}"
-                                                                data-supplier="{{ $item->purchaseOrder->supplier_name ?? '' }}"
-                                                                data-unit="{{ $item->unit }}"
-                                                                data-val="{{ $item->unit_cost }}"
-                                                                data-qty="{{ $item->qty }}">
-                                                            {{ Str::limit($item->description, 45) }} (Qty: {{ $item->qty }})
-                                                        </option>
-                                                    @endforeach
-                                                </optgroup>
-                                            @endforeach
-                                        @endif
-                                    </select>
-                                </div>
+                                @if(isset($deliveredPoItems) && count($deliveredPoItems) > 0)
+                                    <div class="mb-4 bg-light p-3 rounded border">
+                                        <label class="form-label text-primary fw-bold mb-2"><i class="fas fa-magic me-1"></i> Auto-Fill from Delivered P.O. (Optional)</label>
+                                        <select id="po_autofill_select" class="form-select border-primary shadow-sm" onchange="autoFillSupplyForm(this)">
+                                            <option value="">Select a delivered item to auto-fill the form...</option>
+                                                @php
+                                                    $groupedItems = $deliveredPoItems->groupBy(function($item) {
+                                                        return $item->purchaseOrder->po_no ?? 'Unknown PO';
+                                                    });
+                                                @endphp
+                                                @foreach($groupedItems as $poNo => $items)
+                                                    <optgroup label="P.O. {{ $poNo }}">
+                                                        @foreach($items as $item)
+                                                            <option value="{{ $item->id }}" 
+                                                                    data-desc="{{ $item->description }}"
+                                                                    data-supplier="{{ $item->purchaseOrder->supplier_name ?? '' }}"
+                                                                    data-unit="{{ $item->unit }}"
+                                                                    data-val="{{ $item->unit_cost }}"
+                                                                    data-qty="{{ $item->qty }}">
+                                                                {{ Str::limit($item->description, 45) }} (Qty: {{ $item->qty }})
+                                                            </option>
+                                                        @endforeach
+                                                    </optgroup>
+                                                @endforeach
+                                        </select>
+                                    </div>
+                                @endif
 
                                 <div class="row g-3">
                                     <div class="col-md-6">
@@ -318,7 +332,7 @@
                                         <input type="text" name="supplier" id="add_supplier" class="form-control" placeholder="e.g. Pandayan">
                                     </div>
                                     
-                                    <div class="col-md-12">
+                                    <div class="col-12">
                                         <label class="form-label fw-bold">Description</label>
                                         <textarea name="description" id="add_desc" class="form-control" rows="2" placeholder="e.g. A4 Size, 70gsm, White"></textarea>
                                     </div>
@@ -398,7 +412,7 @@
         </div>
     </div>
 
-    <div class="modal fade" id="editSupplyModal" tabindex="-1">
+    <div class="modal fade" id="editSupplyModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-xl">
             <div class="modal-content">
                 <div class="modal-header bg-success text-white">
@@ -423,7 +437,7 @@
                             
                             <div class="col-md-9 ps-4">
                                 <div class="row g-3">
-                                    <div class="col-md-12">
+                                    <div class="col-12">
                                         <div class="alert alert-light border-success border-start border-4 py-2 px-3 mb-1 d-flex align-items-center justify-content-between">
                                             <span><i class="fas fa-barcode text-success me-2"></i>Stock No. (Barcode)</span>
                                             <input type="text" name="barcode_id" id="edit_stock" class="form-control form-control-sm bg-white fw-bold w-50" readonly required>
@@ -439,7 +453,7 @@
                                         <input type="text" name="supplier" id="edit_supplier" class="form-control">
                                     </div>
                                     
-                                    <div class="col-md-12">
+                                    <div class="col-12">
                                         <label class="form-label fw-bold">Description</label>
                                         <textarea name="description" id="edit_desc" class="form-control" rows="2"></textarea>
                                     </div>
@@ -492,7 +506,7 @@
                                         <input type="number" name="unit_value" id="edit_value" class="form-control" step="0.01" min="0" required>
                                     </div>
                                     
-                                    <div class="col-md-12 mt-4"><hr class="m-0"></div>
+                                    <div class="col-12 mt-4"><hr class="m-0"></div>
                                     
                                     <div class="col-md-6">
                                         <label class="form-label fw-bold text-success">Total Stock Quantity <span class="text-danger">*</span></label>
@@ -516,7 +530,7 @@
         </div>
     </div>
     
-    <div class="modal fade" id="deleteSupplyModal" tabindex="-1">
+    <div class="modal fade" id="deleteSupplyModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header bg-danger text-white">
@@ -553,22 +567,17 @@
     <script>
         // --- DUPLICATE ITEM CHECK INTERCEPTOR ---
         document.getElementById('addSupplyForm').addEventListener('submit', function(e) {
-            // If the form has the hidden force_save flag, submit normally
-            if (this.querySelector('input[name="force_save"]')) {
-                return; 
-            }
+            if (this.querySelector('input[name="force_save"]')) return; 
             
-            e.preventDefault(); // Stop standard form submission
+            e.preventDefault(); 
             const form = this;
             const formData = new FormData(form);
 
-            // Change button to loading state
             const submitBtn = form.querySelector('button[type="submit"]');
             const originalText = submitBtn.innerHTML;
             submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing...';
             submitBtn.disabled = true;
 
-            // Perform the AJAX fetch check
             fetch(form.action, {
                 method: 'POST',
                 body: formData,
@@ -577,7 +586,6 @@
             .then(response => response.json())
             .then(data => {
                 if (data.status === 'duplicate') {
-                    // Reset button
                     submitBtn.innerHTML = originalText;
                     submitBtn.disabled = false;
                     
@@ -586,24 +594,21 @@
                         text: 'An item with these exact details is already in the inventory. Would you like to add this quantity to the existing stock instead of creating a duplicate?',
                         icon: 'warning',
                         showCancelButton: true,
-                        confirmButtonColor: '#10b981', // Success green for "Add to existing"
-                        cancelButtonColor: '#6c757d',  // Gray for "Create as new"
+                        confirmButtonColor: '#10b981', 
+                        cancelButtonColor: '#6c757d', 
                         confirmButtonText: '<i class="fas fa-plus me-1"></i> Yes, add to existing stock',
                         cancelButtonText: 'No, create as a new item',
                         reverseButtons: true
                     }).then((result) => {
                         if (result.isConfirmed) {
-                            // User wants to add to existing stock (Triggers stockTransaction endpoint)
                             const qty = document.getElementById('add_qty').value;
                             const supplier = document.getElementById('add_supplier').value;
                             const csrf = document.querySelector('meta[name="csrf-token"]').content;
                             
-                            // Create a temporary hidden form to post to the transaction endpoint (ADMIN ROUTE)
                             const tempForm = document.createElement('form');
                             tempForm.method = 'POST';
                             tempForm.action = `/admin/supplies/${data.existing_id}/transaction`;
                             
-                            // Get today's date formatted as YYYY-MM-DD
                             const today = new Date().toISOString().split('T')[0];
                             
                             tempForm.innerHTML = `
@@ -615,10 +620,9 @@
                                 <input type="hidden" name="remarks" value="Added from duplicate check">
                             `;
                             document.body.appendChild(tempForm);
-                            tempForm.submit(); // Submits and naturally redirects back with success message
+                            tempForm.submit();
 
                         } else if (result.dismiss === Swal.DismissReason.cancel) {
-                            // User actively rejected the duplicate catch, force save it anyway!
                             submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Saving...';
                             submitBtn.disabled = true;
                             
@@ -628,11 +632,10 @@
                             forceInput.value = '1';
                             form.appendChild(forceInput);
                             
-                            form.submit(); // Standard submit to trigger page reload + session message
+                            form.submit(); 
                         }
                     });
                 } else if (data.status === 'success') {
-                    // It saved perfectly fine on the backend without duplicates
                     window.location.reload();
                 }
             })
@@ -654,10 +657,9 @@
                     clearTimeout(typingTimer);
                     typingTimer = setTimeout(() => {
                         filterForm.submit();
-                    }, 600); // Waits 600ms after user stops typing
+                    }, 600); 
                 });
 
-                // Keep cursor focused and at the end of the text after reload
                 if (searchInput.value.length > 0) {
                     searchInput.focus();
                     const val = searchInput.value;
@@ -684,7 +686,6 @@
             document.getElementById('add_desc').value = selectedOption.getAttribute('data-desc');
             document.getElementById('add_supplier').value = selectedOption.getAttribute('data-supplier');
             
-            // Auto-select the dropdown logic
             let rawUnit = (selectedOption.getAttribute('data-unit') || "").toLowerCase().trim();
             let unitSelect = document.getElementById('add_unit');
             let matchFound = false;
@@ -723,7 +724,6 @@
                 .then(data => { 
                     contentArea.innerHTML = data; 
                     
-                    // Render Barcode
                     const barcodeEl = contentArea.querySelector('.barcode-render-modal');
                     if (barcodeEl && barcodeEl.getAttribute('data-value') !== 'N/A') {
                         JsBarcode(barcodeEl, barcodeEl.getAttribute('data-value'), {
@@ -764,7 +764,6 @@
                 document.getElementById('edit_stock').value = this.getAttribute('data-stock');
                 document.getElementById('edit_desc').value = this.getAttribute('data-desc');
                 
-                // Set the dropdown value safely
                 let unitVal = this.getAttribute('data-unit');
                 let unitSelect = document.getElementById('edit_unit');
                 let optionExists = Array.from(unitSelect.options).some(opt => opt.value === unitVal);
@@ -839,7 +838,6 @@
             }
         });
 
-        // Advanced Pagination Scroll & Auto-Center
         window.addEventListener('load', function() {
             const paginationUl = document.querySelector('.custom-pagination-wrapper ul.pagination');
             if (paginationUl) {

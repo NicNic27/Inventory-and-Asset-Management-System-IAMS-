@@ -46,14 +46,15 @@
                 @php $grand_total = 0; @endphp
                 @forelse($assets as $row)
                     @php 
-                        $total = $row->unit_value * $row->quantity;
+                        // Each row represents 1 unique asset now, so total value equals unit value
+                        $total = $row->unit_value;
                         $grand_total += $total;
                     @endphp
                     <tr>
-                        <td class="text-center">{{ $row->barcode_id }}</td>
+                        <td class="text-center">{{ $row->barcode_id ?: 'N/A' }}</td>
                         <td class="fw-bold">{{ $row->article }}</td>
                         <td>{{ $row->description }}</td>
-                        <td class="text-center">{{ $row->quantity }}</td>
+                        <td class="text-center">1</td> <!-- Hardcoded to 1 since quantity column is removed -->
                         <td class="text-end">₱{{ number_format($row->unit_value, 2) }}</td>
                         <td class="text-end">₱{{ number_format($total, 2) }}</td>
                         <td class="text-center">{{ $row->status }}</td>

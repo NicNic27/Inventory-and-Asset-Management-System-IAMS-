@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use App\Models\ActivityLog;
 
 class ProfileController extends Controller
 {
@@ -30,14 +31,11 @@ class ProfileController extends Controller
         $user->lastname = $request->lastname;
         $user->email = $request->email;
         
-        // If the user typed a new password, hash it and save it
         if ($request->filled('password')) {
             $user->password = Hash::make($request->password);
         }
 
-        // Handle Avatar Image Upload
         if ($request->hasFile('image')) {
-            // Delete old image if it exists
             if ($user->image && file_exists(public_path('uploads/users/' . $user->image))) {
                 unlink(public_path('uploads/users/' . $user->image));
             }
@@ -48,6 +46,14 @@ class ProfileController extends Controller
         }
 
         $user->save();
+
+        ActivityLog::create([
+            'user_id' => $user->id,
+            'action' => 'Updated',
+            'description' => "User updated their own profile.",
+            'ip_address' => request()->ip(),
+            'user_agent' => request()->userAgent()
+        ]);
 
         return redirect()->back()->with('msg', 'Profile updated successfully!');
     }

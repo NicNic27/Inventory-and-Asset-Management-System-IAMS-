@@ -103,18 +103,22 @@
             outline: none;
         }
 
-        .btn-view {
+        .btn-action {
             background-color: #f8f9fc;
-            color: #101954;
             border: 1px solid #e0e0e0;
             border-radius: 6px;
-            padding: 5px 15px;
+            padding: 5px 12px;
             transition: 0.3s;
             font-size: 0.9rem;
             text-decoration: none;
             display: inline-block;
+            margin-right: 5px;
         }
+        .btn-view { color: #101954; }
         .btn-view:hover { background-color: #101954; color: white; border-color: #101954; }
+        
+        .btn-delete { color: #dc3545; }
+        .btn-delete:hover { background-color: #dc3545; color: white; border-color: #dc3545; }
 
         /* Custom Pagination Styling */
         #styled-pagination nav > div:not(:last-child),
@@ -150,6 +154,10 @@
         .page-link { color: #6c757d; }
         .page-link:hover { color: #101954; background-color: #f4f6f9; }
 
+        /* Modal Stack Fix */
+        .modal { z-index: 1060 !important; }
+        .modal-backdrop { z-index: 1055 !important; }
+
         @media (max-width: 768px) { 
             .main-content { margin-left: 0; height: auto; overflow: visible; } 
             body { overflow: visible; height: auto; }
@@ -177,6 +185,13 @@
         @if(session('msg'))
             <div class="alert alert-success alert-dismissible fade show border-0 shadow-sm py-2" role="alert">
                 <i class="fas fa-check-circle me-2"></i> {{ session('msg') }}
+                <button type="button" class="btn-close pt-3" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        @endif
+        
+        @if(session('error'))
+            <div class="alert alert-danger alert-dismissible fade show border-0 shadow-sm py-2" role="alert">
+                <i class="fas fa-exclamation-circle me-2"></i> {{ session('error') }}
                 <button type="button" class="btn-close pt-3" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
         @endif
@@ -262,7 +277,13 @@
                                     <span class="status-badge {{ $badgeClass }}"><i class="{{ $icon }} me-1"></i> {{ $ris->status }}</span>
                                 </td>
                                 <td class="text-center">
-                                    <a href="{{ url('/user/ris/' . $ris->id) }}" class="btn-view shadow-sm"><i class="fa-regular fa-eye"></i> View</a>
+                                    <a href="{{ url('/user/ris/' . $ris->id) }}" class="btn-action btn-view shadow-sm"><i class="fa-regular fa-eye"></i> View</a>
+                                    
+                                    @if($ris->status == 'Pending' || $ris->status == 'Pending Staff Review')
+                                        <button class="btn-action btn-delete shadow-sm" data-bs-toggle="modal" data-bs-target="#deleteRisModal{{ $ris->id }}" title="Delete Request">
+                                            <i class="fa-solid fa-trash-can"></i> Delete
+                                        </button>
+                                    @endif
                                 </td>
                             </tr>
                         @empty
@@ -305,6 +326,33 @@
         </div>
     </div>
 
+    @foreach($requests as $ris)
+        @if($ris->status == 'Pending' || $ris->status == 'Pending Staff Review')
+        <div class="modal fade text-start" id="deleteRisModal{{ $ris->id }}" tabindex="-1" aria-hidden="true" style="z-index: 1060;">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow">
+                    <div class="modal-header bg-danger text-white">
+                        <h5 class="modal-title"><i class="fas fa-exclamation-triangle me-2"></i>Delete Request</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <form action="{{ url('/user/ris/' . $ris->id) }}" method="POST">
+                        @csrf
+                        @method('DELETE')
+                        <div class="modal-body p-4 text-center">
+                            <p class="fs-5 mb-0 text-dark">Are you sure you want to delete <strong>{{ $ris->ris_no }}</strong>?</p>
+                            <p class="small text-muted mt-2">This action cannot be undone.</p>
+                        </div>
+                        <div class="modal-footer bg-light border-0 justify-content-center">
+                            <button type="button" class="btn btn-secondary px-4 fw-bold" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-danger px-4 fw-bold"><i class="fas fa-trash-alt me-1"></i> Delete Request</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        @endif
+    @endforeach
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         // Auto-search logic (Debounce)
@@ -318,10 +366,9 @@
                     clearTimeout(typingTimer);
                     typingTimer = setTimeout(() => {
                         filterForm.submit();
-                    }, 600); // Waits 600ms after user stops typing
+                    }, 600); 
                 });
 
-                // Keep cursor focused
                 if (risSearchInput.value.length > 0) {
                     risSearchInput.focus();
                     const val = risSearchInput.value;

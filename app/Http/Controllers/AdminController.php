@@ -19,8 +19,8 @@ class AdminController extends Controller
         $user = Auth::user();
         $user_name = $user ? $user->firstname . ' ' . $user->lastname : 'Admin';
 
-        // 1. Basic Counters
-        $total_assets = Asset::sum('quantity') ?? 0;
+        // 1. Basic Counters (FIXED: Asset uses count() because quantity was removed)
+        $total_assets = Asset::count() ?? 0;
         $total_supplies = Supply::sum('quantity') ?? 0;
         $total_users = User::count() ?? 0;
         $approved_requests = RisRequest::where('status', 'Approved')->count();

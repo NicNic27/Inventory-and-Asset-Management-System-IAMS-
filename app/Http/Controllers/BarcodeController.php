@@ -5,31 +5,28 @@ namespace App\Http\Controllers;
 use App\Models\Asset;
 use App\Models\Supply;
 use App\Models\Transaction;
+use App\Models\ActivityLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Pagination\LengthAwarePaginator;
 
 class BarcodeController extends Controller
 {
-    // --- VIEWS ---
     public function generator(Request $request)
     {
         $perPage = $request->input('per_page', 5);
         $page = $request->input('page', 1);
-        
-        // Grab search and category parameters from the URL
         $search = $request->input('search');
         $category = $request->input('category', 'all');
 
         $supplies = collect();
         $assets = collect();
 
-        // 1. Fetch from Supplies (if category is 'all' or 'supply')
         if ($category === 'all' || $category === 'supply') {
             $supplyQuery = Supply::whereNotNull('barcode_id')
-                ->select('id', 'barcode_id as barcode_code', 'article');
+                ->select('id', 'barcode_id as barcode_code', 'article', 'description', 'supplier');
                 
-            // Apply Search Filter to Database
             if (!empty($search)) {
                 $supplyQuery->where(function($q) use ($search) {
                     $q->where('article', 'LIKE', "%{$search}%")
@@ -44,12 +41,10 @@ class BarcodeController extends Controller
             });
         }
 
-        // 2. Fetch from Assets (if category is 'all' or 'asset')
         if ($category === 'all' || $category === 'asset') {
             $assetQuery = Asset::whereNotNull('barcode_id')
-                ->select('id', 'barcode_id as barcode_code', 'article');
+                ->select('id', 'barcode_id as barcode_code', 'article', 'description', 'supplier');
                 
-            // Apply Search Filter to Database
             if (!empty($search)) {
                 $assetQuery->where(function($q) use ($search) {
                     $q->where('article', 'LIKE', "%{$search}%")
@@ -64,10 +59,8 @@ class BarcodeController extends Controller
             });
         }
 
-        // 3. Merge both lists and sort by ID descending (highest ID = newest added)
         $mergedBarcodes = $supplies->concat($assets)->sortByDesc('id')->values();
 
-        // 4. Manually Paginate the merged collection
         $offset = ($page * $perPage) - $perPage;
         $itemsForCurrentPage = $mergedBarcodes->slice($offset, $perPage)->all();
         
@@ -79,13 +72,9 @@ class BarcodeController extends Controller
             ['path' => $request->url(), 'query' => $request->query()]
         );
 
-        // Pass search and category variables back to the view so the inputs don't clear out
         return view('barcodes.generator', compact('barcodes', 'perPage', 'search', 'category'));
     }
 
-    // --- AJAX / API ENDPOINTS ---
-    
-    // Process Scanner Input (STRICTLY SEPARATED)
     public function processScan(Request $request)
     {
         $barcode = trim($request->barcode);
@@ -97,7 +86,6 @@ class BarcodeController extends Controller
         $item = null;
         $table = '';
 
-        // STRICT SEPARATION: Only search the database requested by the scanner context
         if ($context === 'supplies') {
             $item = Supply::where('barcode_id', $barcode)->first();
             $table = 'supplies';
@@ -105,7 +93,6 @@ class BarcodeController extends Controller
             $item = Asset::where('barcode_id', $barcode)->first();
             $table = 'assets';
         } else {
-            // Global fallback
             $item = Asset::where('barcode_id', $barcode)->first();
             $table = 'assets';
             if (!$item) {
@@ -134,6 +121,14 @@ class BarcodeController extends Controller
                 'remarks' => $remarks
             ]);
 
+            ActivityLog::create([
+                'user_id' => Auth::id(),
+                'action' => 'Updated',
+                'description' => "Processed Scanner {$mode} for Barcode: {$barcode} (Qty: {$qty})",
+                'ip_address' => request()->ip(),
+                'user_agent' => request()->userAgent()
+            ]);
+
             return response()->json([
                 'status' => 'success',
                 'item_name' => $item->article,
@@ -147,12 +142,10 @@ class BarcodeController extends Controller
         return response()->json(['status' => 'error', 'message' => 'Barcode not found in ' . ucfirst($context) . ' Inventory.']);
     }
 
-    // Fetch Recent Scans for Modal
     public function recentScans(Request $request)
     {
         $context = $request->context ?? 'all';
         
-        // Grab recent IN/OUT transactions
         $query = Transaction::where(function($q) {
             $q->where('remarks', 'Scanner')->orWhere('remarks', 'LIKE', 'RIS:%');
         })->orderBy('id', 'desc')->limit(10);
@@ -188,6 +181,79 @@ class BarcodeController extends Controller
                           </div>';
             }
         }
+        return response($html);
+    }
+
+    public function printAll(Request $request)
+    {
+        $type = $request->query('type', 'supply');
+        
+        if ($type === 'asset') {
+            $items = Asset::whereNotNull('barcode_id')->orderBy('article', 'asc')->get();
+            $title = "Asset Barcodes Master List";
+        } else {
+            $items = Supply::whereNotNull('barcode_id')->orderBy('article', 'asc')->get();
+            $title = "Supply Barcodes Master List";
+        }
+
+        $html = '<!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <title>'.$title.'</title>
+            <style>
+                body { font-family: "Segoe UI", sans-serif; padding: 20px; }
+                .text-center { text-align: center; }
+                table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                th, td { border: 1px solid #ddd; padding: 12px 8px; text-align: left; vertical-align: middle; }
+                th { background-color: #f4f6f9; color: #101954; font-weight: bold; }
+                .barcode-cell { text-align: center; width: 250px; }
+                .desc { font-size: 0.85rem; color: #555; }
+                @media print { 
+                    button { display: none; } 
+                    @page { margin: 10mm; }
+                }
+            </style>
+            <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.0/dist/JsBarcode.all.min.js"></script>
+        </head>
+        <body>
+            <h2 class="text-center" style="color: #101954; margin-bottom: 5px;">'.$title.'</h2>
+            <p class="text-center" style="color: #666; margin-top: 0;">Generated on ' . date('M d, Y') . '</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 30%">Article / Item</th>
+                        <th style="width: 40%">Description</th>
+                        <th class="barcode-cell">Barcode</th>
+                    </tr>
+                </thead>
+                <tbody>';
+
+        foreach ($items as $item) {
+            $desc = htmlspecialchars($item->description ?? 'No description available');
+            $code = $item->barcode_id;
+            $article = htmlspecialchars($item->article);
+            
+            $html .= '<tr>
+                        <td><strong>' . $article . '</strong></td>
+                        <td class="desc">' . $desc . '</td>
+                        <td class="barcode-cell">
+                            <svg class="barcode" jsbarcode-format="CODE128" jsbarcode-value="'.$code.'" jsbarcode-displayvalue="true" jsbarcode-height="40" jsbarcode-width="1.5"></svg>
+                        </td>
+                      </tr>';
+        }
+
+        $html .= '</tbody>
+            </table>
+            <script>
+                JsBarcode(".barcode").init();
+                setTimeout(function() { 
+                    window.print(); 
+                }, 800);
+            </script>
+        </body>
+        </html>';
+
         return response($html);
     }
 }

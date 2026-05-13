@@ -17,6 +17,10 @@
         padding: 20px;
         text-align: center;
         border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        transition: background-color 0.2s;
+    }
+    .sidebar-header:hover {
+        background-color: rgba(255, 255, 255, 0.05);
     }
     .sidebar-header img {
         width: 60px;
@@ -110,10 +114,12 @@
 <div class="sidebar-backdrop no-print" id="sidebarBackdrop"></div>
 
 <div class="sidebar" id="mainSidebar">
-    <div class="sidebar-header">
-        <img src="{{ asset('assets/images/depedRovCirc.png') }}" alt="Logo">
-        <h5>DIVISION USER</h5>
-    </div>
+    <a href="{{ url('/') }}" style="text-decoration: none; color: inherit;">
+        <div class="sidebar-header" title="Go to Landing Page">
+            <img src="{{ asset('assets/images/depedRovCirc.png') }}" alt="Logo">
+            <h5>DIVISION USER</h5>
+        </div>
+    </a>
     
     <div class="nav-menu">
         <a href="{{ url('/user/dashboard') }}" class="nav-link {{ request()->is('user/dashboard*') ? 'active' : '' }}">

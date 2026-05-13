@@ -31,7 +31,7 @@
     <h4 class="fw-bold mt-3 mb-2 text-dark">{{ $user->firstname }} {{ $user->lastname }}</h4>
     
     <div class="mb-4">
-        <span class="badge bg-{{ $roleName == 'Admin' ? 'dark' : 'primary' }} me-1 px-3 py-2">{{ $roleName }}</span>
+        <span class="badge bg-{{ $roleName == 'Admin' ? 'dark' : ($roleName == 'User' ? 'primary' : 'secondary') }} me-1 px-3 py-2">{{ $roleName }}</span>
         <span class="badge bg-{{ $statusColor }} px-3 py-2 border border-{{ $statusColor }}-subtle">{{ $user->status }}</span>
     </div>
 

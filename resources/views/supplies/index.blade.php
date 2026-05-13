@@ -10,7 +10,6 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     
     <style>
-        /* Lock body scroll on Desktop */
         body { 
             background-color: #f4f6f9; 
             font-family: 'Segoe UI', sans-serif; 
@@ -19,7 +18,6 @@
             margin: 0;
         }
 
-        /* Flexbox Layout to utilize 100vh properly on Desktop */
         .main-content { 
             margin-left: 250px; 
             padding: 20px; 
@@ -30,7 +28,6 @@
             flex-direction: column;
         }
 
-        /* Table Card matches flex height */
         .table-container { 
             background: white; 
             padding: 20px; 
@@ -42,14 +39,12 @@
             min-height: 0; 
         }
 
-        /* Scrollable table body */
         .table-responsive {
             flex-grow: 1;
             overflow-y: auto; 
             margin-bottom: 10px;
         }
 
-        /* Sticky Table Headers */
         .table thead th {
             position: sticky;
             top: 0;
@@ -58,15 +53,14 @@
             box-shadow: 0 1px 2px rgba(0,0,0,0.1);
         }
 
-        .status-available { background-color: #d1e7dd; color: #0f5132; }
-        .status-low { background-color: #fff3cd; color: #856404; }
-        .status-out { background-color: #f8d7da; color: #842029; }
+        .status-available { background-color: #d1e7dd; color: #0f5132; border: 1px solid #badbcc;}
+        .status-low { background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba;}
+        .status-out { background-color: #f8d7da; color: #842029; border: 1px solid #f5c2c7;}
         
         .clickable-row { cursor: pointer; }
         .clickable-row td { transition: background-color 0.2s ease-in-out; }
         .clickable-row:hover td { background-color: #dde2e6 !important; }
 
-        /* --- Advanced Scrollable Pagination (Sticky Arrows) --- */
         #styled-pagination nav > div:not(:last-child),
         #styled-pagination p { display: none !important; }
 
@@ -100,10 +94,8 @@
         .page-link { color: #6c757d; }
         .page-link:hover { color: #101954; background-color: #f4f6f9; }
 
-        /* --- THE Z-INDEX FIX FOR UNCLICKABLE MODALS --- */
         .modal { z-index: 1060 !important; }
         
-        /* --- MOBILE RESPONSIVE OVERRIDES --- */
         @media (max-width: 768px) { 
             body { overflow: visible; height: auto; }
             .main-content { 
@@ -183,10 +175,9 @@
                             <th class="text-nowrap">Stock No.</th>
                             <th class="text-nowrap">Article / Item</th>
                             <th class="text-nowrap" style="min-width: 200px;">Description</th>
-                            <th>Unit</th>
-                            <th>Value</th>
-                            <th>Qty</th>
-                            <th>Status</th>
+                            <th>Unit Value</th>
+                            <th class="text-center">Remaining Stock</th>
+                            <th class="text-center">Status</th>
                             <th class="text-center">Actions</th>
                         </tr>
                     </thead>
@@ -198,17 +189,37 @@
                                 
                                 $status_class = 'status-available';
                                 $status_text = 'Available';
-                                if($row->quantity == 0) { $status_class = 'status-out'; $status_text = 'Out of Stock'; }
-                                elseif($row->quantity <= $threshold) { $status_class = 'status-low'; $status_text = 'Low Stock'; }
+                                $qtyColor = 'text-dark';
+
+                                if($row->quantity == 0) { 
+                                    $status_class = 'status-out'; 
+                                    $status_text = 'Out of Stock'; 
+                                    $qtyColor = 'text-danger';
+                                } elseif($row->quantity <= $threshold) { 
+                                    $status_class = 'status-low'; 
+                                    $status_text = 'Low Stock'; 
+                                    $qtyColor = 'text-warning text-dark';
+                                }
+
+                                // Fetch the dynamic total input from the subquery passed by the controller
+                                $totalInventory = max((int)$row->total_input, (int)$row->quantity);
                             @endphp
                             <tr class="clickable-row" data-id="{{ $row->id }}">
                                 <td class="fw-bold text-primary font-monospace">{!! $stockNo !!}</td>
                                 <td class="fw-bold text-nowrap">{{ $row->article }}</td>
                                 <td>{{ Str::limit($row->description, 40) }}</td>
-                                <td>{{ $row->unit_measure }}</td>
                                 <td class="text-nowrap">₱{{ number_format($row->unit_value, 2) }}</td>
-                                <td class="fw-bold fs-5 text-dark">{{ $row->quantity }}</td>
-                                <td><span class="badge rounded-pill {{ $status_class }} px-2 py-1">{{ $status_text }}</span></td>
+                                
+                                <td class="text-center" style="min-width: 120px;">
+                                    <div class="d-flex align-items-center justify-content-center gap-1">
+                                        <span class="fw-bold fs-5 {{ $qtyColor }}">{{ $row->quantity }}</span>
+                                        <span class="text-muted small">/ {{ $totalInventory }}</span>
+                                    </div>
+                                    <div class="text-muted" style="font-size: 0.7rem;">({{ $row->unit_measure }})</div>
+                                </td>
+                                
+                                <td class="text-center"><span class="badge rounded-pill {{ $status_class }} px-2 py-1">{{ $status_text }}</span></td>
+                                
                                 <td>
                                     <div class="d-flex justify-content-center gap-1">
                                         <button class="btn btn-sm btn-light border text-primary view-btn" title="View" data-id="{{ $row->id }}">
@@ -303,33 +314,33 @@
                             </div>
                             
                             <div class="col-md-9 ps-md-4">
-                                <div class="mb-4 bg-light p-3 rounded border">
-                                    <label class="form-label text-primary fw-bold mb-2"><i class="fas fa-magic me-1"></i> Auto-Fill from Delivered P.O. (Optional)</label>
-                                    <select id="po_autofill_select" class="form-select border-primary shadow-sm" onchange="autoFillSupplyForm(this)">
-                                        <option value="">Select a delivered item to auto-fill the form...</option>
-                                        @if(isset($deliveredPoItems) && count($deliveredPoItems) > 0)
-                                            @php
-                                                $groupedItems = $deliveredPoItems->groupBy(function($item) {
-                                                    return $item->purchaseOrder->po_no ?? 'Unknown PO';
-                                                });
-                                            @endphp
-                                            @foreach($groupedItems as $poNo => $items)
-                                                <optgroup label="P.O. {{ $poNo }}">
-                                                    @foreach($items as $item)
-                                                        <option value="{{ $item->id }}" 
-                                                                data-desc="{{ $item->description }}"
-                                                                data-supplier="{{ $item->purchaseOrder->supplier_name ?? '' }}"
-                                                                data-unit="{{ $item->unit }}"
-                                                                data-val="{{ $item->unit_cost }}"
-                                                                data-qty="{{ $item->qty }}">
-                                                            {{ Str::limit($item->description, 45) }} (Qty: {{ $item->qty }})
-                                                        </option>
-                                                    @endforeach
-                                                </optgroup>
-                                            @endforeach
-                                        @endif
-                                    </select>
-                                </div>
+                                @if(isset($deliveredPoItems) && count($deliveredPoItems) > 0)
+                                    <div class="mb-4 bg-light p-3 rounded border">
+                                        <label class="form-label text-primary fw-bold mb-2"><i class="fas fa-magic me-1"></i> Auto-Fill from Delivered P.O. (Optional)</label>
+                                        <select id="po_autofill_select" class="form-select border-primary shadow-sm" onchange="autoFillSupplyForm(this)">
+                                            <option value="">Select a delivered item to auto-fill the form...</option>
+                                                @php
+                                                    $groupedItems = $deliveredPoItems->groupBy(function($item) {
+                                                        return $item->purchaseOrder->po_no ?? 'Unknown PO';
+                                                    });
+                                                @endphp
+                                                @foreach($groupedItems as $poNo => $items)
+                                                    <optgroup label="P.O. {{ $poNo }}">
+                                                        @foreach($items as $item)
+                                                            <option value="{{ $item->id }}" 
+                                                                    data-desc="{{ $item->description }}"
+                                                                    data-supplier="{{ $item->purchaseOrder->supplier_name ?? '' }}"
+                                                                    data-unit="{{ $item->unit }}"
+                                                                    data-val="{{ $item->unit_cost }}"
+                                                                    data-qty="{{ $item->qty }}">
+                                                                {{ Str::limit($item->description, 45) }} (Qty: {{ $item->qty }})
+                                                            </option>
+                                                        @endforeach
+                                                    </optgroup>
+                                                @endforeach
+                                        </select>
+                                    </div>
+                                @endif
 
                                 <div class="row g-3">
                                     <div class="col-md-6">

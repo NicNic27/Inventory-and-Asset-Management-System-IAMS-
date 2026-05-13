@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Purchase Orders - DepEd AMS</title>
+    <title>Delivery Orders - DepEd AMS</title>
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -121,8 +121,8 @@
         
         <div class="row align-items-center mb-4 g-3">
             <div class="col-12 col-md-6 text-center text-md-start">
-                <h2 class="header-title mb-1"><i class="fas fa-file-invoice-dollar text-primary me-2"></i>Purchase Orders</h2>
-                <p class="text-muted small mb-0">Manage and view official DepEd Purchase Orders</p>
+                <h2 class="header-title mb-1"><i class="fas fa-file-invoice-dollar text-primary me-2"></i>Delivery Orders</h2>
+                <p class="text-muted small mb-0">Manage and view official DepEd Delivery Orders</p>
             </div>
             <div class="col-12 col-md-6 text-md-end">
                 <div class="d-grid d-md-block">
@@ -174,6 +174,7 @@
                     <thead>
                         <tr>
                             <th class="text-nowrap">P.O. Number</th>
+                            <th class="text-nowrap">Category</th>
                             <th class="text-nowrap">Supplier</th>
                             <th class="text-nowrap">Date</th>
                             <th class="text-nowrap">Total Amount</th>
@@ -185,6 +186,15 @@
                         @forelse($purchaseOrders as $po)
                         <tr class="clickable-row" data-id="{{ $po->id }}">
                             <td class="fw-bold text-primary">{{ $po->po_no }}</td>
+                            <td>
+                                @if($po->po_type == 'Supply')
+                                    <span class="badge" style="background-color: #101954; color: white;"><i class="fas fa-box-open me-1"></i> Supply</span>
+                                @elseif($po->po_type == 'Asset')
+                                    <span class="badge" style="background-color: #101954; color: white;"><i class="fas fa-laptop me-1"></i> Asset</span>
+                                @else
+                                    <span class="text-muted small">-</span>
+                                @endif
+                            </td>
                             <td>{{ $po->supplier_name }}</td>
                             <td>{{ \Carbon\Carbon::parse($po->po_date)->format('M d, Y') }}</td>
                             <td class="fw-bold text-nowrap">₱{{ number_format($po->total_amount, 2) }}</td>
@@ -209,7 +219,7 @@
                             </td>
                         </tr>
                         @empty
-                        <tr><td colspan="6" class="text-center py-4 text-muted">No Purchase Orders match your filters.</td></tr>
+                        <tr><td colspan="7" class="text-center py-4 text-muted">No Purchase Orders match your filters.</td></tr>
                         @endforelse
                     </tbody>
                 </table>
@@ -297,7 +307,6 @@
                 <div class="modal-footer border-0 p-3 bg-dark bg-opacity-75">
                     <div class="w-100 d-grid gap-2 d-md-flex justify-content-md-end">
                         <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">Close</button>
-                        <button type="button" class="btn btn-primary px-4 fw-bold shadow" onclick="triggerActualPrint()"><i class="fas fa-print me-2"></i> Print Document</button>
                     </div>
                 </div>
             </div>
@@ -392,8 +401,93 @@
     <script>
         let currentPoData = null;
 
-        // Auto-search logic (Debounce)
+        window.autoUpdatePoStatus = function() {
+            const rows = document.querySelectorAll('.item-row');
+            if (rows.length === 0) return;
+            
+            let checkedCount = 0;
+            rows.forEach(row => {
+                if (row.querySelector('.item-delivered-cb').checked) checkedCount++;
+            });
+            
+            const statusSelect = document.getElementById('in-status');
+            if (checkedCount === 0) {
+                statusSelect.value = 'Pending';
+            } else if (checkedCount === rows.length) {
+                statusSelect.value = 'Complete';
+            } else {
+                statusSelect.value = 'Partial';
+            }
+        };
+
+        window.addEmptyItemRow = function(data = {unit: 'pc', desc: '', qty: 0, cost: 0.00, is_delivered: false}) {
+            const container = document.getElementById('itemsContainer');
+            const q = parseFloat(data.qty) || 0;
+            const c = parseFloat(data.cost) || 0;
+            const total = (q * c).toLocaleString(undefined, {minimumFractionDigits: 2});
+            const isSelected = (val) => data.unit === val ? 'selected' : '';
+            const isChecked = data.is_delivered ? 'checked' : '';
+
+            const templateHtml = `
+                <div class="card position-relative item-row p-3 mb-3 border-0 shadow-sm border-start border-4 border-success">
+                    <div class="row g-3 align-items-center">
+                        <div class="col-4 col-md-1 text-center pt-md-2">
+                            <label class="form-label d-block text-success mb-2" title="Mark as Delivered">RCVD</label>
+                            <input type="checkbox" class="form-check-input item-delivered-cb shadow-sm border-secondary" style="width: 22px; height: 22px; cursor: pointer;" ${isChecked} onchange="autoUpdatePoStatus()">
+                        </div>
+                        <div class="col-8 col-md-2">
+                            <label class="form-label">Unit <span class="text-danger">*</span></label>
+                            <select class="form-select unit-select" required>
+                                <option value="pc" ${isSelected('pc')}>pc</option>
+                                <option value="pcs" ${isSelected('pcs')}>pcs</option>
+                                <option value="unit" ${isSelected('unit')}>unit</option>
+                                <option value="set" ${isSelected('set')}>set</option>
+                            </select>
+                        </div>
+                        <div class="col-12 col-md-4">
+                            <label class="form-label">Description <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control desc-input" value="${data.desc}" placeholder="Enter item details..." required>
+                        </div>
+                        <div class="col-6 col-md-1">
+                            <label class="form-label">Qty <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control qty-input" value="${q}" required oninput="autoUpdatePoStatus()">
+                        </div>
+                        <div class="col-6 col-md-2">
+                            <label class="form-label">Unit Cost <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text">₱</span>
+                                <input type="number" step="0.01" class="form-control cost-input" value="${c}" required>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-2">
+                            <label class="form-label">Total Amount</label>
+                            <input type="text" class="form-control bg-light fw-bold total-output" readonly value="${total}">
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-danger position-absolute" style="top: 10px; right: 10px; border-radius: 50%; width: 30px; height: 30px;" onclick="this.closest('.item-row').remove(); autoUpdatePoStatus();"><i class="fa-solid fa-trash"></i></button>
+                </div>
+            `;
+            container.insertAdjacentHTML('beforeend', templateHtml);
+            autoUpdatePoStatus(); 
+        };
+
+        // Attach Calculation Listeners globally
+        document.addEventListener('input', (e) => {
+            if (e.target.classList.contains('qty-input') || e.target.classList.contains('cost-input')) {
+                const row = e.target.closest('.item-row');
+                const q = parseFloat(row.querySelector('.qty-input').value) || 0;
+                const c = parseFloat(row.querySelector('.cost-input').value) || 0;
+                row.querySelector('.total-output').value = (q * c).toLocaleString(undefined, {minimumFractionDigits: 2});
+            }
+        });
+
         document.addEventListener("DOMContentLoaded", function() {
+            // Re-attach Add Item Button Listener
+            const addItemBtn = document.getElementById('addItemBtn');
+            if (addItemBtn) {
+                addItemBtn.addEventListener('click', () => window.addEmptyItemRow());
+            }
+
             const poSearchInput = document.getElementById('poSearchInput');
             const filterForm = document.getElementById('filterForm');
             let typingTimer;
@@ -401,12 +495,9 @@
             if(poSearchInput) {
                 poSearchInput.addEventListener('input', function() {
                     clearTimeout(typingTimer);
-                    typingTimer = setTimeout(() => {
-                        filterForm.submit();
-                    }, 600); // Waits 600ms after user stops typing to submit
+                    typingTimer = setTimeout(() => { filterForm.submit(); }, 600); 
                 });
 
-                // Keep cursor focused and at the end of the text after reload
                 if (poSearchInput.value.length > 0) {
                     poSearchInput.focus();
                     const val = poSearchInput.value;
@@ -456,11 +547,10 @@
             return Array.isArray(parsed) ? parsed : [];
         }
 
-        // POPULATE THE VIEW MODAL
         function viewPO(id) {
             fetch(`/po/${id}`)
             .then(res => {
-                if(!res.ok) throw new Error('Database Error. Make sure you ran the migration.');
+                if(!res.ok) throw new Error('Database Error.');
                 return res.json();
             })
             .then(data => {
@@ -472,13 +562,11 @@
                 document.getElementById('v-date').innerText = data.po_date;
                 document.getElementById('v-mode').innerText = data.procurement_mode;
                 
-                // Signatories
                 document.getElementById('v-auth-name').innerText = data.auth_official || "";
                 document.getElementById('v-auth-designation').innerText = data.auth_official_designation || "REGIONAL DIRECTOR";
                 document.getElementById('v-acc-name').innerText = data.chief_accountant || "";
                 document.getElementById('v-acc-designation').innerText = data.chief_accountant_designation || "ACCOUNTANT II";
                 
-                // Fetch Delivery Details
                 document.getElementById('v-place-delivery').innerText = data.place_of_delivery || "________________";
                 document.getElementById('v-date-delivery').innerText = data.date_of_delivery || "________________";
                 document.getElementById('v-delivery-term').innerText = data.delivery_term || "________________";
@@ -495,7 +583,6 @@
                     let sub = q * uCost;
                     total += sub;
                     
-                    // Add a small visual indicator to the description if it arrived
                     let isDelivered = (item.is_delivered == 1 || item.is_delivered == true);
                     let checkBadge = isDelivered ? '<span class="badge bg-success float-end rounded-pill"><i class="fas fa-check"></i> Rcvd</span>' : '';
 
@@ -509,14 +596,9 @@
                 document.getElementById('v-words').innerText = numberToWords(finalTotal) + " PESOS ONLY";
 
                 new bootstrap.Modal(document.getElementById('viewPoPreviewModal')).show();
-            })
-            .catch(err => {
-                console.error(err);
-                Swal.fire('Error', 'Failed to load PO data. Please run your database migrations.', 'error');
             });
         }
 
-        // TRIGGER THE ACTUAL PRINT
         function triggerActualPrint() {
             if(!currentPoData) return;
             const data = currentPoData;
@@ -528,13 +610,11 @@
             document.getElementById('p-date').innerText = data.po_date;
             document.getElementById('p-mode').innerText = data.procurement_mode;
             
-            // Signatories 
             document.getElementById('p-auth-name-display').innerText = data.auth_official || "";
             document.getElementById('p-auth-designation').innerText = data.auth_official_designation || "REGIONAL DIRECTOR";
             document.getElementById('p-acc-name-display').innerText = data.chief_accountant || "";
             document.getElementById('p-acc-designation').innerText = data.chief_accountant_designation || "ACCOUNTANT II";
             
-            // Push to Delivery Details
             document.getElementById('p-place-delivery').innerText = data.place_of_delivery || "________________";
             document.getElementById('p-date-delivery').innerText = data.date_of_delivery || "________________";
             document.getElementById('p-delivery-term').innerText = data.delivery_term || "________________";
@@ -562,7 +642,47 @@
             window.print();
         }
 
-        // TRIGGER EDIT MODAL
+        // CATEGORY PROMPT LOGIC
+        function openCreateModal() {
+            Swal.fire({
+                title: 'Select P.O. Category',
+                text: 'Is this Purchase Order for Supplies or Assets?',
+                icon: 'question',
+                showCancelButton: false, 
+                showCloseButton: true,   
+                showDenyButton: true,
+                confirmButtonText: '<i class="fas fa-box-open me-1"></i> Supply',
+                denyButtonText: '<i class="fas fa-laptop me-1"></i> Asset',
+                confirmButtonColor: '#101954', 
+                denyButtonColor: '#101954',    
+                allowOutsideClick: false
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    launchPoModal('Supply');
+                } else if (result.isDenied) {
+                    launchPoModal('Asset');
+                }
+            });
+        }
+
+        function launchPoModal(type) {
+            resetModalState();
+            document.getElementById('poForm').reset();
+            document.getElementById('itemsContainer').innerHTML = '';
+            document.getElementById('modal_po_id').value = ''; 
+            
+            // Set the hidden input and visual badge safely
+            document.getElementById('po_type').value = type;
+            let badge = document.getElementById('po_type_badge');
+            if(badge) {
+                badge.innerHTML = type === 'Supply' ? '<i class="fas fa-box-open me-1"></i> Supply P.O.' : '<i class="fas fa-laptop me-1"></i> Asset P.O.';
+                badge.style.display = 'inline-block';
+            }
+
+            if (typeof window.addEmptyItemRow === "function") window.addEmptyItemRow();
+            new bootstrap.Modal(document.getElementById('receivePoModal')).show();
+        }
+
         function editPO(id) {
             resetModalState();
             document.querySelector('.modal-title').innerHTML = '<i class="fas fa-edit me-2"></i> Edit Purchase Order';
@@ -577,25 +697,28 @@
             new bootstrap.Modal(document.getElementById('deletePoModal')).show();
         }
 
-        function openCreateModal() {
-            resetModalState();
-            document.getElementById('poForm').reset();
-            document.getElementById('itemsContainer').innerHTML = '';
-            document.getElementById('modal_po_id').value = ''; 
-            if (typeof addEmptyItemRow === "function") addEmptyItemRow();
-            new bootstrap.Modal(document.getElementById('receivePoModal')).show();
-        }
-
         function resetModalState() {
             document.querySelectorAll('#poForm input, #poForm select').forEach(input => input.disabled = false);
             document.getElementById('addItemBtn').style.display = 'inline-block';
             document.querySelector('button[form="poForm"]').style.display = 'inline-block'; 
-            document.querySelector('.modal-title').innerHTML = '<i class="fas fa-file-invoice me-2"></i> Receive Purchase Order';
+            
+            // Fix: Do not overwrite the innerHTML completely so we don't destroy the badge element
+            let badge = document.getElementById('po_type_badge');
+            if (badge) badge.style.display = 'none';
         }
 
-        // POPULATE THE CREATE/EDIT FORM
         function populateModalData(data) {
             document.getElementById('modal_po_id').value = data.id;
+            
+            // Handle the loaded PO Type
+            let type = data.po_type || 'Supply';
+            document.getElementById('po_type').value = type;
+            let badge = document.getElementById('po_type_badge');
+            if(badge) {
+                badge.innerHTML = type === 'Supply' ? '<i class="fas fa-box-open me-1"></i> Supply P.O.' : '<i class="fas fa-laptop me-1"></i> Asset P.O.';
+                badge.style.display = 'inline-block';
+            }
+
             document.getElementById('in-entity').value = data.entity_name || '';
             document.getElementById('po_no').value = data.po_no || '';
             document.getElementById('in-supplier').value = data.supplier_name || '';
@@ -603,13 +726,11 @@
             document.getElementById('in-date').value = data.po_date || '';
             document.getElementById('in-mode').value = data.procurement_mode || '';
             
-            // Populate Signatories
             document.getElementById('in-auth-name').value = data.auth_official || '';
             document.getElementById('in-auth-designation').value = data.auth_official_designation || 'REGIONAL DIRECTOR';
             document.getElementById('in-acc-name').value = data.chief_accountant || '';
             document.getElementById('in-acc-designation').value = data.chief_accountant_designation || 'ACCOUNTANT II';
             
-            // Populate Delivery Details Form
             document.getElementById('in-place-delivery').value = data.place_of_delivery || '';
             document.getElementById('in-date-delivery').value = data.date_of_delivery || '';
             document.getElementById('in-delivery-term').value = data.delivery_term || '';
@@ -623,17 +744,93 @@
             if(itemsArray.length > 0) {
                 itemsArray.forEach(item => {
                     let uCost = parseFloat(item.unit_cost !== undefined ? item.unit_cost : (item.cost || 0));
-                    // Pass the checkbox status down
                     let isD = item.is_delivered == 1 || item.is_delivered == true;
                     
-                    if (typeof addEmptyItemRow === "function") {
-                        addEmptyItemRow({unit: item.unit || 'pc', desc: item.description || '', qty: item.qty || 0, cost: uCost, is_delivered: isD});
+                    if (typeof window.addEmptyItemRow === "function") {
+                        window.addEmptyItemRow({unit: item.unit || 'pc', desc: item.description || '', qty: item.qty || 0, cost: uCost, is_delivered: isD});
                     }
                 });
             } else {
-                if (typeof addEmptyItemRow === "function") addEmptyItemRow();
+                if (typeof window.addEmptyItemRow === "function") window.addEmptyItemRow();
             }
         }
+
+        // Submitting the Form
+        document.getElementById('poForm').addEventListener('submit', function(e) {
+            e.preventDefault(); 
+
+            let formData = {
+                _token: '{{ csrf_token() }}',
+                po_type: document.getElementById('po_type').value, // <--- Passing the PO Type
+                entity_name: document.getElementById('in-entity').value,
+                po_no: document.getElementById('po_no').value,
+                supplier_name: document.getElementById('in-supplier').value,
+                supplier_address: document.getElementById('in-address').value,
+                po_date: document.getElementById('in-date').value,
+                procurement_mode: document.getElementById('in-mode').value,
+                
+                auth_official: document.getElementById('in-auth-name').value,
+                auth_official_designation: document.getElementById('in-auth-designation').value,
+                chief_accountant: document.getElementById('in-acc-name').value,
+                chief_accountant_designation: document.getElementById('in-acc-designation').value,
+                
+                place_of_delivery: document.getElementById('in-place-delivery').value,
+                date_of_delivery: document.getElementById('in-date-delivery').value,
+                delivery_term: document.getElementById('in-delivery-term').value,
+                payment_term: document.getElementById('in-payment-term').value,
+                
+                status: document.getElementById('in-status').value,
+                total_amount: 0,
+                items: []
+            };
+
+            let po_id = document.getElementById('modal_po_id').value;
+            let method = po_id ? 'PUT' : 'POST';
+            let url = po_id ? `/po/${po_id}` : '{{ route('po.store') }}';
+
+            const rows = document.querySelectorAll('.item-row');
+            if(rows.length === 0) {
+                Swal.fire('Warning', 'You must add at least one item.', 'warning');
+                return;
+            }
+
+            rows.forEach(row => {
+                let q = parseFloat(row.querySelector('.qty-input').value) || 0;
+                let c = parseFloat(row.querySelector('.cost-input').value) || 0;
+                let isD = row.querySelector('.item-delivered-cb').checked;
+                let subtotal = q * c;
+                formData.total_amount += subtotal;
+
+                formData.items.push({
+                    unit: row.querySelector('.unit-select').value,
+                    description: row.querySelector('.desc-input').value,
+                    qty: q,
+                    cost: c,
+                    is_delivered: isD
+                });
+            });
+
+            fetch(url, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify(formData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if(data.success) {
+                    Swal.fire('Saved!', data.message, 'success').then(() => { window.location.reload(); });
+                } else {
+                    Swal.fire('Error', data.message, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                Swal.fire('Error', 'Failed to save to database.', 'error');
+            });
+        });
     </script>
 </body>
 </html>

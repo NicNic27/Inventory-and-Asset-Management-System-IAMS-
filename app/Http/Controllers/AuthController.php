@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use App\Models\ActivityLog;
 
 class AuthController extends Controller
 {
@@ -21,7 +22,6 @@ class AuthController extends Controller
             'email.ends_with' => 'Only @deped.gov.ph emails are allowed to log in.'
         ]);
 
-        // Attempt login and ensure status is 'Active'
         $credentials = [
             'email' => $request->email,
             'password' => $request->password,
@@ -31,19 +31,25 @@ class AuthController extends Controller
         if (Auth::attempt($credentials, $request->boolean('remember'))) {
             $request->session()->regenerate();
             
-            // --- STRICT ROLE-BASED REDIRECTION ---
-            $role = strtolower(Auth::user()->role); // Ensure lowercase for matching
+            ActivityLog::create([
+                'user_id' => Auth::id(),
+                'action' => 'Login',
+                'description' => "User successfully logged in.",
+                'ip_address' => request()->ip(),
+                'user_agent' => request()->userAgent()
+            ]);
+
+            $role = strtolower(Auth::user()->role); 
             
             if ($role === 'admin') {
-                return redirect('/admin/dashboard'); // Forced redirect for Admin
+                return redirect('/admin/dashboard'); 
             } elseif ($role === 'staff') {
-                return redirect('/'); // Forced redirect for Staff
+                return redirect('/dashboard'); 
             } elseif ($role === 'frontuser') {
-                return redirect('/user/dashboard'); // Forced redirect for End User
+                return redirect('/user/dashboard'); 
             }
 
-            // Fallback just in case
-            return redirect('/');
+            return redirect('/dashboard'); 
         }
 
         return back()->withErrors([
@@ -53,6 +59,18 @@ class AuthController extends Controller
 
     public function logout(Request $request)
     {
+        $userId = Auth::id();
+
+        if ($userId) {
+            ActivityLog::create([
+                'user_id' => $userId,
+                'action' => 'Logout',
+                'description' => "User logged out.",
+                'ip_address' => request()->ip(),
+                'user_agent' => request()->userAgent()
+            ]);
+        }
+
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();

@@ -26,6 +26,11 @@ use App\Http\Controllers\Admin\GlobalSearchController as AdminSearchController;
 use App\Http\Controllers\PurchaseOrderController;
 use App\Http\Controllers\IcsController;
 
+// --- PUBLIC ROUTES ---
+Route::get('/', function () {
+    return view('landing');
+});
+
 // --- GUEST ROUTES (Login) ---
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
@@ -45,6 +50,10 @@ Route::middleware('auth')->group(function () {
     // ==========================================
     // 1. STAFF ROUTES (Personnel)
     // ==========================================
+    
+    Route::get('/dashboard', [DashboardController::class, 'index']);
+    Route::get('/dashboard/chart-data', [\App\Http\Controllers\DashboardController::class, 'getChartData']);
+
     // Staff Global Search
     Route::get('/global-search', [StaffSearchController::class, 'search'])->name('staff.global.search');
     Route::get('/notifications/fetch', [StaffNotificationController::class, 'fetch'])->name('staff.notifications.fetch');
@@ -56,16 +65,13 @@ Route::middleware('auth')->group(function () {
     Route::put('/po/{id}', [\App\Http\Controllers\PurchaseOrderController::class, 'update'])->name('po.update');
     Route::delete('/po/{id}', [\App\Http\Controllers\PurchaseOrderController::class, 'destroy'])->name('po.destroy');
 
-    // Dashboard
-    Route::get('/', [DashboardController::class, 'index']);
-    Route::get('/dashboard/chart-data', [\App\Http\Controllers\DashboardController::class, 'getChartData']);
-
     // Assets
-    Route::get('/asset-list', [AssetController::class, 'index']);
-    Route::post('/asset-list', [AssetController::class, 'store']);
-    Route::put('/asset-list/{id}', [AssetController::class, 'update']);
-    Route::delete('/asset-list/{id}', [AssetController::class, 'destroy']);
-    Route::post('/asset-list/{id}/transaction', [AssetController::class, 'stockTransaction']);
+    Route::get('/asset-list', [\App\Http\Controllers\AssetController::class, 'index']);
+    Route::post('/asset-list', [\App\Http\Controllers\AssetController::class, 'store']);
+    Route::put('/asset-list/{id}', [\App\Http\Controllers\AssetController::class, 'update']);
+    Route::delete('/asset-list/{id}', [\App\Http\Controllers\AssetController::class, 'destroy']);
+    Route::get('/asset-list/{id}/details', [\App\Http\Controllers\AssetController::class, 'details']);
+    Route::post('/asset-list/scan-update', [\App\Http\Controllers\AssetController::class, 'updateScanStatus']);
 
     // Supplies
     Route::get('/supplies', [SupplyController::class, 'index']);
@@ -81,18 +87,29 @@ Route::middleware('auth')->group(function () {
     Route::post('/barcodes/generate', [BarcodeController::class, 'store']);
     Route::post('/barcodes/scan', [BarcodeController::class, 'processScan']);
     Route::post('/barcodes/recent-scans', [BarcodeController::class, 'recentScans']);
+    Route::get('/barcodes/print-all', [\App\Http\Controllers\BarcodeController::class, 'printAll']);
     
     // Transactions
     Route::get('/transactions', [TransactionController::class, 'index']);
+    Route::get('/transactions/ris-items', [\App\Http\Controllers\TransactionController::class, 'getRisItems']);
 
     // RIS Requests
     Route::get('/ris', [StaffRisController::class, 'index']);
     Route::get('/ris/{id}/review', [StaffRisController::class, 'review']);
     Route::post('/ris/{id}/update', [StaffRisController::class, 'update']);
 
-    // ICS Requests
+    // ICS Requests & History
     Route::get('/ics', [IcsController::class, 'create']);
     Route::post('/ics', [IcsController::class, 'store']);
+    Route::get('/ics/history', [IcsController::class, 'history']);
+    Route::post('/ics/{id}/upload-signed', [IcsController::class, 'uploadSigned']);
+    Route::get('/ics/{id}/sticker/{itemIndex}', [IcsController::class, 'sticker']);
+    Route::get('/ics/{id}/view-digital', [IcsController::class, 'viewDigital']);
+    Route::get('/ics/{id}/edit', [IcsController::class, 'edit']);
+    Route::put('/ics/{id}', [IcsController::class, 'update']);
+    Route::delete('/ics/{id}', [IcsController::class, 'destroy']);
+    Route::post('/ics/{id}/transfer/{itemIndex}', [\App\Http\Controllers\IcsController::class, 'transferItem']);
+    
 
     // Staff Profile
     Route::post('/profile/update', [\App\Http\Controllers\ProfileController::class, 'update'])->name('profile.update');
@@ -100,7 +117,6 @@ Route::middleware('auth')->group(function () {
     // ==========================================
     // 2. ADMIN ROUTES
     // ==========================================
-    // Admin Global Search
     Route::get('/admin/global-search', [AdminSearchController::class, 'search'])->name('admin.global.search');
     Route::get('/admin/notifications/fetch', [AdminNotificationController::class, 'fetch'])->name('admin.notifications.fetch');
     Route::get('/admin/dashboard/chart-data', [\App\Http\Controllers\Admin\DashboardController::class, 'getChartData'])->name('admin.dashboard.chart-data');
@@ -118,16 +134,15 @@ Route::middleware('auth')->group(function () {
     // Admin Assets
     Route::get('/admin/assets', [AdminAssetController::class, 'index']);
     Route::post('/admin/assets', [AdminAssetController::class, 'store']);
+    Route::post('/admin/assets/scan-update', [AdminAssetController::class, 'updateScanStatus']); 
+    Route::get('/admin/assets/{id}/details', [AdminAssetController::class, 'details']);
     Route::put('/admin/assets/{id}', [AdminAssetController::class, 'update']);
     Route::delete('/admin/assets/{id}', [AdminAssetController::class, 'destroy']);
-    Route::get('/admin/assets/{id}/details', [AdminAssetController::class, 'details']);
 
     // Admin RIS Requests
     Route::get('/admin/ris', [AdminRisController::class, 'index']);
     Route::get('/admin/ris/{id}/review', [AdminRisController::class, 'review']);
     Route::post('/admin/ris/{id}/process', [AdminRisController::class, 'process']);
-
-    // Legacy fallback for view buttons
     Route::get('/admin/requests', [AdminRisController::class, 'index']);
 
     // Admin Reports
@@ -158,6 +173,9 @@ Route::middleware('auth')->group(function () {
     // System Settings
     Route::get('/admin/settings', [App\Http\Controllers\Admin\SettingsController::class, 'index']);
     Route::post('/admin/settings/update', [App\Http\Controllers\Admin\SettingsController::class, 'update']);
+    
+    // NEW: System Activity Logs
+    Route::get('/admin/activity-logs', [App\Http\Controllers\Admin\ActivityLogController::class, 'index']);
 
     // ==========================================
     // 3. END-USER (DIVISION) ROUTES
@@ -170,6 +188,7 @@ Route::middleware('auth')->group(function () {
 
     // Profile Routes
     Route::post('/user/profile', [\App\Http\Controllers\User\ProfileController::class, 'update']);
+    Route::get('/user/profile', [UserProfileController::class, 'index']);
 
     // RIS Routes
     Route::get('/user/ris/create', [UserRisController::class, 'create']);
@@ -178,8 +197,6 @@ Route::middleware('auth')->group(function () {
     Route::get('/user/ris/{id}', [UserRisController::class, 'show']);
     Route::get('/user/ris/{id}/edit', [UserRisController::class, 'edit']);
     Route::post('/user/ris/{id}/update', [UserRisController::class, 'update']);
+    Route::delete('/user/ris/{id}', [UserRisController::class, 'destroy']);
 
-
-    // Profile Routes
-    Route::get('/user/profile', [UserProfileController::class, 'index']);
 });
