@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Schema;
 
 class DatabaseSeeder extends Seeder
 {
@@ -16,7 +17,7 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         // 1. Create Default Admin User
-        User::create([
+        $this->createUser([
             'firstname'      => 'Head',
             'lastname'       => 'Admin',
             'employee_id'    => 'ADMIN-001',
@@ -31,7 +32,7 @@ class DatabaseSeeder extends Seeder
         ]);
 
         // 2. Create Default Staff (Personnel) User
-        User::create([
+        $this->createUser([
             'firstname'      => 'Supply',
             'lastname'       => 'Personnel',
             'employee_id'    => 'STAFF-001',
@@ -46,7 +47,7 @@ class DatabaseSeeder extends Seeder
         ]);
 
         // 3. Create Default Front User (End User / Requestor)
-        User::create([
+        $this->createUser([
             'firstname'      => 'Division',
             'lastname'       => 'Requestor',
             'employee_id'    => 'USER-001',
@@ -59,5 +60,20 @@ class DatabaseSeeder extends Seeder
             'role'           => 'frontuser',
             'status'         => 'Active',
         ]);
+    }
+
+    private function createUser(array $data): void
+    {
+        if (Schema::hasColumn('users', 'name')) {
+            $data['name'] = trim(($data['firstname'] ?? '') . ' ' . ($data['lastname'] ?? ''));
+        }
+
+        foreach ($data as $field => $value) {
+            if (!Schema::hasColumn('users', $field)) {
+                unset($data[$field]);
+            }
+        }
+
+        User::create($data);
     }
 }

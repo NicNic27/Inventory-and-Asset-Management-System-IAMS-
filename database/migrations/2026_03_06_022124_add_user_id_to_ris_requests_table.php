@@ -8,16 +8,20 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('ris_requests', function (Blueprint $table) {
-            // Adds the user_id securely
-            $table->unsignedBigInteger('user_id')->nullable()->after('id');
-        });
+        if (!Schema::hasColumn('ris_requests', 'user_id')) {
+            Schema::table('ris_requests', function (Blueprint $table) {
+                // Adds the user_id securely
+                $table->unsignedBigInteger('user_id')->nullable()->after('id');
+            });
+        }
     }
 
     public function down(): void
     {
-        Schema::table('ris_requests', function (Blueprint $table) {
-            $table->dropColumn('user_id');
-        });
+        if (Schema::hasColumn('ris_requests', 'user_id')) {
+            Schema::table('ris_requests', function (Blueprint $table) {
+                $table->dropColumn('user_id');
+            });
+        }
     }
 };

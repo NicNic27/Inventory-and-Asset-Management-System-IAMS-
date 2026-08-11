@@ -13,9 +13,14 @@ class User extends Authenticatable
     const UPDATED_AT = null;
 
     protected $fillable = [
+        'name',
         'firstname',
         'lastname',
+        'employee_id',
+        'designation',
         'department',
+        'contact_number',
+        'username',
         'image',
         'email',
         'password',

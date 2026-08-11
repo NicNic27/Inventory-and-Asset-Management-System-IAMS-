@@ -14,7 +14,9 @@ return new class extends Migration
         Schema::table('users', function (Blueprint $table) {
             // Adds the 'remember_token' string column (100 chars, nullable) 
             // specifically used by Laravel's "Remember Me" auth feature
-            $table->rememberToken();
+            if (!Schema::hasColumn('users', 'remember_token')) {
+                $table->rememberToken();
+            }
         });
     }
 
@@ -25,7 +27,9 @@ return new class extends Migration
     {
         Schema::table('users', function (Blueprint $table) {
             // Drops the column if we ever need to rollback
-            $table->dropRememberToken();
+            if (Schema::hasColumn('users', 'remember_token')) {
+                $table->dropRememberToken();
+            }
         });
     }
 };

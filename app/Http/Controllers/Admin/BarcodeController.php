@@ -7,6 +7,8 @@ use App\Models\Asset;
 use App\Models\Supply;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class BarcodeController extends Controller
 {
@@ -24,14 +26,32 @@ class BarcodeController extends Controller
 
         // 1. Fetch from Supplies 
         if ($category === 'all' || $category === 'supply') {
-            $supplyQuery = Supply::whereNotNull('barcode_id')
-                ->select('id', 'barcode_id as barcode_code', 'article', 'description', 'supplier');
-                
+            $supplyFields = ['id', 'barcode_id as barcode_code'];
+            $supplyHasArticle = Schema::hasColumn('supplies', 'article');
+            $supplyHasDescription = Schema::hasColumn('supplies', 'description');
+            $supplyHasSupplier = Schema::hasColumn('supplies', 'supplier');
+
+            if ($supplyHasArticle) {
+                $supplyFields[] = 'article';
+            }
+            if ($supplyHasDescription) {
+                $supplyFields[] = 'description';
+            }
+            if ($supplyHasSupplier) {
+                $supplyFields[] = 'supplier';
+            }
+
+            $supplyQuery = Supply::whereNotNull('barcode_id')->select($supplyFields);
+
             // Apply Search Filter to Database
             if (!empty($search)) {
-                $supplyQuery->where(function($q) use ($search) {
-                    $q->where('article', 'LIKE', "%{$search}%")
-                      ->orWhere('barcode_id', 'LIKE', "%{$search}%");
+                $supplyQuery->where(function($q) use ($search, $supplyHasArticle) {
+                    if ($supplyHasArticle) {
+                        $q->where('article', 'LIKE', "%{$search}%")
+                          ->orWhere('barcode_id', 'LIKE', "%{$search}%");
+                    } else {
+                        $q->where('barcode_id', 'LIKE', "%{$search}%");
+                    }
                 });
             }
 
@@ -44,14 +64,32 @@ class BarcodeController extends Controller
 
         // 2. Fetch from Assets 
         if ($category === 'all' || $category === 'asset') {
-            $assetQuery = Asset::whereNotNull('barcode_id')
-                ->select('id', 'barcode_id as barcode_code', 'article', 'description', 'supplier');
-                
+            $assetFields = ['id', 'barcode_id as barcode_code'];
+            $assetHasArticle = Schema::hasColumn('assets', 'article');
+            $assetHasDescription = Schema::hasColumn('assets', 'description');
+            $assetHasSupplier = Schema::hasColumn('assets', 'supplier');
+
+            if ($assetHasArticle) {
+                $assetFields[] = 'article';
+            }
+            if ($assetHasDescription) {
+                $assetFields[] = 'description';
+            }
+            if ($assetHasSupplier) {
+                $assetFields[] = 'supplier';
+            }
+
+            $assetQuery = Asset::whereNotNull('barcode_id')->select($assetFields);
+
             // Apply Search Filter to Database
             if (!empty($search)) {
-                $assetQuery->where(function($q) use ($search) {
-                    $q->where('article', 'LIKE', "%{$search}%")
-                      ->orWhere('barcode_id', 'LIKE', "%{$search}%");
+                $assetQuery->where(function($q) use ($search, $assetHasArticle) {
+                    if ($assetHasArticle) {
+                        $q->where('article', 'LIKE', "%{$search}%")
+                          ->orWhere('barcode_id', 'LIKE', "%{$search}%");
+                    } else {
+                        $q->where('barcode_id', 'LIKE', "%{$search}%");
+                    }
                 });
             }
 

@@ -13,8 +13,10 @@ return new class extends Migration
     {
         Schema::table('users', function (Blueprint $table) {
             // Safely check if columns exist before adding them to prevent crashes
+            $afterEmployee = Schema::hasColumn('users', 'lastname') ? 'lastname' : 'name';
+
             if (!Schema::hasColumn('users', 'employee_id')) {
-                $table->string('employee_id')->nullable()->after('lastname');
+                $table->string('employee_id')->nullable()->after($afterEmployee);
             }
             if (!Schema::hasColumn('users', 'department')) {
                 $table->string('department')->nullable()->after('employee_id');

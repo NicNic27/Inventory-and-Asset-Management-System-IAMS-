@@ -148,7 +148,7 @@
         <div class="container content-wrapper">
             <div class="row align-items-center">
                 <div class="col-lg-7 col-md-12">
-                    <div class="system-title">Assets Management/Supply Section</div>
+                    <div class="system-title">Asset Management Section</div>
                     <h1 class="main-heading">
                         RIS Before <br> <span>Release</span>
                     </h1>
