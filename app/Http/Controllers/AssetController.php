@@ -9,6 +9,7 @@ use App\Models\IcsRequest;
 use App\Models\ActivityLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Auth;
 
@@ -85,50 +86,76 @@ class AssetController extends Controller
                     'status' => 'duplicate'
                 ]);
             }
+
+            return redirect('/asset-list')->with('error', 'Asset barcode already exists.');
         }
 
         $imageName = null;
         if ($request->hasFile('image')) {
             $file = $request->file('image');
             $imageName = time() . '_' . Str::slug($request->article) . '.' . $file->getClientOriginalExtension();
-            $file->move(public_path('storage/assets'), $imageName);
+            $file->storeAs('public/assets', $imageName);
         }
 
-        $asset = Asset::create([
-            'barcode_id' => $request->barcode_id,
-            'article' => $request->article,
-            'description' => $request->description,
-            'unit_measure' => $request->unit_measure,
-            'supplier' => $request->supplier,
-            'unit_value' => $request->unit_value,
-            'status' => $request->status ?? 'Serviceable',
-            'image' => $imageName
-        ]);
+        try {
+            DB::beginTransaction();
 
-        Transaction::create([
-            'item_id' => $asset->id,
-            'item_type' => 'assets',
-            'transaction_type' => 'ADDED',
-            'quantity' => 1, 
-            'supplier' => $request->supplier,
-            'transaction_date' => date('Y-m-d'),
-            'remarks' => 'Opening Balance / New Item',
-            'date_time' => now()
-        ]);
+            $asset = Asset::create([
+                'item_code' => $request->barcode_id,
+                'barcode_id' => $request->barcode_id,
+                'name' => $request->article,
+                'article' => $request->article,
+                'category' => $request->category ?? 'Assets',
+                'description' => $request->description,
+                'unit_measure' => $request->unit_measure,
+                'supplier' => $request->supplier,
+                'unit_value' => $request->unit_value,
+                'status' => $request->status ?? 'Serviceable',
+                'image' => $imageName
+            ]);
 
-        ActivityLog::create([
-            'user_id' => Auth::id(),
-            'action' => 'Created',
-            'description' => "Added new asset: {$asset->article}",
-            'ip_address' => request()->ip(),
-            'user_agent' => request()->userAgent()
-        ]);
+            Transaction::create([
+                'item_id' => $asset->id,
+                'item_type' => 'assets',
+                'transaction_type' => 'ADDED',
+                'quantity' => 1,
+                'supplier' => $request->supplier,
+                'transaction_date' => date('Y-m-d'),
+                'remarks' => 'Opening Balance / New Item',
+                'date_time' => now()
+            ]);
 
-        if ($request->ajax() || $request->wantsJson()) {
-            return response()->json(['status' => 'success']);
+            ActivityLog::create([
+                'user_id' => Auth::id(),
+                'action' => 'Created',
+                'description' => "Added new asset: {$asset->article}",
+                'ip_address' => request()->ip(),
+                'user_agent' => request()->userAgent()
+            ]);
+
+            DB::commit();
+
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['status' => 'success']);
+            }
+
+            return redirect('/asset-list')->with('msg', 'saved');
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            if ($imageName && Storage::exists('public/assets/' . $imageName)) {
+                Storage::delete('public/assets/' . $imageName);
+            }
+
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Unable to save asset. Please try again.'
+                ], 500);
+            }
+
+            return redirect('/asset-list')->with('error', 'Unable to save asset. Please try again.');
         }
-
-        return redirect('/asset-list')->with('msg', 'saved');
     }
 
     public function update(Request $request, $id)
@@ -145,39 +172,66 @@ class AssetController extends Controller
                     'status' => 'duplicate'
                 ]);
             }
+
+            return redirect('/asset-list')->with('error', 'Asset barcode already exists.');
         }
 
         $imageName = $asset->image;
         if ($request->hasFile('image')) {
             $file = $request->file('image');
-            $imageName = time() . '_' . Str::slug($request->article) . '.' . $file->getClientOriginalExtension();
-            $file->move(public_path('storage/assets'), $imageName);
+            $newImageName = time() . '_' . Str::slug($request->article) . '.' . $file->getClientOriginalExtension();
+            $file->storeAs('public/assets', $newImageName);
+            $imageName = $newImageName;
         }
 
-        $asset->update([
-            'barcode_id' => $request->barcode_id,
-            'article' => $request->article,
-            'description' => $request->description,
-            'unit_measure' => $request->unit_measure,
-            'supplier' => $request->supplier,
-            'unit_value' => $request->unit_value,
-            'status' => $request->status,
-            'image' => $imageName
-        ]);
+        try {
+            DB::beginTransaction();
 
-        ActivityLog::create([
-            'user_id' => Auth::id(),
-            'action' => 'Updated',
-            'description' => "Updated asset details: {$asset->article}",
-            'ip_address' => request()->ip(),
-            'user_agent' => request()->userAgent()
-        ]);
+            $asset->update([
+                'item_code' => $request->barcode_id,
+                'barcode_id' => $request->barcode_id,
+                'name' => $request->article,
+                'article' => $request->article,
+                'category' => $request->category ?? 'Assets',
+                'description' => $request->description,
+                'unit_measure' => $request->unit_measure,
+                'supplier' => $request->supplier,
+                'unit_value' => $request->unit_value,
+                'status' => $request->status,
+                'image' => $imageName
+            ]);
 
-        if ($request->ajax() || $request->wantsJson()) {
-            return response()->json(['status' => 'success']);
+            ActivityLog::create([
+                'user_id' => Auth::id(),
+                'action' => 'Updated',
+                'description' => "Updated asset details: {$asset->article}",
+                'ip_address' => request()->ip(),
+                'user_agent' => request()->userAgent()
+            ]);
+
+            DB::commit();
+
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['status' => 'success']);
+            }
+
+            return redirect('/asset-list')->with('msg', 'saved');
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            if (isset($newImageName) && Storage::exists('public/assets/' . $newImageName)) {
+                Storage::delete('public/assets/' . $newImageName);
+            }
+
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Unable to update asset. Please try again.'
+                ], 500);
+            }
+
+            return redirect('/asset-list')->with('error', 'Unable to update asset. Please try again.');
         }
-
-        return redirect('/asset-list')->with('msg', 'saved');
     }
 
     public function destroy($id)

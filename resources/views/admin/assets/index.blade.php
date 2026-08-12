@@ -491,6 +491,10 @@
                         });
                     } else if (data.status === 'success') {
                         window.location.reload();
+                    } else {
+                        submitBtn.innerHTML = originalText;
+                        submitBtn.disabled = false;
+                        Swal.fire('Error', data.message || 'An error occurred while saving the asset.', 'error');
                     }
                 })
                 .catch(error => {

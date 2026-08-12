@@ -12,8 +12,11 @@ class Asset extends Model
     public $timestamps = false;
 
     protected $fillable = [
+        'item_code',
         'barcode_id',
+        'name',
         'article',
+        'category',
         'description',
         'unit_measure',
         'supplier',

@@ -95,8 +95,11 @@ class AssetController extends Controller
         }
 
         $asset = Asset::create([
+            'item_code' => $request->barcode_id,
             'barcode_id' => $request->barcode_id,
+            'name' => $request->article,
             'article' => $request->article,
+            'category' => $request->category ?? 'Assets',
             'description' => $request->description,
             'unit_measure' => $request->unit_measure,
             'supplier' => $request->supplier,
@@ -155,8 +158,11 @@ class AssetController extends Controller
         }
 
         $asset->update([
+            'item_code' => $request->barcode_id,
             'barcode_id' => $request->barcode_id,
+            'name' => $request->article,
             'article' => $request->article,
+            'category' => $request->category ?? 'Assets',
             'description' => $request->description,
             'unit_measure' => $request->unit_measure,
             'supplier' => $request->supplier,
