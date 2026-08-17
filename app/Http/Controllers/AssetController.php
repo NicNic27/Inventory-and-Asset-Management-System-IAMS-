@@ -7,6 +7,7 @@ use App\Models\Transaction;
 use App\Models\PurchaseOrderItem; 
 use App\Models\IcsRequest;
 use App\Models\ActivityLog;
+use App\Services\AssetService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -15,6 +16,12 @@ use Illuminate\Support\Facades\Auth;
 
 class AssetController extends Controller
 {
+    private AssetService $assetService;
+
+    public function __construct(AssetService $assetService)
+    {
+        $this->assetService = $assetService;
+    }
     public function index(Request $request)
     {
         $perPage = $request->input('per_page', 5);
@@ -37,21 +44,10 @@ class AssetController extends Controller
 
         $assets = $query->orderBy('id', 'desc')->paginate($perPage);
 
-        // Fetch assignment using precise PHP logic to handle legacy records
+        // Fetch assignment using service
         $assets->getCollection()->transform(function ($asset) {
-            $latestReq = IcsRequest::where('items_json', 'LIKE', '%"inv_no":"'.$asset->barcode_id.'"%')
-                ->orderBy('created_at', 'desc')
-                ->first();
-                
-            if ($latestReq) {
-                $items = is_string($latestReq->items_json) ? json_decode($latestReq->items_json, true) : $latestReq->items_json;
-                $asset_item = collect($items)->firstWhere('inv_no', $asset->barcode_id);
-                $status = $asset_item['transfer_status'] ?? 'Active';
-                
-                $asset->assigned_to = ($status === 'Active') ? $latestReq->sig_received_by_name : null;
-            } else {
-                $asset->assigned_to = null;
-            }
+            $assignmentInfo = $this->assetService->getAssignmentInfo($asset);
+            $asset->assigned_to = $assignmentInfo['assigned_to'] ?? null;
             return $asset;
         });
 
@@ -78,62 +74,27 @@ class AssetController extends Controller
 
     public function store(Request $request)
     {
-        $duplicate = Asset::where('barcode_id', trim($request->barcode_id))->first();
-
-        if ($duplicate) {
+        // Check for duplicate barcode
+        if ($this->assetService->barcodeDuplicate($request->barcode_id)) {
             if ($request->ajax() || $request->wantsJson()) {
-                return response()->json([
-                    'status' => 'duplicate'
-                ]);
+                return response()->json(['status' => 'duplicate']);
             }
-
             return redirect('/asset-list')->with('error', 'Asset barcode already exists.');
         }
 
-        $imageName = null;
-        if ($request->hasFile('image')) {
-            $file = $request->file('image');
-            $imageName = time() . '_' . Str::slug($request->article) . '.' . $file->getClientOriginalExtension();
-            $file->storeAs('public/assets', $imageName);
-        }
-
         try {
-            DB::beginTransaction();
-
-            $asset = Asset::create([
-                'item_code' => $request->barcode_id,
+            // Create asset using service
+            $asset = $this->assetService->create([
                 'barcode_id' => $request->barcode_id,
-                'name' => $request->article,
                 'article' => $request->article,
-                'category' => $request->category ?? 'Assets',
+                'category' => $request->category,
                 'description' => $request->description,
                 'unit_measure' => $request->unit_measure,
                 'supplier' => $request->supplier,
                 'unit_value' => $request->unit_value,
-                'status' => $request->status ?? 'Serviceable',
-                'image' => $imageName
+                'status' => $request->status,
+                'image' => $request->file('image')
             ]);
-
-            Transaction::create([
-                'item_id' => $asset->id,
-                'item_type' => 'assets',
-                'transaction_type' => 'ADDED',
-                'quantity' => 1,
-                'supplier' => $request->supplier,
-                'transaction_date' => date('Y-m-d'),
-                'remarks' => 'Opening Balance / New Item',
-                'date_time' => now()
-            ]);
-
-            ActivityLog::create([
-                'user_id' => Auth::id(),
-                'action' => 'Created',
-                'description' => "Added new asset: {$asset->article}",
-                'ip_address' => request()->ip(),
-                'user_agent' => request()->userAgent()
-            ]);
-
-            DB::commit();
 
             if ($request->ajax() || $request->wantsJson()) {
                 return response()->json(['status' => 'success']);
@@ -141,12 +102,6 @@ class AssetController extends Controller
 
             return redirect('/asset-list')->with('msg', 'saved');
         } catch (\Exception $e) {
-            DB::rollBack();
-
-            if ($imageName && Storage::exists('public/assets/' . $imageName)) {
-                Storage::delete('public/assets/' . $imageName);
-            }
-
             if ($request->ajax() || $request->wantsJson()) {
                 return response()->json([
                     'status' => 'error',
@@ -162,54 +117,31 @@ class AssetController extends Controller
     {
         $asset = Asset::findOrFail($id);
         
+        // Check for duplicate barcode (excluding current asset)
         $duplicate = Asset::where('barcode_id', trim($request->barcode_id))
                           ->where('id', '!=', $id)
                           ->first();
 
         if ($duplicate) {
             if ($request->ajax() || $request->wantsJson()) {
-                return response()->json([
-                    'status' => 'duplicate'
-                ]);
+                return response()->json(['status' => 'duplicate']);
             }
-
             return redirect('/asset-list')->with('error', 'Asset barcode already exists.');
         }
 
-        $imageName = $asset->image;
-        if ($request->hasFile('image')) {
-            $file = $request->file('image');
-            $newImageName = time() . '_' . Str::slug($request->article) . '.' . $file->getClientOriginalExtension();
-            $file->storeAs('public/assets', $newImageName);
-            $imageName = $newImageName;
-        }
-
         try {
-            DB::beginTransaction();
-
-            $asset->update([
-                'item_code' => $request->barcode_id,
+            // Update asset using service
+            $asset = $this->assetService->update($asset, [
                 'barcode_id' => $request->barcode_id,
-                'name' => $request->article,
                 'article' => $request->article,
-                'category' => $request->category ?? 'Assets',
+                'category' => $request->category,
                 'description' => $request->description,
                 'unit_measure' => $request->unit_measure,
                 'supplier' => $request->supplier,
                 'unit_value' => $request->unit_value,
                 'status' => $request->status,
-                'image' => $imageName
+                'image' => $request->file('image')
             ]);
-
-            ActivityLog::create([
-                'user_id' => Auth::id(),
-                'action' => 'Updated',
-                'description' => "Updated asset details: {$asset->article}",
-                'ip_address' => request()->ip(),
-                'user_agent' => request()->userAgent()
-            ]);
-
-            DB::commit();
 
             if ($request->ajax() || $request->wantsJson()) {
                 return response()->json(['status' => 'success']);
@@ -217,12 +149,6 @@ class AssetController extends Controller
 
             return redirect('/asset-list')->with('msg', 'saved');
         } catch (\Exception $e) {
-            DB::rollBack();
-
-            if (isset($newImageName) && Storage::exists('public/assets/' . $newImageName)) {
-                Storage::delete('public/assets/' . $newImageName);
-            }
-
             if ($request->ajax() || $request->wantsJson()) {
                 return response()->json([
                     'status' => 'error',
@@ -237,19 +163,15 @@ class AssetController extends Controller
     public function destroy($id)
     {
         $asset = Asset::findOrFail($id);
-        
-        ActivityLog::create([
-            'user_id' => Auth::id(),
-            'action' => 'Deleted',
-            'description' => "Deleted asset: {$asset->article}",
-            'ip_address' => request()->ip(),
-            'user_agent' => request()->userAgent()
-        ]);
 
-        $asset->delete();
-        Transaction::where('item_id', $id)->where('item_type', 'assets')->delete();
+        try {
+            $this->assetService->delete($asset);
+            Transaction::where('item_id', $id)->where('item_type', 'assets')->delete();
 
-        return redirect('/asset-list')->with('msg', 'deleted');
+            return redirect('/asset-list')->with('msg', 'deleted');
+        } catch (\Exception $e) {
+            return redirect('/asset-list')->with('error', 'Unable to delete asset. Please try again.');
+        }
     }
 
     public function details($id)
