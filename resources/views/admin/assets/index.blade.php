@@ -28,6 +28,31 @@
             flex-direction: column;
         }
 
+            .custody-history-side {
+                width: min(420px, calc(50vw - 1.5rem));
+                max-width: 420px;
+                margin: 0;
+                position: fixed;
+                left: calc(50% + 0.5rem);
+                top: 50%;
+            }
+
+            .modal.show .custody-history-side {
+                transform: translateY(-50%);
+            }
+
+            @media (max-width: 992px) {
+                .custody-history-side {
+                    width: auto;
+                    max-width: 500px;
+                    position: relative;
+                    left: auto;
+                    top: auto;
+                    margin-left: auto;
+                    margin-right: auto;
+                }
+            }
+
         .table-container { 
             background: white; 
             padding: 20px 20px 10px 20px; 
@@ -202,8 +227,13 @@
                                                 data-article="{{ $row->article }}"
                                                 data-stock="{{ $row->barcode_id }}"
                                                 data-desc="{{ $row->description }}"
+                                                data-model="{{ $row->model }}"
+                                                data-serial-number="{{ $row->serial_number }}"
+                                                data-acquisition-date="{{ optional($row->acquisition_date)->format('Y-m-d') }}"
                                                 data-unit="{{ $row->unit_measure }}"
                                                 data-value="{{ $row->unit_value }}"
+                                                data-person-accountable="{{ $row->person_accountable }}"
+                                                data-validation-signatory="{{ $row->validation_signatory }}"
                                                 data-status="{{ $row->status }}"
                                                 data-image="{{ $row->image }}"
                                                 data-supplier="{{ $row->supplier }}">
@@ -310,31 +340,53 @@
                                 @endif
 
                                 <div class="row g-3">
-                                    <div class="col-md-6">
-                                        <label class="form-label fw-bold">Article (Name) <span class="text-danger">*</span></label>
+                                    <div class="col-12">
+                                        <label class="form-label fw-bold">Date of Inventory</label>
+                                        <input type="date" name="inventory_date" class="form-control" value="{{ now()->toDateString() }}" readonly>
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label fw-bold">Article / Name <span class="text-danger">*</span></label>
                                         <input type="text" name="article" id="add_article" class="form-control" required placeholder="e.g. Dell Laptop">
                                     </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label fw-bold">Supplier</label>
-                                        <input type="text" name="supplier" id="add_supplier" class="form-control" placeholder="e.g. PC Express">
-                                    </div>
-                                    
                                     <div class="col-12">
                                         <label class="form-label fw-bold">Description</label>
-                                        <textarea name="description" id="add_desc" class="form-control" rows="2" placeholder="e.g. Core i5, 8GB RAM, 256GB SSD"></textarea>
+                                        <textarea name="description" id="add_desc" class="form-control" rows="2" placeholder="Describe the property or equipment"></textarea>
                                     </div>
-                                    
-                                    <div class="col-md-12">
-                                        <label class="form-label fw-bold text-primary">Property No. (Barcode ID) <span class="text-danger">*</span></label>
-                                        <input type="text" name="barcode_id" class="form-control border-primary border-2" required placeholder="Enter Property Number manually...">
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">Model</label>
+                                        <input type="text" name="model" id="add_model" class="form-control" placeholder="Optional">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">Serial Number <span class="text-danger">*</span></label>
+                                        <input type="text" name="serial_number" id="add_serial_number" class="form-control" required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">Acquisition Date <span class="text-danger">*</span></label>
+                                        <input type="date" name="acquisition_date" id="add_acquisition_date" class="form-control" value="{{ now()->toDateString() }}" required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">Unit Value (₱) <span class="text-danger">*</span></label>
+                                        <input type="number" name="unit_value" id="add_val" class="form-control" step="0.01" min="0" placeholder="0.00" required>
                                     </div>
                                     <div class="col-md-6">
                                         <label class="form-label fw-bold">Unit Measure <span class="text-danger">*</span></label>
                                         <input type="text" name="unit_measure" id="add_unit" class="form-control" placeholder="e.g. Unit, Set" required>
                                     </div>
                                     <div class="col-md-6">
-                                        <label class="form-label fw-bold">Unit Value (₱) <span class="text-danger">*</span></label>
-                                        <input type="number" name="unit_value" id="add_val" class="form-control" step="0.01" min="0" placeholder="0.00" required>
+                                        <label class="form-label fw-bold">Person Accountable</label>
+                                        <input type="text" name="person_accountable" id="add_person_accountable" class="form-control">
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label fw-bold">Validation Signatory of Inventory Committees</label>
+                                        <textarea name="validation_signatory" id="add_validation_signatory" class="form-control" rows="3" placeholder="List one signatory per line"></textarea>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">Supplier</label>
+                                        <input type="text" name="supplier" id="add_supplier" class="form-control" placeholder="e.g. PC Express">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold text-primary">Property No. / Barcode</label>
+                                        <input type="text" class="form-control border-primary border-2 bg-light" value="Generated after saving" readonly>
                                     </div>
                                 </div>
                                 <input type="hidden" name="status" value="Serviceable">
@@ -377,7 +429,7 @@
                                 <div class="row g-3">
                                     <div class="col-md-6">
                                         <label class="form-label fw-bold">Property No. (Barcode ID) <span class="text-danger">*</span></label>
-                                        <input type="text" name="barcode_id" id="edit_stock" class="form-control border-primary border-2 bg-light" required>
+                                        <input type="text" id="edit_stock" class="form-control border-primary border-2 bg-light" readonly>
                                     </div>
                                     <div class="col-md-6">
                                         <label class="form-label fw-bold">Status <span class="text-danger">*</span></label>
@@ -400,6 +452,18 @@
                                         <label class="form-label fw-bold">Description</label>
                                         <textarea name="description" id="edit_desc" class="form-control" rows="2"></textarea>
                                     </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">Model</label>
+                                        <input type="text" name="model" id="edit_model" class="form-control">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">Serial Number <span class="text-danger">*</span></label>
+                                        <input type="text" name="serial_number" id="edit_serial_number" class="form-control" required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">Acquisition Date <span class="text-danger">*</span></label>
+                                        <input type="date" name="acquisition_date" id="edit_acquisition_date" class="form-control" required>
+                                    </div>
                                     
                                     <div class="col-md-6">
                                         <label class="form-label fw-bold">Unit Measure <span class="text-danger">*</span></label>
@@ -408,6 +472,14 @@
                                     <div class="col-md-6">
                                         <label class="form-label fw-bold">Unit Value (₱) <span class="text-danger">*</span></label>
                                         <input type="number" name="unit_value" id="edit_value" class="form-control" step="0.01" min="0" required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">Person Accountable</label>
+                                        <input type="text" name="person_accountable" id="edit_person_accountable" class="form-control">
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label fw-bold">Validation Signatory of Inventory Committees</label>
+                                        <textarea name="validation_signatory" id="edit_validation_signatory" class="form-control" rows="3"></textarea>
                                     </div>
                                 </div>
                             </div>
@@ -449,6 +521,14 @@
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content shadow-lg border-0" id="view_details_content" style="border-radius: 10px;">
                 </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="custodyHistoryModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg custody-history-side">
+            <div class="modal-content border-0 shadow" id="custody_history_content">
+                <div class="modal-body text-center p-5"><div class="spinner-border text-primary"></div></div>
+            </div>
         </div>
     </div>
 
@@ -554,6 +634,15 @@
                 });
         }
 
+            function openCustodyHistory(id) {
+                const contentArea = document.getElementById('custody_history_content');
+                contentArea.innerHTML = '<div class="modal-body text-center p-5"><div class="spinner-border text-primary"></div><p class="mt-2 mb-0">Loading history...</p></div>';
+                new bootstrap.Modal(document.getElementById('custodyHistoryModal')).show();
+                fetch(`/admin/assets/${id}/custody-history`)
+                .then(response => response.text())
+                .then(data => { contentArea.innerHTML = '<div class="modal-header bg-primary text-white"><h5 class="modal-title"><i class="fas fa-clock-rotate-left me-2"></i>Borrowing & Transfer History</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body p-4">' + data + '</div>'; });
+            }
+
         document.querySelectorAll('.clickable-row').forEach(row => {
             row.addEventListener('click', function(e) {
                 if(e.target.closest('button') || e.target.closest('a')) { return; }
@@ -578,8 +667,13 @@
                 document.getElementById('edit_article').value = this.getAttribute('data-article');
                 document.getElementById('edit_stock').value = this.getAttribute('data-stock');
                 document.getElementById('edit_desc').value = this.getAttribute('data-desc');
+                document.getElementById('edit_model').value = this.getAttribute('data-model');
+                document.getElementById('edit_serial_number').value = this.getAttribute('data-serial-number');
+                document.getElementById('edit_acquisition_date').value = this.getAttribute('data-acquisition-date');
                 document.getElementById('edit_unit').value = this.getAttribute('data-unit');
                 document.getElementById('edit_value').value = this.getAttribute('data-value');
+                document.getElementById('edit_person_accountable').value = this.getAttribute('data-person-accountable');
+                document.getElementById('edit_validation_signatory').value = this.getAttribute('data-validation-signatory');
                 document.getElementById('edit_supplier').value = this.getAttribute('data-supplier');
                 document.getElementById('edit_status').value = this.getAttribute('data-status');
 

@@ -75,26 +75,26 @@ class AssetController extends Controller
 
     public function store(Request $request)
     {
-        // Check for duplicate barcode
-        if ($this->assetService->barcodeDuplicate($request->barcode_id)) {
-            if ($request->ajax() || $request->wantsJson()) {
-                return response()->json(['status' => 'duplicate']);
-            }
-            return redirect('/asset-list')->with('error', 'Asset barcode already exists.');
-        }
+        $validated = $request->validate([
+            'article' => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string'],
+            'model' => ['nullable', 'string', 'max:255'],
+            'serial_number' => ['required', 'string', 'max:255'],
+            'acquisition_date' => ['required', 'date'],
+            'unit_value' => ['required', 'numeric', 'min:0'],
+            'unit_measure' => ['required', 'string', 'max:255'],
+            'person_accountable' => ['nullable', 'string', 'max:255'],
+            'validation_signatory' => ['nullable', 'string'],
+            'supplier' => ['nullable', 'string', 'max:255'],
+            'status' => ['nullable', 'string', 'max:255'],
+            'image' => ['nullable', 'image', 'max:5120'],
+        ]);
 
         try {
             // Create asset using service
             $asset = $this->assetService->create([
-                'barcode_id' => $request->barcode_id,
-                'article' => $request->article,
-                'category' => $request->category,
-                'description' => $request->description,
-                'unit_measure' => $request->unit_measure,
-                'supplier' => $request->supplier,
-                'unit_value' => $request->unit_value,
-                'status' => $request->status,
-                'image' => $request->file('image')
+                ...$validated,
+                'image' => $request->file('image'),
             ]);
 
             if ($request->ajax() || $request->wantsJson()) {
@@ -117,31 +117,26 @@ class AssetController extends Controller
     public function update(Request $request, $id)
     {
         $asset = Asset::findOrFail($id);
-        
-        // Check for duplicate barcode (excluding current asset)
-        $duplicate = Asset::where('barcode_id', trim($request->barcode_id))
-                          ->where('id', '!=', $id)
-                          ->first();
-
-        if ($duplicate) {
-            if ($request->ajax() || $request->wantsJson()) {
-                return response()->json(['status' => 'duplicate']);
-            }
-            return redirect('/asset-list')->with('error', 'Asset barcode already exists.');
-        }
+        $validated = $request->validate([
+            'article' => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string'],
+            'model' => ['nullable', 'string', 'max:255'],
+            'serial_number' => ['required', 'string', 'max:255'],
+            'acquisition_date' => ['required', 'date'],
+            'unit_value' => ['required', 'numeric', 'min:0'],
+            'unit_measure' => ['required', 'string', 'max:255'],
+            'person_accountable' => ['nullable', 'string', 'max:255'],
+            'validation_signatory' => ['nullable', 'string'],
+            'supplier' => ['nullable', 'string', 'max:255'],
+            'status' => ['required', 'string', 'max:255'],
+            'image' => ['nullable', 'image', 'max:5120'],
+        ]);
 
         try {
             // Update asset using service
             $asset = $this->assetService->update($asset, [
-                'barcode_id' => $request->barcode_id,
-                'article' => $request->article,
-                'category' => $request->category,
-                'description' => $request->description,
-                'unit_measure' => $request->unit_measure,
-                'supplier' => $request->supplier,
-                'unit_value' => $request->unit_value,
-                'status' => $request->status,
-                'image' => $request->file('image')
+                ...$validated,
+                'image' => $request->file('image'),
             ]);
 
             if ($request->ajax() || $request->wantsJson()) {
@@ -231,19 +226,6 @@ class AssetController extends Controller
             }
         }
 
-        $custodyHistoryHtml = '<p class="text-muted small mb-0">No borrowing, transfer, or return records yet.</p>';
-        if ($custodyHistory->isNotEmpty()) {
-            $custodyHistoryHtml = '<div class="list-group list-group-flush">';
-            foreach ($custodyHistory as $custody) {
-                $state = $custody->returned_at ? 'Returned ' . $custody->returned_at->format('M d, Y') : 'Currently out';
-                $stateClass = $custody->returned_at ? 'text-success' : 'text-primary';
-                $location = trim(($custody->department ?: '') . ($custody->unit ? ' - ' . $custody->unit : '')) ?: 'Location not recorded';
-                $dueDate = $custody->due_at ? ' Due: ' . $custody->due_at->format('M d, Y') : '';
-                $custodyHistoryHtml .= '<div class="list-group-item px-0 py-2"><div class="d-flex justify-content-between gap-2"><strong>'.e($custody->holder_name ?: 'Unknown holder').'</strong><span class="small '.$stateClass.'">'.$state.'</span></div><div class="small text-muted">'.e($custody->transaction_type).' | '.e($location).' | Issued: '.($custody->issued_at?->format('M d, Y') ?: 'N/A').$dueDate.'</div></div>';
-            }
-            $custodyHistoryHtml .= '</div>';
-        }
-
         $imageHtml = $asset->image 
             ? '<img src="'.asset('storage/assets/'.$asset->image).'" class="img-fluid rounded shadow-sm" style="max-height: 250px; object-fit: cover;">'
             : '<div class="bg-light rounded d-flex align-items-center justify-content-center border" style="height: 200px;"><i class="fas fa-laptop fa-4x text-muted opacity-25"></i></div>';
@@ -313,12 +295,6 @@ class AssetController extends Controller
                     </div>
                 </div>
                 <div class="col-12">
-                    <div class="border rounded p-3 bg-white shadow-sm">
-                        <small class="text-muted d-block text-uppercase fw-bold mb-2" style="font-size: 0.7rem;">Borrowing & Transfer History</small>
-                        '.$custodyHistoryHtml.'
-                    </div>
-                </div>
-                <div class="col-12">
                     <div class="border rounded p-3 bg-light shadow-sm d-flex justify-content-between align-items-center mt-2">
                         <small class="text-muted text-uppercase fw-bold" style="font-size: 0.75rem;">Unit Value</small>
                         <span class="fw-bold text-success fs-4">₱ '.number_format($asset->unit_value, 2).'</span>
@@ -327,10 +303,27 @@ class AssetController extends Controller
             </div>
         </div>
         <div class="modal-footer bg-light border-0">
+            <button type="button" class="btn btn-outline-primary px-4 fw-bold" onclick="openCustodyHistory('.$asset->id.')"><i class="fas fa-clock-rotate-left me-1"></i> Borrowing & Transfer History</button>
+            <a href="'.url('/asset-list/'.$asset->id.'/print-slip').'" target="_blank" rel="noopener" class="btn btn-primary px-4 fw-bold"><i class="fas fa-print me-1"></i> Print Asset Slip</a>
             <button type="button" class="btn btn-secondary px-4 fw-bold" data-bs-dismiss="modal">Close</button>
         </div>';
 
         return response($html);
+    }
+
+    public function printSlip($id)
+    {
+        return view('assets.print-slip', [
+            'asset' => Asset::findOrFail($id),
+        ]);
+    }
+
+    public function custodyHistory($id)
+    {
+        return view('assets.custody-history', [
+            'asset' => Asset::findOrFail($id),
+            'history' => AssetCustody::where('asset_id', $id)->latest('issued_at')->latest('id')->get(),
+        ]);
     }
 
     public function updateScanStatus(Request $request)

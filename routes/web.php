@@ -72,6 +72,8 @@ Route::middleware('auth')->group(function () {
     Route::put('/asset-list/{id}', [\App\Http\Controllers\AssetController::class, 'update']);
     Route::delete('/asset-list/{id}', [\App\Http\Controllers\AssetController::class, 'destroy']);
     Route::get('/asset-list/{id}/details', [\App\Http\Controllers\AssetController::class, 'details']);
+    Route::get('/asset-list/{id}/custody-history', [\App\Http\Controllers\AssetController::class, 'custodyHistory']);
+    Route::get('/asset-list/{id}/print-slip', [\App\Http\Controllers\AssetController::class, 'printSlip']);
     Route::post('/asset-list/scan-update', [\App\Http\Controllers\AssetController::class, 'updateScanStatus']);
     Route::get('/asset-custody/scan', [AssetCustodyController::class, 'scan']);
     Route::post('/asset-custody', [AssetCustodyController::class, 'store']);
@@ -141,6 +143,8 @@ Route::middleware('auth')->group(function () {
     Route::post('/admin/assets', [AdminAssetController::class, 'store']);
     Route::post('/admin/assets/scan-update', [AdminAssetController::class, 'updateScanStatus']); 
     Route::get('/admin/assets/{id}/details', [AdminAssetController::class, 'details']);
+    Route::get('/admin/assets/{id}/custody-history', [AdminAssetController::class, 'custodyHistory']);
+    Route::get('/admin/assets/{id}/print-slip', [AdminAssetController::class, 'printSlip']);
     Route::put('/admin/assets/{id}', [AdminAssetController::class, 'update']);
     Route::delete('/admin/assets/{id}', [AdminAssetController::class, 'destroy']);
 

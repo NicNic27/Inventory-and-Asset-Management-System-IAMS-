@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class AssetService
 {
@@ -49,6 +50,20 @@ class AssetService
         try {
             DB::beginTransaction();
 
+            $acquisitionDate = $data['acquisition_date'];
+            $value = (float) $data['unit_value'];
+            $prefix = $value >= 5000 ? 'HV' : 'LV';
+            $datePart = date('Y-m-d', strtotime($acquisitionDate));
+            $sequence = Asset::whereDate('acquisition_date', $acquisitionDate)
+                ->lockForUpdate()
+                ->count() + 1;
+            $propertyNumber = sprintf('%s-%s-%04d', $prefix, $datePart, $sequence);
+
+            while (Asset::where('barcode_id', $propertyNumber)->exists()) {
+                $sequence++;
+                $propertyNumber = sprintf('%s-%s-%04d', $prefix, $datePart, $sequence);
+            }
+
             // Handle image upload if provided as file
             if (isset($data['image']) && $data['image'] instanceof \Illuminate\Http\UploadedFile) {
                 $imageName = $this->storeImageFile($data['image'], $data['article'] ?? 'asset');
@@ -56,13 +71,19 @@ class AssetService
             }
 
             $asset = Asset::create([
-                'item_code' => $data['barcode_id'],
-                'barcode_id' => $data['barcode_id'],
+                'inventory_date' => now()->toDateString(),
+                'item_code' => $propertyNumber,
+                'barcode_id' => $propertyNumber,
                 'name' => $data['article'],
                 'article' => $data['article'],
                 'category' => $data['category'] ?? 'Assets',
                 'description' => $data['description'],
+                'model' => $data['model'] ?? null,
+                'serial_number' => $data['serial_number'],
+                'acquisition_date' => $acquisitionDate,
                 'unit_measure' => $data['unit_measure'],
+                'person_accountable' => $data['person_accountable'] ?? null,
+                'validation_signatory' => $data['validation_signatory'] ?? null,
                 'supplier' => $data['supplier'] ?? null,
                 'unit_value' => $data['unit_value'] ?? 0,
                 'status' => $data['status'] ?? 'Serviceable',
@@ -128,7 +149,12 @@ class AssetService
                 'article' => $data['article'] ?? $asset->article,
                 'category' => $data['category'] ?? $asset->category,
                 'description' => $data['description'] ?? $asset->description,
+                'model' => $data['model'] ?? $asset->model,
+                'serial_number' => $data['serial_number'] ?? $asset->serial_number,
+                'acquisition_date' => $data['acquisition_date'] ?? $asset->acquisition_date,
                 'unit_measure' => $data['unit_measure'] ?? $asset->unit_measure,
+                'person_accountable' => $data['person_accountable'] ?? $asset->person_accountable,
+                'validation_signatory' => $data['validation_signatory'] ?? $asset->validation_signatory,
                 'supplier' => $data['supplier'] ?? $asset->supplier,
                 'unit_value' => $data['unit_value'] ?? $asset->unit_value,
                 'status' => $data['status'] ?? $asset->status,
@@ -229,6 +255,9 @@ class AssetService
      */
     private function storeImageFile($file, string $prefix): string
     {
-        return time() . '_' . Str::slug($prefix) . '.' . $file->getClientOriginalExtension();
+        $filename = time() . '_' . Str::slug($prefix) . '.' . $file->getClientOriginalExtension();
+        $file->storeAs('public/assets', $filename);
+
+        return $filename;
     }
 }

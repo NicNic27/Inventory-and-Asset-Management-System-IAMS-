@@ -19,9 +19,11 @@ class AssetCrudTest extends TestCase
 
         // Create
         $post = [
-            'barcode_id' => 'ASSET-1001',
             'article' => 'Test Laptop',
             'description' => 'A test laptop',
+            'model' => 'Test Model',
+            'serial_number' => 'SERIAL-1001',
+            'acquisition_date' => '2026-08-18',
             'unit_measure' => 'pc',
             'supplier' => 'Vendor',
             'unit_value' => 50000,
@@ -31,9 +33,12 @@ class AssetCrudTest extends TestCase
         $createResp = $this->post('/asset-list', $post);
         $createResp->assertStatus(302);
 
-        $this->assertDatabaseHas('assets', ['barcode_id' => 'ASSET-1001']);
+        $this->assertDatabaseHas('assets', [
+            'barcode_id' => 'HV-2026-08-18-0001',
+            'serial_number' => 'SERIAL-1001',
+        ]);
 
-        $asset = Asset::where('barcode_id', 'ASSET-1001')->first();
+        $asset = Asset::where('serial_number', 'SERIAL-1001')->first();
 
         // Read details
         $details = $this->get('/asset-list/'.$asset->id.'/details');

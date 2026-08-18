@@ -78,6 +78,9 @@
         .badge-in { background-color: #d1e7dd; color: #0f5132; border: 1px solid #badbcc; }
         .badge-added { background-color: #cfe2ff; color: #084298; border: 1px solid #b6d4fe; } 
         .badge-out { background-color: #f8d7da; color: #842029; border: 1px solid #f5c2c7; }
+        .badge-issued { background-color: #fff3cd; color: #664d03; border: 1px solid #ffecb5; }
+        .badge-returned { background-color: #d1e7dd; color: #0f5132; border: 1px solid #badbcc; }
+        .badge-transferred { background-color: #e2d9f3; color: #432874; border: 1px solid #c5b3e6; }
         
         .text-small { font-size: 0.9rem; }
 
@@ -120,6 +123,8 @@
         .modal { z-index: 1060 !important; }
         .modal-backdrop { z-index: 1055 !important; }
 
+        .print-heading { display: none; }
+
         @media (max-width: 992px) { 
             body { overflow-y: auto; } 
             .main-content { 
@@ -135,11 +140,17 @@
 
         @media print {
             .no-print, .sidebar { display: none !important; }
+            .print-heading { display: block; text-align: center; border-bottom: 2px solid #101954; padding-bottom: 10px; margin-bottom: 14px; }
+            .print-heading h1 { margin: 0; color: #101954; font-size: 18pt; letter-spacing: 0.04em; }
+            .print-heading p { margin: 3px 0 0; color: #555; font-size: 9pt; }
             body { overflow: visible !important; }
             .main-content { margin: 0; padding: 0; height: auto; display: block; }
             .card, .history-card { box-shadow: none; border: none; padding: 0; display: block; }
             .table-responsive { overflow: visible; display: block; border-bottom: none; }
-            .table { width: 100%; }
+            .table { width: 100%; border-collapse: collapse; font-size: 8pt; }
+            .table th, .table td { border: 1px solid #adb5bd !important; padding: 6px 7px !important; vertical-align: top; }
+            .table thead th { position: static; background: #e9ecef !important; color: #111; box-shadow: none; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .table tbody tr:nth-child(even) { background: #f8f9fa !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         }
     </style>
 </head>
@@ -149,6 +160,10 @@
     @include('layouts.sidebar')
 
     <div class="main-content">
+        <div class="print-heading">
+            <h1>Inventory Transaction History</h1>
+            <p>Department of Education | Generated {{ now()->format('F d, Y h:i A') }}</p>
+        </div>
         
         <div class="d-flex justify-content-between align-items-center mb-4 no-print title-section">
             <div>
@@ -177,6 +192,9 @@
                             <option value="IN">Stock IN</option>
                             <option value="OUT">Stock OUT</option>
                             <option value="ADDED">Newly Added</option>
+                            <option value="ISSUED">Issued / Borrowed</option>
+                            <option value="RETURNED">Returned to Inventory</option>
+                            <option value="TRANSFERRED">Transferred</option>
                         </select>
                     </div>
                 </div>
@@ -217,6 +235,15 @@
                                 } elseif ($typeUpper == 'ADDED') {
                                     $badgeClass = 'badge-added';
                                     $icon = 'fa-plus';
+                                } elseif ($typeUpper == 'ISSUED') {
+                                    $badgeClass = 'badge-issued';
+                                    $icon = 'fa-hand-holding';
+                                } elseif ($typeUpper == 'RETURNED') {
+                                    $badgeClass = 'badge-returned';
+                                    $icon = 'fa-rotate-left';
+                                } elseif ($typeUpper == 'TRANSFERRED') {
+                                    $badgeClass = 'badge-transferred';
+                                    $icon = 'fa-right-left';
                                 }
                                 
                                 if ($typeUpper == 'OUT') {
