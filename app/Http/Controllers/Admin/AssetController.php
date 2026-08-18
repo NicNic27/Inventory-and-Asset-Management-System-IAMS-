@@ -8,6 +8,7 @@ use App\Models\Transaction;
 use App\Models\PurchaseOrderItem; 
 use App\Models\IcsRequest;
 use App\Models\ActivityLog;
+use App\Models\AssetCustody;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -207,6 +208,11 @@ class AssetController extends Controller
     public function details($id)
     {
         $asset = Asset::findOrFail($id);
+        $custodyHistory = AssetCustody::where('asset_id', $asset->id)
+            ->latest('issued_at')
+            ->latest('id')
+            ->get();
+        $activeCustody = $custodyHistory->firstWhere('returned_at', null);
         
         $allAssignments = IcsRequest::where('items_json', 'LIKE', '%"inv_no":"'.$asset->barcode_id.'"%')
             ->orderBy('created_at', 'desc')
@@ -240,6 +246,32 @@ class AssetController extends Controller
                     $previousOwner = $req->sig_received_by_name ?: 'Unknown';
                 }
             }
+        }
+
+        if ($custodyHistory->isNotEmpty()) {
+            $previousCustody = $custodyHistory->first(fn ($custody) => $custody->returned_at !== null);
+            $previousOwner = $previousCustody ? e($previousCustody->holder_name ?: 'Unknown') : '<span class="text-muted">None</span>';
+
+            if ($activeCustody) {
+                $activeAssignment = $activeCustody;
+                $assignedTo = e($activeCustody->holder_name ?: 'Unknown');
+                $dateOfInventory = $activeCustody->issued_at?->format('M d, Y') ?: 'N/A';
+            } else {
+                $assignedTo = '<span class="text-muted">In inventory</span>';
+            }
+        }
+
+        $custodyHistoryHtml = '<p class="text-muted small mb-0">No borrowing, transfer, or return records yet.</p>';
+        if ($custodyHistory->isNotEmpty()) {
+            $custodyHistoryHtml = '<div class="list-group list-group-flush">';
+            foreach ($custodyHistory as $custody) {
+                $state = $custody->returned_at ? 'Returned ' . $custody->returned_at->format('M d, Y') : 'Currently out';
+                $stateClass = $custody->returned_at ? 'text-success' : 'text-primary';
+                $location = trim(($custody->department ?: '') . ($custody->unit ? ' - ' . $custody->unit : '')) ?: 'Location not recorded';
+                $dueDate = $custody->due_at ? ' Due: ' . $custody->due_at->format('M d, Y') : '';
+                $custodyHistoryHtml .= '<div class="list-group-item px-0 py-2"><div class="d-flex justify-content-between gap-2"><strong>'.e($custody->holder_name ?: 'Unknown holder').'</strong><span class="small '.$stateClass.'">'.$state.'</span></div><div class="small text-muted">'.e($custody->transaction_type).' | '.e($location).' | Issued: '.($custody->issued_at?->format('M d, Y') ?: 'N/A').$dueDate.'</div></div>';
+            }
+            $custodyHistoryHtml .= '</div>';
         }
 
         $imageHtml = $asset->image 
@@ -294,7 +326,7 @@ class AssetController extends Controller
                 </div>
                 <div class="col-6">
                     <div class="border rounded p-3 bg-white h-100 shadow-sm border-start border-4 border-warning">
-                        <small class="text-muted d-block text-uppercase fw-bold mb-1" style="font-size: 0.7rem;">Date of Inventory</small>
+                        <small class="text-muted d-block text-uppercase fw-bold mb-1" style="font-size: 0.7rem;">Issued / Inventory Date</small>
                         <span class="fw-semibold text-dark">'.$dateOfInventory.'</span>
                     </div>
                 </div>
@@ -308,6 +340,12 @@ class AssetController extends Controller
                     <div class="border rounded p-3 bg-white h-100 shadow-sm">
                         <small class="text-muted d-block text-uppercase fw-bold mb-1" style="font-size: 0.7rem;">Unit Measure</small>
                         <span class="fw-semibold text-dark">'.($asset->unit_measure ?: 'N/A').'</span>
+                    </div>
+                </div>
+                <div class="col-12">
+                    <div class="border rounded p-3 bg-white shadow-sm">
+                        <small class="text-muted d-block text-uppercase fw-bold mb-2" style="font-size: 0.7rem;">Borrowing & Transfer History</small>
+                        '.$custodyHistoryHtml.'
                     </div>
                 </div>
                 <div class="col-12">

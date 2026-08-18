@@ -6,6 +6,7 @@ use App\Models\Asset;
 use App\Models\Transaction;
 use App\Models\ActivityLog;
 use App\Models\IcsRequest;
+use App\Models\AssetCustody;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
@@ -188,6 +189,23 @@ class AssetService
      */
     public function getAssignmentInfo(Asset $asset): ?array
     {
+        $activeCustody = AssetCustody::where('asset_id', $asset->id)
+            ->whereNull('returned_at')
+            ->latest('issued_at')
+            ->first();
+
+        if ($activeCustody) {
+            return [
+                'assigned_to' => $activeCustody->holder_name,
+                'status' => $activeCustody->transaction_type,
+                'request' => null,
+            ];
+        }
+
+        if (AssetCustody::where('asset_id', $asset->id)->exists()) {
+            return null;
+        }
+
         $latestReq = IcsRequest::where('items_json', 'LIKE', '%"inv_no":"' . $asset->barcode_id . '"%')
             ->orderBy('created_at', 'desc')
             ->first();

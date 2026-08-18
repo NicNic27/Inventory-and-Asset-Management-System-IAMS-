@@ -127,7 +127,7 @@
             </div>
             <div class="col-12 col-md-6 d-flex flex-column flex-md-row gap-2 justify-content-md-end">
                 <button class="btn btn-outline-dark fw-bold shadow-sm mobile-stack" onclick="scanAssetStatus()">
-                    <i class="fas fa-barcode me-1"></i> Scan Asset (Status Update)
+                    <i class="fas fa-barcode me-1"></i> Scan Asset for Custody
                 </button>
                 <button class="btn btn-primary shadow-sm mobile-stack" data-bs-toggle="modal" data-bs-target="#addAssetModal">
                     <i class="fas fa-plus me-2"></i> Add New Asset
@@ -467,6 +467,142 @@
         </div>
     </div>
 
+    <div class="modal fade" id="assetCustodyModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title"><i class="fas fa-barcode me-2"></i>Asset Custody Scanner</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="assetCustodyForm">
+                    <div class="modal-body p-4">
+                        <div id="custodyLookupSection">
+                            <label for="custodyBarcode" class="form-label fw-bold">Property No. / Barcode</label>
+                            <div class="input-group">
+                                <input type="text" id="custodyBarcode" class="form-control form-control-lg" autocomplete="off" placeholder="Scan or enter the asset barcode">
+                                <button type="button" id="lookupAssetButton" class="btn btn-primary"><i class="fas fa-search"></i></button>
+                            </div>
+                        </div>
+
+                        <div id="custodyDetailsSection" class="d-none">
+                            <div class="border rounded p-3 bg-light mb-3">
+                                <div class="d-flex justify-content-between align-items-start gap-3">
+                                    <div>
+                                        <div id="custodyAssetArticle" class="fw-bold fs-5"></div>
+                                        <div id="custodyAssetDescription" class="text-muted small"></div>
+                                        <div id="custodyAssetBarcode" class="font-monospace text-primary fw-semibold mt-1"></div>
+                                    </div>
+                                    <span id="custodyStateBadge" class="badge bg-success">Available</span>
+                                </div>
+                                <div id="currentHolder" class="small text-muted mt-2 d-none"></div>
+                            </div>
+
+                            <input type="hidden" id="custodyAssetId">
+                            <input type="hidden" id="activeCustodyId">
+                            <div id="issueTransferFields">
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Action</label>
+                                    <div class="btn-group w-100" role="group">
+                                        <input type="radio" class="btn-check" name="custody_action" id="borrowAction" value="Borrowed" checked>
+                                        <label class="btn btn-outline-primary" for="borrowAction"><i class="fas fa-handshake me-1"></i>Borrow / Issue</label>
+                                        <input type="radio" class="btn-check" name="custody_action" id="transferAction" value="Transferred">
+                                        <label class="btn btn-outline-primary" for="transferAction"><i class="fas fa-right-left me-1"></i>Transfer</label>
+                                    </div>
+                                </div>
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">Borrower / Accountable Person</label>
+                                        <input type="text" id="holderName" class="form-control" maxlength="255">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">Position</label>
+                                        <input type="text" id="holderPosition" class="form-control" maxlength="255">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">Department</label>
+                                        <input type="text" id="holderDepartment" class="form-control" maxlength="255" placeholder="e.g. Administrative Division">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">Unit / Office</label>
+                                        <input type="text" id="holderUnit" class="form-control" maxlength="255" placeholder="e.g. General Services Unit">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">Issue Date</label>
+                                        <input type="date" id="issuedAt" class="form-control" value="{{ now()->toDateString() }}">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">Expected Return Date <span class="text-muted fw-normal">(optional)</span></label>
+                                        <input type="date" id="dueAt" class="form-control">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div id="returnFields" class="d-none">
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Action</label>
+                                    <div class="btn-group w-100" role="group">
+                                        <input type="radio" class="btn-check" name="active_custody_action" id="returnAction" value="return" checked>
+                                        <label class="btn btn-outline-success" for="returnAction"><i class="fas fa-rotate-left me-1"></i>Return to Inventory</label>
+                                        <input type="radio" class="btn-check" name="active_custody_action" id="activeTransferAction" value="transfer">
+                                        <label class="btn btn-outline-primary" for="activeTransferAction"><i class="fas fa-right-left me-1"></i>Transfer</label>
+                                    </div>
+                                </div>
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">Return Date</label>
+                                        <input type="date" id="returnedAt" class="form-control" value="{{ now()->toDateString() }}">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">Condition on Return</label>
+                                        <select id="returnCondition" class="form-select">
+                                            <option value="Serviceable">Serviceable</option>
+                                            <option value="Unserviceable">Unserviceable / Defective</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div id="transferRecipientFields" class="row g-3 mt-0 d-none">
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">New Accountable Person</label>
+                                        <input type="text" id="transferHolderName" class="form-control" maxlength="255">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">Position</label>
+                                        <input type="text" id="transferHolderPosition" class="form-control" maxlength="255">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">Department</label>
+                                        <input type="text" id="transferDepartment" class="form-control" maxlength="255">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">Unit / Office</label>
+                                        <input type="text" id="transferUnit" class="form-control" maxlength="255">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">Transfer Date</label>
+                                        <input type="date" id="transferIssuedAt" class="form-control" value="{{ now()->toDateString() }}">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">Expected Return Date <span class="text-muted fw-normal">(optional)</span></label>
+                                        <input type="date" id="transferDueAt" class="form-control">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mt-3">
+                                <label class="form-label fw-bold">Remarks <span class="text-muted fw-normal">(optional)</span></label>
+                                <textarea id="custodyRemarks" class="form-control" rows="2" maxlength="2000"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-light">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" id="saveCustodyButton" class="btn btn-primary d-none">Save Custody Record</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -526,69 +662,118 @@
         attachDuplicateCheck('editForm');
 
 
+        const custodyModalElement = document.getElementById('assetCustodyModal');
+        const custodyModal = new bootstrap.Modal(custodyModalElement);
+        const custodyDetailsSection = document.getElementById('custodyDetailsSection');
+        const issueTransferFields = document.getElementById('issueTransferFields');
+        const returnFields = document.getElementById('returnFields');
+        const saveCustodyButton = document.getElementById('saveCustodyButton');
+
         function scanAssetStatus() {
-            Swal.fire({
-                title: 'Scan Asset Barcode',
-                html: '<p class="text-muted mb-3">Scan or type the Property No. (Barcode ID) below:</p>',
-                input: 'text',
-                inputPlaceholder: 'e.g. AST-2026-0001',
-                showCancelButton: true,
-                confirmButtonText: 'Search Asset <i class="fas fa-search ms-1"></i>',
-                confirmButtonColor: '#101954',
-                customClass: { popup: 'rounded-4 shadow' }
-            }).then((result) => {
-                if (result.isConfirmed && result.value) {
-                    const barcode = result.value.trim();
-                    
-                    Swal.fire({
-                        title: 'Update Asset Status',
-                        html: `<p>What is the new status for Property No: <b>${barcode}</b>?</p>`,
-                        showDenyButton: true,
-                        showCancelButton: true,
-                        confirmButtonText: '<i class="fas fa-check-circle me-1"></i> Returned (Serviceable)',
-                        confirmButtonColor: '#198754',
-                        denyButtonText: '<i class="fas fa-times-circle me-1"></i> Defective / Unserviceable',
-                        denyButtonColor: '#dc3545',
-                        cancelButtonText: 'Cancel',
-                        customClass: { popup: 'rounded-4 shadow' }
-                    }).then((statusResult) => {
-                        if (statusResult.isConfirmed || statusResult.isDenied) {
-                            const newStatus = statusResult.isConfirmed ? 'Serviceable' : 'Unserviceable';
-                            
-                            fetch('{{ url("/asset-list/scan-update") }}', {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-                                },
-                                body: JSON.stringify({ barcode_id: barcode, status: newStatus })
-                            })
-                            .then(response => response.json())
-                            .then(data => {
-                                if (data.status === 'success') {
-                                    Swal.fire({
-                                        icon: 'success',
-                                        title: 'Updated!',
-                                        text: data.message,
-                                        confirmButtonColor: '#101954'
-                                    }).then(() => window.location.reload());
-                                } else {
-                                    Swal.fire({
-                                        icon: 'error',
-                                        title: 'Error',
-                                        text: data.message,
-                                        confirmButtonColor: '#101954'
-                                    });
-                                }
-                            })
-                            .catch(error => {
-                                Swal.fire('Error', 'Something went wrong.', 'error');
-                            });
-                        }
-                    });
-                }
-            });
+            document.getElementById('assetCustodyForm').reset();
+            document.getElementById('custodyBarcode').value = '';
+            custodyDetailsSection.classList.add('d-none');
+            saveCustodyButton.classList.add('d-none');
+            custodyModal.show();
+            custodyModalElement.addEventListener('shown.bs.modal', () => document.getElementById('custodyBarcode').focus(), { once: true });
         }
+
+        function setCustodyMode(activeCustody) {
+            const isReturned = Boolean(activeCustody);
+            issueTransferFields.classList.toggle('d-none', isReturned);
+            returnFields.classList.toggle('d-none', !isReturned);
+            document.getElementById('currentHolder').classList.toggle('d-none', !isReturned);
+            saveCustodyButton.textContent = isReturned ? 'Return Asset to Inventory' : 'Save Custody Record';
+        }
+
+        document.querySelectorAll('input[name="active_custody_action"]').forEach(input => {
+            input.addEventListener('change', () => {
+                const transferring = document.getElementById('activeTransferAction').checked;
+                document.getElementById('transferRecipientFields').classList.toggle('d-none', !transferring);
+                saveCustodyButton.textContent = transferring ? 'Save Transfer Record' : 'Return Asset to Inventory';
+            });
+        });
+
+        async function lookupAssetForCustody() {
+            const barcode = document.getElementById('custodyBarcode').value.trim();
+            if (!barcode) return;
+
+            const response = await fetch(`{{ url('/asset-custody/scan') }}?barcode_id=${encodeURIComponent(barcode)}`);
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.message || 'Unable to find this asset.');
+
+            const activeCustody = data.active_custody;
+            document.getElementById('custodyAssetId').value = data.asset.id;
+            document.getElementById('activeCustodyId').value = activeCustody ? activeCustody.id : '';
+            document.getElementById('custodyAssetArticle').textContent = data.asset.article;
+            document.getElementById('custodyAssetDescription').textContent = data.asset.description || 'No description';
+            document.getElementById('custodyAssetBarcode').textContent = data.asset.barcode_id;
+            const badge = document.getElementById('custodyStateBadge');
+            badge.textContent = activeCustody ? `${activeCustody.transaction_type} / Out` : data.asset.status === 'Serviceable' ? 'Available' : data.asset.status;
+            badge.className = `badge ${activeCustody ? 'bg-primary' : data.asset.status === 'Serviceable' ? 'bg-success' : 'bg-danger'}`;
+            document.getElementById('currentHolder').textContent = activeCustody ? `Currently with ${activeCustody.holder_name} | ${activeCustody.department}${activeCustody.unit ? `, ${activeCustody.unit}` : ''}` : '';
+            setCustodyMode(activeCustody);
+            custodyDetailsSection.classList.remove('d-none');
+            saveCustodyButton.classList.remove('d-none');
+        }
+
+        document.getElementById('lookupAssetButton').addEventListener('click', () => {
+            lookupAssetForCustody().catch(error => Swal.fire('Asset not found', error.message, 'error'));
+        });
+
+        document.getElementById('custodyBarcode').addEventListener('keydown', event => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                lookupAssetForCustody().catch(error => Swal.fire('Asset not found', error.message, 'error'));
+            }
+        });
+
+        document.getElementById('assetCustodyForm').addEventListener('submit', async event => {
+            event.preventDefault();
+            const activeCustodyId = document.getElementById('activeCustodyId').value;
+            const isTransfer = activeCustodyId && document.getElementById('activeTransferAction').checked;
+            const payload = activeCustodyId && !isTransfer
+                ? { returned_at: document.getElementById('returnedAt').value, condition_on_return: document.getElementById('returnCondition').value, remarks: document.getElementById('custodyRemarks').value }
+                : isTransfer
+                    ? {
+                        holder_name: document.getElementById('transferHolderName').value,
+                        holder_position: document.getElementById('transferHolderPosition').value,
+                        department: document.getElementById('transferDepartment').value,
+                        unit: document.getElementById('transferUnit').value,
+                        issued_at: document.getElementById('transferIssuedAt').value,
+                        due_at: document.getElementById('transferDueAt').value,
+                        remarks: document.getElementById('custodyRemarks').value,
+                    }
+                : {
+                    asset_id: document.getElementById('custodyAssetId').value,
+                    transaction_type: document.querySelector('input[name="custody_action"]:checked').value,
+                    holder_name: document.getElementById('holderName').value,
+                    holder_position: document.getElementById('holderPosition').value,
+                    department: document.getElementById('holderDepartment').value,
+                    unit: document.getElementById('holderUnit').value,
+                    issued_at: document.getElementById('issuedAt').value,
+                    due_at: document.getElementById('dueAt').value,
+                    condition_on_issue: 'Serviceable',
+                    remarks: document.getElementById('custodyRemarks').value,
+                };
+            const url = activeCustodyId ? `{{ url('/asset-custody') }}/${activeCustodyId}/${isTransfer ? 'transfer' : 'return'}` : '{{ url('/asset-custody') }}';
+            saveCustodyButton.disabled = true;
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content },
+                    body: JSON.stringify(payload),
+                });
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.message || 'Unable to save the custody record.');
+                custodyModal.hide();
+                Swal.fire('Saved', data.message, 'success').then(() => window.location.reload());
+            } catch (error) {
+                Swal.fire('Unable to save', error.message, 'error');
+            } finally {
+                saveCustodyButton.disabled = false;
+            }
+        });
 
         document.addEventListener("DOMContentLoaded", function() {
             const searchInput = document.getElementById('assetSearchInput');

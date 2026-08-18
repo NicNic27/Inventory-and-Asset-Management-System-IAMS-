@@ -25,6 +25,7 @@ use App\Http\Controllers\GlobalSearchController as StaffSearchController;
 use App\Http\Controllers\Admin\GlobalSearchController as AdminSearchController;
 use App\Http\Controllers\PurchaseOrderController;
 use App\Http\Controllers\IcsController;
+use App\Http\Controllers\AssetCustodyController;
 
 // --- PUBLIC ROUTES ---
 Route::get('/', function () {
@@ -72,6 +73,10 @@ Route::middleware('auth')->group(function () {
     Route::delete('/asset-list/{id}', [\App\Http\Controllers\AssetController::class, 'destroy']);
     Route::get('/asset-list/{id}/details', [\App\Http\Controllers\AssetController::class, 'details']);
     Route::post('/asset-list/scan-update', [\App\Http\Controllers\AssetController::class, 'updateScanStatus']);
+    Route::get('/asset-custody/scan', [AssetCustodyController::class, 'scan']);
+    Route::post('/asset-custody', [AssetCustodyController::class, 'store']);
+    Route::post('/asset-custody/{custody}/return', [AssetCustodyController::class, 'returnAsset']);
+    Route::post('/asset-custody/{custody}/transfer', [AssetCustodyController::class, 'transfer']);
 
     // Supplies
     Route::get('/supplies', [SupplyController::class, 'index']);
