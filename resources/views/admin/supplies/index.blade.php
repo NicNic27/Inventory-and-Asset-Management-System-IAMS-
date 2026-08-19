@@ -133,7 +133,7 @@
                 <div class="d-flex gap-2 flex-grow-1">
                     <div class="input-group shadow-sm" style="max-width: 350px;">
                         <span class="input-group-text bg-white border-end-0"><i class="fas fa-search text-muted"></i></span>
-                        <input type="text" name="search" id="supplySearchInput" class="form-control border-start-0 ps-0" placeholder="Search Stock No., Article, or Desc..." value="{{ request('search') }}">
+                        <input type="text" name="search" id="supplySearchInput" class="form-control border-start-0 ps-0" placeholder="Search Article or Description..." value="{{ request('search') }}">
                     </div>
                     
                     <select name="status_filter" class="form-select shadow-sm" style="max-width: 180px;" onchange="document.getElementById('filterForm').submit();">
@@ -153,7 +153,6 @@
                 <table class="table align-middle mb-0">
                     <thead class="table-light">
                         <tr>
-                            <th class="text-nowrap">Stock No.</th>
                             <th class="text-nowrap">Article / Item</th>
                             <th class="text-nowrap" style="min-width: 200px;">Description</th>
                             <th>Unit Value</th>
@@ -183,7 +182,6 @@
                                 $totalInventory = max((int)$row->total_input, (int)$row->quantity);
                             @endphp
                             <tr class="clickable-row" data-id="{{ $row->id }}">
-                                <td class="fw-bold text-primary font-monospace">{{ $row->barcode_id ?: 'N/A' }}</td>
                                 <td class="fw-bold">{{ $row->article }}</td>
                                 <td><small class="text-muted">{{ Str::limit($row->description, 40) }}</small></td>
                                 <td>₱{{ number_format($row->unit_value, 2) }}</td>
@@ -211,7 +209,6 @@
                                                 data-bs-target="#editSupplyModal"
                                                 data-id="{{ $row->id }}"
                                                 data-article="{{ $row->article }}"
-                                                data-stock="{{ $row->barcode_id }}"
                                                 data-desc="{{ $row->description }}"
                                                 data-unit="{{ $row->unit_measure }}"
                                                 data-value="{{ $row->unit_value }}"
@@ -234,7 +231,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="8" class="text-center py-5 text-muted border-bottom-0">
+                                <td colspan="6" class="text-center py-5 text-muted border-bottom-0">
                                     <i class="fas fa-box-open fa-3x mb-3 opacity-25 d-block"></i>
                                     No supplies match your search.
                                 </td>
@@ -338,10 +335,6 @@
                                     </div>
                                     
                                     <div class="col-md-4">
-                                        <label class="form-label fw-bold">Stock No. (Barcode)</label>
-                                        <input type="text" class="form-control bg-light text-muted" placeholder="Auto-generated" disabled>
-                                    </div>
-                                    <div class="col-md-4">
                                         <label class="form-label fw-bold">Unit Measure <span class="text-danger">*</span></label>
                                         <select name="unit_measure" id="add_unit" class="form-select" required>
                                             <option value="" selected disabled>Select Unit</option>
@@ -439,8 +432,7 @@
                                 <div class="row g-3">
                                     <div class="col-12">
                                         <div class="alert alert-light border-success border-start border-4 py-2 px-3 mb-1 d-flex align-items-center justify-content-between">
-                                            <span><i class="fas fa-barcode text-success me-2"></i>Stock No. (Barcode)</span>
-                                            <input type="text" name="barcode_id" id="edit_stock" class="form-control form-control-sm bg-white fw-bold w-50" readonly required>
+                                            <span><i class="fas fa-box-open text-success me-2"></i>Supply details</span>
                                         </div>
                                     </div>
                                     
@@ -719,23 +711,30 @@
             new bootstrap.Modal(document.getElementById('viewSupplyModal')).show();
             contentArea.innerHTML = '<div class="p-5 text-center"><div class="spinner-border text-primary"></div><p class="mt-2 mb-0">Loading...</p></div>';
 
-            fetch(`/admin/supplies/${id}/details`)
-                .then(response => response.text())
-                .then(data => { 
-                    contentArea.innerHTML = data; 
-                    
-                    const barcodeEl = contentArea.querySelector('.barcode-render-modal');
-                    if (barcodeEl && barcodeEl.getAttribute('data-value') !== 'N/A') {
-                        JsBarcode(barcodeEl, barcodeEl.getAttribute('data-value'), {
-                            format: "CODE128",
-                            width: 1.5,
-                            height: 40,
-                            displayValue: true,
-                            fontSize: 14,
-                            margin: 0,
-                            textMargin: 4
-                        });
+            fetch(`/admin/supplies/${id}/details`, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+                .then(async response => {
+                    const data = await response.text();
+                    if (!response.ok) {
+                        throw new Error(`Unable to load supply details (HTTP ${response.status}).`);
                     }
+                    return data;
+                })
+                .then(data => {
+                    contentArea.innerHTML = data;
+                })
+                .catch(error => {
+                    contentArea.innerHTML = `
+                        <div class="modal-header bg-danger text-white">
+                            <h5 class="modal-title">Unable to load supply details</h5>
+                        </div>
+                        <div class="modal-body text-center py-4">
+                            <p class="mb-0">${error.message}</p>
+                        </div>
+                        <div class="modal-footer justify-content-center">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        </div>`;
                 });
         }
 
@@ -761,7 +760,6 @@
                 document.getElementById('editForm').action = `/admin/supplies/${id}`;
                 
                 document.getElementById('edit_article').value = this.getAttribute('data-article');
-                document.getElementById('edit_stock').value = this.getAttribute('data-stock');
                 document.getElementById('edit_desc').value = this.getAttribute('data-desc');
                 
                 let unitVal = this.getAttribute('data-unit');

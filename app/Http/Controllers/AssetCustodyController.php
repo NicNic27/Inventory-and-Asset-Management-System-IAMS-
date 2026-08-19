@@ -9,16 +9,42 @@ use App\Models\Transaction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 
 class AssetCustodyController extends Controller
 {
     public function scan(Request $request)
     {
-        $data = $request->validate(['barcode_id' => ['required', 'string', 'max:255']]);
-        $asset = Asset::where('barcode_id', trim($data['barcode_id']))->first();
+        $request->merge([
+            'barcode_id' => strtoupper(trim((string) $request->input('barcode_id'))),
+        ]);
+
+        $validator = Validator::make($request->all(), [
+            'barcode_id' => [
+                'required',
+                'string',
+                'max:255',
+                    'regex:/^(PPE|HV|LV)-\d{4}-\d{2}-\d{2}-\d{5}(-\d{2})?-\d{2}$/',
+            ],
+        ], [
+            'barcode_id.required' => 'Please scan a barcode first.',
+            'barcode_id.regex' => 'Please check if this barcode is valid.',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => $validator->errors()->first('barcode_id'),
+            ], 422);
+        }
+
+        $data = $validator->validated();
+        $barcodeId = strtoupper(trim($data['barcode_id']));
+        $asset = Asset::where('barcode_id', $barcodeId)->first();
 
         if (!$asset) {
-            return response()->json(['message' => 'Asset not found. Check the property number and scan again.'], 404);
+            return response()->json([
+                'message' => 'Please check if this barcode is valid.',
+            ], 404);
         }
 
         $activeCustody = AssetCustody::where('asset_id', $asset->id)

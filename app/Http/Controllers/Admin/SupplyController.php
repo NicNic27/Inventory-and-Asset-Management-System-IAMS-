@@ -6,8 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Supply;
 use App\Models\Transaction;
 use App\Models\PurchaseOrderItem;
-use App\Models\SystemSetting;
 use App\Models\ActivityLog;
+use App\Services\SupplyService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Auth;
@@ -24,8 +24,7 @@ class SupplyController extends Controller
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function($q) use ($search) {
-                $q->where('barcode_id', 'like', "%{$search}%")
-                  ->orWhere('article', 'like', "%{$search}%")
+                                $q->where('article', 'like', "%{$search}%")
                   ->orWhere('description', 'like', "%{$search}%");
             });
         }
@@ -94,28 +93,15 @@ class SupplyController extends Controller
             }
         }
 
-        $seqSetting = SystemSetting::firstOrCreate(
-            ['key' => 'seq_stock_no'], 
-            ['value' => '1']
-        );
-
-        $currentNumber = (int) $seqSetting->value;
-        $yearMonth = date('Y-m'); 
-        $sequenceFormatted = str_pad($currentNumber, 4, '0', STR_PAD_LEFT); 
-        $generatedBarcode = 'SUP-' . $yearMonth . '-' . $sequenceFormatted;
-
-        $seqSetting->update(['value' => $currentNumber + 1]);
-
         $imageName = null;
         if ($request->hasFile('image')) {
             $imageName = time() . '.' . $request->image->extension();
-            $request->image->storeAs('public/supplies', $imageName);
+            $request->image->storeAs('supplies', $imageName, 'public');
         }
 
         $supply = Supply::create([
             'article' => $request->article,
             'description' => $request->description,
-            'barcode_id' => $generatedBarcode, 
             'unit_measure' => $request->unit_measure,
             'unit_value' => $request->unit_value,
             'quantity' => $request->initial_quantity,
@@ -147,7 +133,7 @@ class SupplyController extends Controller
             return response()->json(['status' => 'success']);
         }
 
-        return redirect('/admin/supplies')->with('msg', 'Supply successfully added with auto-generated barcode!');
+        return redirect('/admin/supplies')->with('msg', 'Supply successfully added!');
     }
 
     public function update(Request $request, $id)
@@ -156,17 +142,14 @@ class SupplyController extends Controller
         
         $imageName = $supply->image;
         if ($request->hasFile('image')) {
-            if ($supply->image && Storage::exists('public/supplies/' . $supply->image)) {
-                Storage::delete('public/supplies/' . $supply->image);
-            }
-            $imageName = time() . '.' . $request->image->extension();
-            $request->image->storeAs('public/supplies', $imageName);
+            $oldImageName = $supply->image;
+            $imageName = time() . '_' . bin2hex(random_bytes(8)) . '.' . $request->image->extension();
+            $request->image->storeAs('supplies', $imageName, 'public');
         }
 
         $supply->update([
             'article' => $request->article,
             'description' => $request->description,
-            'barcode_id' => $request->barcode_id,
             'unit_measure' => $request->unit_measure,
             'unit_value' => $request->unit_value,
             'quantity' => $request->quantity,
@@ -175,6 +158,10 @@ class SupplyController extends Controller
             'status' => $request->status ?? 'Available',
             'image' => $imageName
         ]);
+
+        if (isset($oldImageName) && $oldImageName && Storage::disk('public')->exists('supplies/' . $oldImageName)) {
+            Storage::disk('public')->delete('supplies/' . $oldImageName);
+        }
 
         ActivityLog::create([
             'user_id' => Auth::id(),
@@ -191,8 +178,8 @@ class SupplyController extends Controller
     {
         $supply = Supply::findOrFail($id);
         
-        if ($supply->image && Storage::exists('public/supplies/' . $supply->image)) {
-            Storage::delete('public/supplies/' . $supply->image);
+        if ($supply->image && Storage::disk('public')->exists('supplies/' . $supply->image)) {
+            Storage::disk('public')->delete('supplies/' . $supply->image);
         }
         
         ActivityLog::create([
@@ -217,7 +204,6 @@ class SupplyController extends Controller
             return '<div class="p-4 text-center text-danger">Supply details not found.</div>';
         }
 
-        $stockNo = !empty($supply->barcode_id) ? $supply->barcode_id : 'N/A';
         $currentQty = intval($supply->quantity);
         $unitValue = floatval($supply->unit_value);
         $threshold = intval($supply->low_stock_threshold ?? 10);
@@ -265,10 +251,6 @@ class SupplyController extends Controller
             </div>';
         }
 
-        $barcodeHtml = ($stockNo !== 'N/A') 
-            ? '<svg id="barcode-modal-'.$id.'" class="barcode-render-modal" data-value="'.$stockNo.'"></svg>'
-            : '<div class="fs-5 fw-bold text-dark">N/A</div>';
-
         return <<<HTML
         {$lightboxHtml}
         <div class="modal-header d-block text-center border-0 p-3" style="background-color: #0b1c3f; border-top-left-radius: 10px; border-top-right-radius: 10px;">
@@ -277,7 +259,7 @@ class SupplyController extends Controller
         <div class="modal-body px-4 pt-4 pb-0">
             <div class="d-flex align-items-center mb-4">
                 <div class="me-4 border rounded d-flex justify-content-center align-items-center bg-light shadow-sm overflow-hidden position-relative" style="width: 100px; height: 100px; flex-shrink: 0;" title="Click to enlarge image">{$imageHtml}</div>
-                <div class="flex-grow-1"><div class="text-muted small text-uppercase tracking-wide mb-1" style="font-size: 0.75rem;">STOCK ID:</div>{$barcodeHtml}</div>
+                <div class="flex-grow-1"><div class="text-muted small text-uppercase tracking-wide mb-1" style="font-size: 0.75rem;">SUPPLY ITEM</div><div class="fw-bold text-dark">Consumable</div></div>
             </div>
             <div class="mb-4 bg-light rounded p-3 border">
                 <div class="d-flex justify-content-between mb-1"><span class="text-muted small fw-bold text-uppercase">Inventory Status</span><span class="badge {$status_class}">{$status_text}</span></div>
@@ -295,39 +277,25 @@ class SupplyController extends Controller
 HTML;
     }
 
-    public function stockTransaction(Request $request, $id)
+    public function stockTransaction(Request $request, SupplyService $supplyService, $id)
     {
         $supply = Supply::findOrFail($id);
-        $qty = $request->qty;
-        $type = $request->transaction_type;
 
-        if ($type == 'IN') {
-            $supply->increment('quantity', $qty);
-        } elseif ($type == 'OUT') {
-            if ($supply->quantity >= $qty) {
-                $supply->decrement('quantity', $qty);
-            } else {
-                return redirect('/admin/supplies')->with('msg', 'error_stock');
-            }
+        try {
+            $supplyService->processStockTransaction($supply, [
+                'type' => $request->transaction_type,
+                'quantity' => $request->qty,
+                'supplier' => $request->supplier,
+                'transaction_date' => $request->transaction_date,
+                'remarks' => $request->remarks,
+            ]);
+        } catch (\InvalidArgumentException|\DomainException $e) {
+            $message = str_starts_with($e->getMessage(), 'Insufficient stock')
+                ? 'error_stock'
+                : 'error_transaction';
+
+            return redirect('/admin/supplies')->with('msg', $message);
         }
-
-        Transaction::create([
-            'item_id' => $id,
-            'item_type' => 'supplies',
-            'transaction_type' => $type,
-            'quantity' => $qty,
-            'supplier' => $request->supplier,
-            'transaction_date' => $request->transaction_date,
-            'remarks' => $request->remarks,
-        ]);
-
-        ActivityLog::create([
-            'user_id' => Auth::id(),
-            'action' => 'Updated',
-            'description' => "Logged {$type} transaction for {$supply->article} (Qty: {$qty})",
-            'ip_address' => request()->ip(),
-            'user_agent' => request()->userAgent()
-        ]);
 
         return redirect('/admin/supplies')->with('msg', 'Supply stock updated successfully!');
     }

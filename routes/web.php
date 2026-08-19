@@ -51,7 +51,8 @@ Route::middleware('auth')->group(function () {
     // ==========================================
     // 1. STAFF ROUTES (Personnel)
     // ==========================================
-    
+    Route::middleware('role:staff')->group(function () {
+
     Route::get('/dashboard', [DashboardController::class, 'index']);
     Route::get('/dashboard/chart-data', [\App\Http\Controllers\DashboardController::class, 'getChartData']);
 
@@ -121,9 +122,13 @@ Route::middleware('auth')->group(function () {
     // Staff Profile
     Route::post('/profile/update', [\App\Http\Controllers\ProfileController::class, 'update'])->name('profile.update');
 
+    });
+
     // ==========================================
     // 2. ADMIN ROUTES
     // ==========================================
+    Route::middleware('role:admin')->group(function () {
+
     Route::get('/admin/global-search', [AdminSearchController::class, 'search'])->name('admin.global.search');
     Route::get('/admin/notifications/fetch', [AdminNotificationController::class, 'fetch'])->name('admin.notifications.fetch');
     Route::get('/admin/dashboard/chart-data', [\App\Http\Controllers\Admin\DashboardController::class, 'getChartData'])->name('admin.dashboard.chart-data');
@@ -186,9 +191,13 @@ Route::middleware('auth')->group(function () {
     // NEW: System Activity Logs
     Route::get('/admin/activity-logs', [App\Http\Controllers\Admin\ActivityLogController::class, 'index']);
 
+    });
+
     // ==========================================
     // 3. END-USER (DIVISION) ROUTES
     // ==========================================
+    Route::middleware('role:frontuser')->group(function () {
+
     Route::get('/user/dashboard', [UserDashboardController::class, 'index']);
     Route::get('/user/supplies', [UserDashboardController::class, 'supplyOverview']);
 
@@ -207,5 +216,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/user/ris/{id}/edit', [UserRisController::class, 'edit']);
     Route::post('/user/ris/{id}/update', [UserRisController::class, 'update']);
     Route::delete('/user/ris/{id}', [UserRisController::class, 'destroy']);
+
+    });
 
 });

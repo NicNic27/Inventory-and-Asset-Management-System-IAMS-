@@ -19,7 +19,6 @@ class SettingsController extends Controller
     public function update(Request $request)
     {
         $keys = [
-            'seq_stock_no', 
             'seq_ris_no', 
             'seq_par_no', 
             'seq_sphv_no', 

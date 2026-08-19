@@ -22,6 +22,10 @@ class Asset extends Model
         'model',
         'serial_number',
         'acquisition_date',
+        'ppe_sub_major_account_group',
+        'general_ledger_account',
+        'location_office',
+        'set_sequence',
         'unit_measure',
         'person_accountable',
         'validation_signatory',
@@ -37,6 +41,7 @@ class Asset extends Model
             'inventory_date' => 'date',
             'acquisition_date' => 'date',
             'unit_value' => 'decimal:2',
+            'set_sequence' => 'integer',
         ];
     }
 }

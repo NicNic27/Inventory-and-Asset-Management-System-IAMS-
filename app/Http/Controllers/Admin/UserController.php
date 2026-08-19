@@ -65,16 +65,17 @@ class UserController extends Controller
         }
 
         if ($request->hasFile('image')) {
-            if ($user->image && file_exists(public_path('uploads/users/' . $user->image))) {
-                unlink(public_path('uploads/users/' . $user->image));
-            }
-            
-            $imageName = time() . '.' . $request->image->extension();
+            $oldImagePath = $user->image ? public_path('uploads/users/' . $user->image) : null;
+            $imageName = time() . '_' . bin2hex(random_bytes(8)) . '.' . $request->image->extension();
             $request->image->move(public_path('uploads/users'), $imageName);
             $data['image'] = $imageName;
         }
 
         $user->update($data);
+
+        if (isset($oldImagePath) && is_file($oldImagePath)) {
+            unlink($oldImagePath);
+        }
 
         ActivityLog::create([
             'user_id' => Auth::id(),

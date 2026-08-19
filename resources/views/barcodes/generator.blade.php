@@ -165,9 +165,8 @@
                     <div class="col-md-3">
                         <label class="form-label fw-bold small text-muted">CATEGORY</label>
                         <select name="category" id="categoryFilter" class="form-select border-primary fw-bold" onchange="document.getElementById('filterForm').submit();">
-                            <option value="all" {{ ($category ?? 'all') == 'all' ? 'selected' : '' }}>All Items</option>
+                            <option value="all" {{ ($category ?? 'all') == 'all' ? 'selected' : '' }}>All Assets</option>
                             <option value="asset" {{ ($category ?? '') == 'asset' ? 'selected' : '' }}>Assets Only</option>
-                            <option value="supply" {{ ($category ?? '') == 'supply' ? 'selected' : '' }}>Supplies Only</option>
                         </select>
                     </div>
                     <div class="col-md-7">
@@ -234,7 +233,7 @@
                                         <br>
                                         <a href="{{ url('/barcodes') }}" class="btn btn-sm btn-outline-primary mt-2">Clear Search</a>
                                     @else
-                                        No generated history found yet. Barcodes will appear here when you add supplies or assets.
+                                        No asset barcodes found yet.
                                     @endif
                                 </td>
                             </tr>
@@ -293,25 +292,14 @@
             Swal.fire({
                 title: '<span style="color: #101954; font-weight: bold;">Print Master List</span>',
                 html: `
-                    <p class="text-muted mb-4">Choose which inventory category you want to generate a barcode print list for:</p>
+                    <p class="text-muted mb-4">Generate a barcode print list for registered assets:</p>
                     <div class="row g-3 px-2">
-                        <div class="col-6">
-                            <div class="p-4 rounded-4 border border-2 border-success text-center shadow-sm" 
-                                 style="cursor: pointer; transition: all 0.2s;" 
-                                 onmouseover="this.style.backgroundColor='#d1e7dd'; this.style.transform='translateY(-3px)';" 
-                                 onmouseout="this.style.backgroundColor='transparent'; this.style.transform='translateY(0)';" 
-                                 onclick="executePrint('supply')">
-                                <i class="fas fa-box-open fa-3x text-success mb-3"></i>
-                                <h5 class="fw-bold text-success mb-1">Supplies</h5>
-                                <span class="badge bg-success bg-opacity-10 text-success">Consumables</span>
-                            </div>
-                        </div>
-                        <div class="col-6">
+                        <div class="col-12">
                             <div class="p-4 rounded-4 border border-2 border-primary text-center shadow-sm" 
                                  style="cursor: pointer; transition: all 0.2s;" 
                                  onmouseover="this.style.backgroundColor='#cfe2ff'; this.style.transform='translateY(-3px)';" 
                                  onmouseout="this.style.backgroundColor='transparent'; this.style.transform='translateY(0)';" 
-                                 onclick="executePrint('asset')">
+                                onclick="executePrint('asset')">
                                 <i class="fas fa-laptop fa-3x text-primary mb-3"></i>
                                 <h5 class="fw-bold text-primary mb-1">Assets</h5>
                                 <span class="badge bg-primary bg-opacity-10 text-primary">Equipment</span>

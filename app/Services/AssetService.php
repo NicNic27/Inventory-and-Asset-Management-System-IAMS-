@@ -7,6 +7,7 @@ use App\Models\Transaction;
 use App\Models\ActivityLog;
 use App\Models\IcsRequest;
 use App\Models\AssetCustody;
+use App\Models\SystemSetting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
@@ -35,7 +36,7 @@ class AssetService
 
         $file = $request->file('image');
         $filename = time() . '_' . Str::slug($article ?? 'asset') . '.' . $file->getClientOriginalExtension();
-        $file->storeAs('public/assets', $filename);
+        $file->storeAs('assets', $filename, 'public');
 
         return $filename;
     }
@@ -51,18 +52,13 @@ class AssetService
             DB::beginTransaction();
 
             $acquisitionDate = $data['acquisition_date'];
-            $value = (float) $data['unit_value'];
-            $prefix = $value >= 5000 ? 'HV' : 'LV';
-            $datePart = date('Y-m-d', strtotime($acquisitionDate));
-            $sequence = Asset::whereDate('acquisition_date', $acquisitionDate)
-                ->lockForUpdate()
-                ->count() + 1;
-            $propertyNumber = sprintf('%s-%s-%04d', $prefix, $datePart, $sequence);
-
-            while (Asset::where('barcode_id', $propertyNumber)->exists()) {
-                $sequence++;
-                $propertyNumber = sprintf('%s-%s-%04d', $prefix, $datePart, $sequence);
-            }
+            $year = date('Y', strtotime($acquisitionDate));
+            $serialSetting = SystemSetting::firstOrCreate(
+                ['key' => 'asset_serial_' . $year],
+                ['value' => '0']
+            );
+            $baseSerial = (int) $serialSetting->value + 1;
+            $serialSetting->update(['value' => $baseSerial]);
 
             // Handle image upload if provided as file
             if (isset($data['image']) && $data['image'] instanceof \Illuminate\Http\UploadedFile) {
@@ -70,43 +66,86 @@ class AssetService
                 $data['image'] = $imageName;
             }
 
-            $asset = Asset::create([
-                'inventory_date' => now()->toDateString(),
-                'item_code' => $propertyNumber,
-                'barcode_id' => $propertyNumber,
-                'name' => $data['article'],
+            $members = [[
                 'article' => $data['article'],
-                'category' => $data['category'] ?? 'Assets',
-                'description' => $data['description'],
+                'description' => $data['description'] ?? null,
                 'model' => $data['model'] ?? null,
                 'serial_number' => $data['serial_number'],
-                'acquisition_date' => $acquisitionDate,
-                'unit_measure' => $data['unit_measure'],
-                'person_accountable' => $data['person_accountable'] ?? null,
-                'validation_signatory' => $data['validation_signatory'] ?? null,
-                'supplier' => $data['supplier'] ?? null,
-                'unit_value' => $data['unit_value'] ?? 0,
-                'status' => $data['status'] ?? 'Serviceable',
-                'image' => $imageName
-            ]);
+                'unit_value' => $data['unit_value'],
+                'set_sequence' => ($data['unit_measure'] ?? 'Unit') === 'Set' ? 1 : null,
+            ]];
 
-            // Create opening transaction
-            Transaction::create([
-                'item_id' => $asset->id,
-                'item_type' => 'assets',
-                'transaction_type' => 'ADDED',
-                'quantity' => 1,
-                'supplier' => $data['supplier'] ?? null,
-                'transaction_date' => date('Y-m-d'),
-                'remarks' => 'Opening Balance / New Item',
-                'date_time' => now()
-            ]);
+            foreach ($data['set_items'] ?? [] as $index => $setItem) {
+                $members[] = [
+                    'article' => $setItem['article'],
+                    'description' => $setItem['description'] ?? null,
+                    'model' => $setItem['model'] ?? null,
+                    'serial_number' => $setItem['serial_number'],
+                    'unit_value' => $setItem['unit_value'],
+                    'set_sequence' => $index + 2,
+                ];
+            }
+
+            $createdAssets = [];
+            foreach ($members as $member) {
+                $prefix = $member['unit_value'] >= 50000 ? 'PPE' : ($member['unit_value'] >= 5000 ? 'HV' : 'LV');
+                $setSequence = $member['set_sequence'];
+                $propertyNumber = implode('-', array_filter([
+                    $prefix,
+                    $year,
+                    $data['ppe_sub_major_account_group'],
+                    $data['general_ledger_account'],
+                    str_pad($baseSerial, 5, '0', STR_PAD_LEFT),
+                    $setSequence === null ? null : str_pad($setSequence, 2, '0', STR_PAD_LEFT),
+                    $data['location_office'],
+                ], static fn ($part) => $part !== null && $part !== ''));
+
+                $asset = Asset::create([
+                    'inventory_date' => now()->toDateString(),
+                    'item_code' => $propertyNumber,
+                    'barcode_id' => $propertyNumber,
+                    'name' => $member['article'],
+                    'article' => $member['article'],
+                    'category' => $data['category'] ?? 'Assets',
+                    'description' => $member['description'],
+                    'model' => $member['model'],
+                    'serial_number' => $member['serial_number'],
+                    'acquisition_date' => $acquisitionDate,
+                    'ppe_sub_major_account_group' => $data['ppe_sub_major_account_group'],
+                    'general_ledger_account' => $data['general_ledger_account'],
+                    'location_office' => $data['location_office'],
+                    'set_sequence' => $setSequence,
+                    'unit_measure' => $data['unit_measure'],
+                    'person_accountable' => $data['person_accountable'] ?? null,
+                    'validation_signatory' => $data['validation_signatory'] ?? null,
+                    'supplier' => $data['supplier'] ?? null,
+                    'unit_value' => $member['unit_value'],
+                    'status' => $data['status'] ?? 'Serviceable',
+                    'image' => $imageName
+                ]);
+                $createdAssets[] = $asset;
+
+                Transaction::create([
+                    'item_id' => $asset->id,
+                    'item_type' => 'assets',
+                    'transaction_type' => 'ADDED',
+                    'quantity' => 1,
+                    'supplier' => $data['supplier'] ?? null,
+                    'transaction_date' => date('Y-m-d'),
+                    'remarks' => 'Opening Balance / New Item',
+                    'date_time' => now()
+                ]);
+            }
+
+            $asset = $createdAssets[0];
 
             // Log activity
             ActivityLog::create([
                 'user_id' => Auth::id(),
                 'action' => 'Created',
-                'description' => "Added new asset: {$asset->article}",
+                'description' => count($createdAssets) > 1
+                    ? "Added asset set: {$asset->article} (" . count($createdAssets) . ' items)'
+                    : "Added new asset: {$asset->article}",
                 'ip_address' => request()->ip(),
                 'user_agent' => request()->userAgent()
             ]);
@@ -117,8 +156,8 @@ class AssetService
         } catch (\Exception $e) {
             DB::rollBack();
 
-            if ($imageName && Storage::exists('public/assets/' . $imageName)) {
-                Storage::delete('public/assets/' . $imageName);
+            if ($imageName && Storage::disk('public')->exists('assets/' . $imageName)) {
+                Storage::disk('public')->delete('assets/' . $imageName);
             }
 
             throw $e;
@@ -130,18 +169,17 @@ class AssetService
      */
     public function update(Asset $asset, array $data): Asset
     {
-        $imageName = $asset->image;
+        $oldImageName = $asset->image;
+        $imageName = $oldImageName;
+        $newImageStored = false;
 
         try {
             DB::beginTransaction();
 
             // Handle image update
             if (isset($data['image']) && $data['image'] instanceof \Illuminate\Http\UploadedFile) {
-                if ($imageName && Storage::exists('public/assets/' . $imageName)) {
-                    Storage::delete('public/assets/' . $imageName);
-                }
-                
                 $imageName = $this->storeImageFile($data['image'], $data['article'] ?? $asset->article);
+                $newImageStored = true;
                 $data['image'] = $imageName;
             }
 
@@ -172,9 +210,18 @@ class AssetService
 
             DB::commit();
 
+            if ($newImageStored && $oldImageName && Storage::disk('public')->exists('assets/' . $oldImageName)) {
+                Storage::disk('public')->delete('assets/' . $oldImageName);
+            }
+
             return $asset;
         } catch (\Exception $e) {
             DB::rollBack();
+
+            if ($newImageStored && $imageName && Storage::disk('public')->exists('assets/' . $imageName)) {
+                Storage::disk('public')->delete('assets/' . $imageName);
+            }
+
             throw $e;
         }
     }
@@ -187,8 +234,8 @@ class AssetService
         try {
             DB::beginTransaction();
 
-            if ($asset->image && Storage::exists('public/assets/' . $asset->image)) {
-                Storage::delete('public/assets/' . $asset->image);
+            if ($asset->image && Storage::disk('public')->exists('assets/' . $asset->image)) {
+                Storage::disk('public')->delete('assets/' . $asset->image);
             }
 
             ActivityLog::create([
@@ -256,7 +303,7 @@ class AssetService
     private function storeImageFile($file, string $prefix): string
     {
         $filename = time() . '_' . Str::slug($prefix) . '.' . $file->getClientOriginalExtension();
-        $file->storeAs('public/assets', $filename);
+        $file->storeAs('assets', $filename, 'public');
 
         return $filename;
     }

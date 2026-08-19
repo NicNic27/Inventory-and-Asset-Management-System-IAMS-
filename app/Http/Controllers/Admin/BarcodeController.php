@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Asset;
-use App\Models\Supply;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
@@ -21,48 +20,8 @@ class BarcodeController extends Controller
         $search = $request->input('search');
         $category = $request->input('category', 'all');
 
-        $supplies = collect();
         $assets = collect();
-
-        // 1. Fetch from Supplies 
-        if ($category === 'all' || $category === 'supply') {
-            $supplyFields = ['id', 'barcode_id as barcode_code'];
-            $supplyHasArticle = Schema::hasColumn('supplies', 'article');
-            $supplyHasDescription = Schema::hasColumn('supplies', 'description');
-            $supplyHasSupplier = Schema::hasColumn('supplies', 'supplier');
-
-            if ($supplyHasArticle) {
-                $supplyFields[] = 'article';
-            }
-            if ($supplyHasDescription) {
-                $supplyFields[] = 'description';
-            }
-            if ($supplyHasSupplier) {
-                $supplyFields[] = 'supplier';
-            }
-
-            $supplyQuery = Supply::whereNotNull('barcode_id')->select($supplyFields);
-
-            // Apply Search Filter to Database
-            if (!empty($search)) {
-                $supplyQuery->where(function($q) use ($search, $supplyHasArticle) {
-                    if ($supplyHasArticle) {
-                        $q->where('article', 'LIKE', "%{$search}%")
-                          ->orWhere('barcode_id', 'LIKE', "%{$search}%");
-                    } else {
-                        $q->where('barcode_id', 'LIKE', "%{$search}%");
-                    }
-                });
-            }
-
-            $supplies = $supplyQuery->get()->map(function ($item) {
-                $item->item_type = 'supply';
-                $item->generated_at = null; 
-                return $item;
-            });
-        }
-
-        // 2. Fetch from Assets 
+        // Fetch asset barcodes only.
         if ($category === 'all' || $category === 'asset') {
             $assetFields = ['id', 'barcode_id as barcode_code'];
             $assetHasArticle = Schema::hasColumn('assets', 'article');
@@ -100,8 +59,8 @@ class BarcodeController extends Controller
             });
         }
 
-        // 3. Merge both lists and sort by ID descending (highest ID = newest added)
-        $mergedBarcodes = $supplies->concat($assets)->sortByDesc('id')->values();
+        // Sort by ID descending (highest ID = newest added).
+        $mergedBarcodes = $assets->sortByDesc('id')->values();
 
         // 4. Manually Paginate the merged collection
         $offset = ($page * $perPage) - $perPage;

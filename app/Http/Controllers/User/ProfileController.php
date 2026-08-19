@@ -32,17 +32,19 @@ class ProfileController extends Controller
 
         // Handle Avatar Image Upload
         if ($request->hasFile('image')) {
-            // Delete old image if it exists
-            if ($user->image && file_exists(public_path('uploads/users/' . $user->image))) {
-                unlink(public_path('uploads/users/' . $user->image));
-            }
-            
-            $imageName = time() . '.' . $request->image->extension();
+            $oldImagePath = $user->image ? public_path('uploads/users/' . $user->image) : null;
+            $imageName = time() . '_' . bin2hex(random_bytes(8)) . '.' . $request->image->extension();
             $request->image->move(public_path('uploads/users'), $imageName);
             $user->image = $imageName;
+        } else {
+            $oldImagePath = null;
         }
 
         $user->save();
+
+        if ($oldImagePath && is_file($oldImagePath)) {
+            unlink($oldImagePath);
+        }
 
         // Redirects back to whatever page the user was on
         return redirect()->back()->with('profile_success', 'Profile updated successfully!');

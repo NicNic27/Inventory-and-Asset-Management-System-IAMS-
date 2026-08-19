@@ -379,13 +379,31 @@
                                         <label class="form-label fw-bold">Acquisition Date <span class="text-danger">*</span></label>
                                         <input type="date" name="acquisition_date" id="add_acquisition_date" class="form-control" value="{{ now()->toDateString() }}" required>
                                     </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label fw-bold">PPE Sub-Major Group <span class="text-danger">*</span></label>
+                                        <input type="text" name="ppe_sub_major_account_group" class="form-control" maxlength="2" pattern="\d{2}" inputmode="numeric" placeholder="00" required>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label fw-bold">General Ledger Account <span class="text-danger">*</span></label>
+                                        <input type="text" name="general_ledger_account" class="form-control" maxlength="2" pattern="\d{2}" inputmode="numeric" placeholder="00" required>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label fw-bold">Location / Office <span class="text-danger">*</span></label>
+                                        <input type="text" name="location_office" class="form-control" maxlength="2" pattern="\d{2}" inputmode="numeric" placeholder="00" required>
+                                    </div>
                                     <div class="col-md-6">
                                         <label class="form-label fw-bold">Unit Value (₱) <span class="text-danger">*</span></label>
                                         <input type="number" name="unit_value" id="add_val" class="form-control" step="0.01" min="0" placeholder="0.00" required>
                                     </div>
                                     <div class="col-md-6">
                                         <label class="form-label fw-bold">Unit Measure <span class="text-danger">*</span></label>
-                                        <input type="text" name="unit_measure" id="add_unit" class="form-control" placeholder="e.g. Unit, Set" required>
+                                        <select name="unit_measure" id="add_unit" class="form-select" required onchange="toggleAssetSetFields(this, 'assetSetItems')">
+                                            <option value="" selected disabled>Select Unit or Set</option>
+                                            <option value="Unit">Unit</option>
+                                            <option value="Set">Set</option>
+                                        </select>
+                                        <button type="button" id="openSetItemsButton" class="btn btn-outline-primary btn-sm mt-2 d-none" data-bs-toggle="modal" data-bs-target="#setItemsModal"><i class="fas fa-layer-group me-1"></i> Add Set Items</button>
+                                        <div id="setItemsSummary" class="small text-muted mt-2"></div>
                                     </div>
                                     <div class="col-md-6">
                                         <label class="form-label fw-bold">Person Accountable</label>
@@ -403,6 +421,16 @@
                                         <label class="form-label fw-bold text-primary">Property No. / Barcode</label>
                                         <input type="text" class="form-control border-primary border-2 bg-light" value="Generated after saving" readonly>
                                     </div>
+                                    <div class="col-12 d-none" id="assetSetItems">
+                                        <div class="border border-primary rounded p-3 bg-light">
+                                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                                <label class="form-label fw-bold text-primary mb-0">Set Components</label>
+                                                <button type="button" class="btn btn-outline-primary btn-sm" onclick="addAssetSetItem('assetSetItemRows')"><i class="fas fa-plus me-1"></i>Add Component</button>
+                                            </div>
+                                            <div id="assetSetItemRows"></div>
+                                            <small class="text-muted">The main asset is sequence 01. Additional components receive 02, 03, and so on.</small>
+                                        </div>
+                                    </div>
                                 </div>
                                 <input type="hidden" name="status" value="Serviceable">
                             </div>
@@ -413,6 +441,26 @@
                         <button type="submit" class="btn btn-primary px-4 fw-bold">Save Asset</button>
                     </div>
                 </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="setItemsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title"><i class="fas fa-layer-group me-2"></i>Set Components</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted">Add the peripherals or component assets. The main asset receives sequence <strong>01</strong>; components continue with <strong>02, 03, ...</strong>.</p>
+                    <div id="setItemsContainer"></div>
+                    <button type="button" class="btn btn-outline-primary btn-sm" id="addSetItemButton"><i class="fas fa-plus me-1"></i> Add Component</button>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="saveSetItemsButton">Use These Components</button>
+                </div>
             </div>
         </div>
     </div>
@@ -689,6 +737,30 @@
 
     <script>
         // --- DUPLICATE ITEM CHECK INTERCEPTOR FOR ASSETS ---
+        function toggleAssetSetFields(select, sectionId) {
+            const section = document.getElementById(sectionId);
+            const rows = document.getElementById('assetSetItemRows');
+            const isSet = select.value === 'Set';
+            section.classList.toggle('d-none', !isSet);
+            if (!isSet) rows.innerHTML = '';
+            if (isSet && rows.children.length === 0) addAssetSetItem('assetSetItemRows');
+        }
+
+        function addAssetSetItem(containerId) {
+            const container = document.getElementById(containerId);
+            const index = container.children.length;
+            const row = document.createElement('div');
+            row.className = 'row g-2 align-items-end mb-2 set-item-row';
+            row.innerHTML = `
+                <div class="col-md-3"><label class="form-label small">Component</label><input name="set_items[${index}][article]" class="form-control" required></div>
+                <div class="col-md-2"><label class="form-label small">Model</label><input name="set_items[${index}][model]" class="form-control"></div>
+                <div class="col-md-2"><label class="form-label small">Serial No.</label><input name="set_items[${index}][serial_number]" class="form-control" required></div>
+                <div class="col-md-2"><label class="form-label small">Value</label><input name="set_items[${index}][unit_value]" type="number" min="0" step="0.01" class="form-control" required></div>
+                <div class="col-md-2"><label class="form-label small">Description</label><input name="set_items[${index}][description]" class="form-control"></div>
+                <div class="col-md-1"><button type="button" class="btn btn-outline-danger" onclick="this.closest('.set-item-row').remove()" title="Remove component"><i class="fas fa-trash"></i></button></div>`;
+            container.appendChild(row);
+        }
+
         function attachDuplicateCheck(formId) {
             const formEl = document.getElementById(formId);
             if(!formEl) return;
@@ -778,8 +850,17 @@
             const barcode = document.getElementById('custodyBarcode').value.trim();
             if (!barcode) return;
 
-            const response = await fetch(`{{ url('/asset-custody/scan') }}?barcode_id=${encodeURIComponent(barcode)}`);
-            const data = await response.json();
+            const normalizedBarcode = barcode.toUpperCase();
+            const response = await fetch(`{{ url('/asset-custody/scan') }}?barcode_id=${encodeURIComponent(normalizedBarcode)}`);
+            const responseText = await response.text();
+            let data;
+
+            try {
+                data = JSON.parse(responseText);
+            } catch (error) {
+                throw new Error('The scan response was invalid. Please check the barcode and try again.');
+            }
+
             if (!response.ok) throw new Error(data.message || 'Unable to find this asset.');
 
             const activeCustody = data.active_custody;
@@ -801,10 +882,79 @@
             lookupAssetForCustody().catch(error => Swal.fire('Asset not found', error.message, 'error'));
         });
 
+        let custodyScanTimer;
+        let custodyLastKeyTime = 0;
+        let custodyRapidKeyCount = 0;
+        let custodyLookupInProgress = false;
+
+        function autoLookupScannedAsset() {
+            clearTimeout(custodyScanTimer);
+            custodyScanTimer = setTimeout(() => {
+                const barcode = document.getElementById('custodyBarcode').value.trim();
+                if (!custodyLookupInProgress && barcode.length >= 4 && custodyRapidKeyCount >= 4) {
+                    custodyLookupInProgress = true;
+                    lookupAssetForCustody()
+                        .catch(error => Swal.fire('Asset not found', error.message, 'error'))
+                        .finally(() => {
+                            custodyLookupInProgress = false;
+                            custodyRapidKeyCount = 0;
+                        });
+                }
+            }, 120);
+        }
+
+        document.getElementById('custodyBarcode').addEventListener('input', event => {
+            const now = performance.now();
+            custodyRapidKeyCount = now - custodyLastKeyTime <= 80 ? custodyRapidKeyCount + 1 : 1;
+            custodyLastKeyTime = now;
+            autoLookupScannedAsset();
+        });
+
         document.getElementById('custodyBarcode').addEventListener('keydown', event => {
             if (event.key === 'Enter') {
                 event.preventDefault();
-                lookupAssetForCustody().catch(error => Swal.fire('Asset not found', error.message, 'error'));
+                if (!custodyLookupInProgress) {
+                    custodyLookupInProgress = true;
+                    lookupAssetForCustody()
+                        .catch(error => Swal.fire('Asset not found', error.message, 'error'))
+                        .finally(() => {
+                            custodyLookupInProgress = false;
+                            custodyRapidKeyCount = 0;
+                        });
+                }
+            }
+        });
+
+        let pageScanBuffer = '';
+        let pageScanTimer;
+        let pageScanLastKeyTime = 0;
+
+        document.addEventListener('keydown', event => {
+            if (custodyModalElement.classList.contains('show')) return;
+            if (event.key === 'Shift' || event.key === 'Control' || event.key === 'Alt' || event.key === 'Tab') return;
+
+            const now = performance.now();
+            if (now - pageScanLastKeyTime > 80) pageScanBuffer = '';
+            pageScanLastKeyTime = now;
+
+            if (event.key === 'Enter') {
+                const scannedBarcode = pageScanBuffer.trim();
+                pageScanBuffer = '';
+                if (scannedBarcode.length >= 4) {
+                    event.preventDefault();
+                    scanAssetStatus();
+                    document.getElementById('custodyBarcode').value = scannedBarcode;
+                    custodyModalElement.addEventListener('shown.bs.modal', () => {
+                        lookupAssetForCustody().catch(error => Swal.fire('Asset not found', error.message, 'error'));
+                    }, { once: true });
+                }
+                return;
+            }
+
+            if (event.key.length === 1) {
+                pageScanBuffer += event.key;
+                clearTimeout(pageScanTimer);
+                pageScanTimer = setTimeout(() => { pageScanBuffer = ''; }, 150);
             }
         });
 

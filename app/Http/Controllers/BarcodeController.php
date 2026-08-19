@@ -3,9 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Asset;
-use App\Models\Supply;
 use App\Models\Transaction;
 use App\Models\ActivityLog;
+use App\Services\SupplyService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
@@ -20,27 +20,7 @@ class BarcodeController extends Controller
         $search = $request->input('search');
         $category = $request->input('category', 'all');
 
-        $supplies = collect();
         $assets = collect();
-
-        if ($category === 'all' || $category === 'supply') {
-            $supplyQuery = Supply::whereNotNull('barcode_id')
-                ->select('id', 'barcode_id as barcode_code', 'article', 'description', 'supplier');
-                
-            if (!empty($search)) {
-                $supplyQuery->where(function($q) use ($search) {
-                    $q->where('article', 'LIKE', "%{$search}%")
-                      ->orWhere('barcode_id', 'LIKE', "%{$search}%");
-                });
-            }
-
-            $supplies = $supplyQuery->get()->map(function ($item) {
-                $item->item_type = 'supply';
-                $item->generated_at = null; 
-                return $item;
-            });
-        }
-
         if ($category === 'all' || $category === 'asset') {
             $assetQuery = Asset::whereNotNull('barcode_id')
                 ->select('id', 'barcode_id as barcode_code', 'article', 'description', 'supplier');
@@ -59,7 +39,7 @@ class BarcodeController extends Controller
             });
         }
 
-        $mergedBarcodes = $supplies->concat($assets)->sortByDesc('id')->values();
+        $mergedBarcodes = $assets->sortByDesc('id')->values();
 
         $offset = ($page * $perPage) - $perPage;
         $itemsForCurrentPage = $mergedBarcodes->slice($offset, $perPage)->all();
@@ -75,7 +55,7 @@ class BarcodeController extends Controller
         return view('barcodes.generator', compact('barcodes', 'perPage', 'search', 'category'));
     }
 
-    public function processScan(Request $request)
+    public function processScan(Request $request, SupplyService $supplyService)
     {
         $barcode = trim($request->barcode);
         $qty = intval($request->qty);
@@ -87,47 +67,40 @@ class BarcodeController extends Controller
         $table = '';
 
         if ($context === 'supplies') {
-            $item = Supply::where('barcode_id', $barcode)->first();
-            $table = 'supplies';
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Supplies do not use barcodes. Please record stock changes from the supply transaction form.'
+            ], 422);
         } elseif ($context === 'assets') {
             $item = Asset::where('barcode_id', $barcode)->first();
             $table = 'assets';
         } else {
             $item = Asset::where('barcode_id', $barcode)->first();
             $table = 'assets';
-            if (!$item) {
-                $item = Supply::where('barcode_id', $barcode)->first();
-                $table = 'supplies';
-            }
         }
 
         if ($item) {
-            $new_stock = ($mode == 'IN') ? ($item->quantity + $qty) : ($item->quantity - $qty);
-
-            if ($new_stock < 0) {
-                return response()->json(['status' => 'error', 'message' => 'Insufficient Stock Available']);
+            if ($table === 'assets') {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Barcode stock transactions are disabled. Supplies do not use barcodes.'
+                ], 422);
             }
 
-            $item->update(['quantity' => $new_stock]);
+            $remarks = ($mode === 'OUT' && !empty($risNumber)) ? 'RIS: ' . $risNumber : 'Scanner';
 
-            $remarks = ($mode == 'OUT' && !empty($risNumber)) ? 'RIS: ' . $risNumber : 'Scanner';
+            try {
+                $supplyService->processStockTransaction($item, [
+                    'type' => $mode,
+                    'quantity' => $qty,
+                    'remarks' => $remarks,
+                ]);
+            } catch (\InvalidArgumentException|\DomainException $e) {
+                return response()->json(['status' => 'error', 'message' => $e->getMessage()], 422);
+            }
 
-            Transaction::create([
-                'item_id' => $item->id,
-                'item_type' => $table,
-                'transaction_type' => $mode,
-                'quantity' => $qty,
-                'transaction_date' => date('Y-m-d'),
-                'remarks' => $remarks
-            ]);
-
-            ActivityLog::create([
-                'user_id' => Auth::id(),
-                'action' => 'Updated',
-                'description' => "Processed Scanner {$mode} for Barcode: {$barcode} (Qty: {$qty})",
-                'ip_address' => request()->ip(),
-                'user_agent' => request()->userAgent()
-            ]);
+            $item->refresh();
+            $new_stock = $item->quantity;
 
             return response()->json([
                 'status' => 'success',
@@ -186,15 +159,8 @@ class BarcodeController extends Controller
 
     public function printAll(Request $request)
     {
-        $type = $request->query('type', 'supply');
-        
-        if ($type === 'asset') {
-            $items = Asset::whereNotNull('barcode_id')->orderBy('article', 'asc')->get();
-            $title = "Asset Barcodes Master List";
-        } else {
-            $items = Supply::whereNotNull('barcode_id')->orderBy('article', 'asc')->get();
-            $title = "Supply Barcodes Master List";
-        }
+        $items = Asset::whereNotNull('barcode_id')->orderBy('article', 'asc')->get();
+        $title = "Asset Barcodes Master List";
 
         $html = '<!DOCTYPE html>
         <html lang="en">

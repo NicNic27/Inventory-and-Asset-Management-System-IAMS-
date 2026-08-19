@@ -209,6 +209,18 @@
                 stockInput.val('');
                 unitInput.val('').removeAttr('readonly').attr('placeholder', 'Type unit manually').removeClass('bg-light');
             } else {
+                const duplicateSelect = $('.select2-supply').filter(function () {
+                    return this !== e.target && $(this).val() === selectedVal;
+                }).first();
+
+                if (duplicateSelect.length) {
+                    $(this).val(null).trigger('change');
+                    const duplicateRow = duplicateSelect.closest('.item-row');
+                    const quantityInput = duplicateRow.find('input[name="quantity[]"]');
+                    quantityInput.trigger('focus').select();
+                    return;
+                }
+
                 manualInput.hide().attr('required', false).val('');
                 unitInput.attr('readonly', true).attr('placeholder', 'Auto-filled').addClass('bg-light');
                 

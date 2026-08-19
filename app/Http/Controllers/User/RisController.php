@@ -68,7 +68,8 @@ class RisController extends Controller
         $ris->status = 'Pending Staff Review'; 
         $ris->save();
 
-        $itemCount = count($request->stock_no ?? []);
+        $itemCount = count($request->description ?? []);
+        $itemsBySupply = [];
         for ($i = 0; $i < $itemCount; $i++) {
             $desc = $request->description[$i] ?? null;
             if ($desc === 'Others') {
@@ -76,16 +77,24 @@ class RisController extends Controller
             }
 
             if (!empty($desc)) {
-                RisItem::create([
-                    'ris_id' => $ris->id,
-                    'stock_no' => $request->stock_no[$i],
-                    'unit' => $request->unit_measure[$i],
-                    'description' => $desc,
-                    'req_quantity' => $request->quantity[$i],
-                    'stock_avail' => 'N/A', 
-                    'remarks' => $request->remarks[$i],
-                ]);
+                $unit = $request->unit_measure[$i] ?? '';
+                $itemKey = strtolower(trim($desc)) . '|' . strtolower(trim($unit));
+                if (!isset($itemsBySupply[$itemKey])) {
+                    $itemsBySupply[$itemKey] = [
+                        'stock_no' => $request->stock_no[$i] ?? null,
+                        'unit' => $unit,
+                        'description' => $desc,
+                        'req_quantity' => 0,
+                        'stock_avail' => 'N/A',
+                        'remarks' => $request->remarks[$i] ?? null,
+                    ];
+                }
+                $itemsBySupply[$itemKey]['req_quantity'] += (int) ($request->quantity[$i] ?? 0);
             }
+        }
+
+        foreach ($itemsBySupply as $itemData) {
+            RisItem::create(['ris_id' => $ris->id] + $itemData);
         }
 
         ActivityLog::create([
@@ -188,7 +197,8 @@ class RisController extends Controller
 
         RisItem::where('ris_id', $ris->id)->delete();
 
-        $itemCount = count($request->stock_no ?? []);
+        $itemCount = count($request->description ?? []);
+        $itemsBySupply = [];
         for ($i = 0; $i < $itemCount; $i++) {
             $desc = $request->description[$i] ?? null;
             
@@ -197,16 +207,24 @@ class RisController extends Controller
             }
 
             if (!empty($desc)) {
-                RisItem::create([
-                    'ris_id' => $ris->id,
-                    'stock_no' => $request->stock_no[$i],
-                    'unit' => $request->unit_measure[$i] ?? null,
-                    'description' => $desc,
-                    'req_quantity' => $request->quantity[$i] ?? null,
-                    'stock_avail' => 'N/A', 
-                    'remarks' => $request->remarks[$i] ?? null,
-                ]);
+                $unit = $request->unit_measure[$i] ?? '';
+                $itemKey = strtolower(trim($desc)) . '|' . strtolower(trim($unit));
+                if (!isset($itemsBySupply[$itemKey])) {
+                    $itemsBySupply[$itemKey] = [
+                        'stock_no' => $request->stock_no[$i] ?? null,
+                        'unit' => $unit,
+                        'description' => $desc,
+                        'req_quantity' => 0,
+                        'stock_avail' => 'N/A',
+                        'remarks' => $request->remarks[$i] ?? null,
+                    ];
+                }
+                $itemsBySupply[$itemKey]['req_quantity'] += (int) ($request->quantity[$i] ?? 0);
             }
+        }
+
+        foreach ($itemsBySupply as $itemData) {
+            RisItem::create(['ris_id' => $ris->id] + $itemData);
         }
 
         ActivityLog::create([

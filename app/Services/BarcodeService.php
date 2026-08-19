@@ -13,31 +13,11 @@ use Illuminate\Support\Facades\Auth;
 class BarcodeService
 {
     /**
-     * Get all barcodes (Assets + Supplies) with search and filtering
+     * Get registered asset barcodes with search and filtering.
      */
     public function getAllBarcodes(string $search = '', string $category = 'all'): object
     {
-        $supplies = collect();
         $assets = collect();
-
-        if ($category === 'all' || $category === 'supply') {
-            $supplyQuery = Supply::whereNotNull('barcode_id')
-                ->select('id', 'barcode_id as barcode_code', 'article', 'description', 'supplier');
-
-            if (!empty($search)) {
-                $supplyQuery->where(function($q) use ($search) {
-                    $q->where('article', 'LIKE', "%{$search}%")
-                      ->orWhere('barcode_id', 'LIKE', "%{$search}%");
-                });
-            }
-
-            $supplies = $supplyQuery->get()->map(function ($item) {
-                $item->item_type = 'supply';
-                $item->generated_at = null;
-                return $item;
-            });
-        }
-
         if ($category === 'all' || $category === 'asset') {
             $assetQuery = Asset::whereNotNull('barcode_id')
                 ->select('id', 'barcode_id as barcode_code', 'article', 'description', 'supplier');
@@ -56,7 +36,7 @@ class BarcodeService
             });
         }
 
-        return $supplies->concat($assets)->sortByDesc('id')->values();
+        return $assets->sortByDesc('id')->values();
     }
 
     /**
@@ -177,11 +157,11 @@ class BarcodeService
         try {
             DB::beginTransaction();
 
-            if ($itemType === 'supply') {
-                $item = Supply::findOrFail($itemId);
-            } else {
-                $item = Asset::findOrFail($itemId);
+            if ($itemType !== 'asset') {
+                throw new \InvalidArgumentException('Only assets can have generated barcodes.');
             }
+
+            $item = Asset::findOrFail($itemId);
 
             if (!$item->barcode_id) {
                 return null;
@@ -217,8 +197,7 @@ class BarcodeService
      */
     public function barcodeExists(string $barcode): bool
     {
-        return Supply::where('barcode_id', trim($barcode))->exists()
-            || Asset::where('barcode_id', trim($barcode))->exists();
+        return Asset::where('barcode_id', trim($barcode))->exists();
     }
 
     /**
@@ -227,14 +206,6 @@ class BarcodeService
     public function findByBarcode(string $barcode): ?object
     {
         $barcode = trim($barcode);
-
-        $supply = Supply::where('barcode_id', $barcode)->first();
-        if ($supply) {
-            return (object)[
-                'type' => 'supply',
-                'item' => $supply
-            ];
-        }
 
         $asset = Asset::where('barcode_id', $barcode)->first();
         if ($asset) {

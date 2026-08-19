@@ -82,7 +82,16 @@ class AssetController extends Controller
             'serial_number' => ['required', 'string', 'max:255'],
             'acquisition_date' => ['required', 'date'],
             'unit_value' => ['required', 'numeric', 'min:0'],
-            'unit_measure' => ['required', 'string', 'max:255'],
+            'unit_measure' => ['required', 'in:Unit,Set'],
+            'ppe_sub_major_account_group' => ['required', 'digits:2'],
+            'general_ledger_account' => ['required', 'digits:2'],
+            'location_office' => ['required', 'digits:2'],
+            'set_items' => ['nullable', 'array'],
+            'set_items.*.article' => ['required_with:set_items', 'string', 'max:255'],
+            'set_items.*.description' => ['nullable', 'string'],
+            'set_items.*.model' => ['nullable', 'string', 'max:255'],
+            'set_items.*.serial_number' => ['required_with:set_items', 'string', 'max:255'],
+            'set_items.*.unit_value' => ['required_with:set_items', 'numeric', 'min:0'],
             'person_accountable' => ['nullable', 'string', 'max:255'],
             'validation_signatory' => ['nullable', 'string'],
             'supplier' => ['nullable', 'string', 'max:255'],
@@ -96,7 +105,6 @@ class AssetController extends Controller
                 ...$validated,
                 'image' => $request->file('image'),
             ]);
-
             if ($request->ajax() || $request->wantsJson()) {
                 return response()->json(['status' => 'success']);
             }

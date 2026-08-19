@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Models\Supply;
 use App\Models\Transaction;
-use App\Models\SystemSetting;
 use App\Models\ActivityLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -52,22 +51,6 @@ class SupplyService
     }
 
     /**
-     * Generate next sequence number for supply
-     */
-    protected function getNextSequenceNumber(): string
-    {
-        $setting = SystemSetting::firstOrCreate(
-            ['key' => 'seq_stock_no'],
-            ['value' => '1']
-        );
-
-        $nextSeq = (int)$setting->value + 1;
-        $setting->update(['value' => $nextSeq]);
-
-        return 'SUP-' . date('Ymd') . '-' . str_pad($nextSeq, 4, '0', STR_PAD_LEFT);
-    }
-
-    /**
      * Create a new supply item
      */
     public function create(array $data): Supply
@@ -85,10 +68,7 @@ class SupplyService
                 $data['image'] = $imageName;
             }
 
-            $barcode = $this->getNextSequenceNumber();
-
             $supply = Supply::create([
-                'barcode_id' => $barcode,
                 'article' => $data['article'],
                 'description' => $data['description'],
                 'unit_measure' => $data['unit_measure'],
@@ -118,7 +98,7 @@ class SupplyService
             ActivityLog::create([
                 'user_id' => Auth::id(),
                 'action' => 'Created',
-                'description' => "Added new supply: {$supply->article} (Barcode: {$barcode})",
+                'description' => "Added new supply: {$supply->article}",
                 'ip_address' => request()->ip(),
                 'user_agent' => request()->userAgent()
             ]);
@@ -129,8 +109,8 @@ class SupplyService
         } catch (\Exception $e) {
             DB::rollBack();
 
-            if ($imageName && Storage::exists('public/supplies/' . $imageName)) {
-                Storage::delete('public/supplies/' . $imageName);
+            if ($imageName && Storage::disk('public')->exists('supplies/' . $imageName)) {
+                Storage::disk('public')->delete('supplies/' . $imageName);
             }
 
             throw $e;
@@ -142,20 +122,19 @@ class SupplyService
      */
     public function update(Supply $supply, array $data): Supply
     {
-        $imageName = $supply->image;
+        $oldImageName = $supply->image;
+        $imageName = $oldImageName;
+        $newImageStored = false;
 
         try {
             DB::beginTransaction();
 
             // Handle image update
             if (isset($data['image']) && $data['image'] instanceof \Illuminate\Http\UploadedFile) {
-                if ($imageName && Storage::exists('public/supplies/' . $imageName)) {
-                    Storage::delete('public/supplies/' . $imageName);
-                }
-
                 $file = $data['image'];
                 $imageName = time() . '_' . $file->getClientOriginalName();
                 $file->storeAs('supplies', $imageName, 'public');
+                $newImageStored = true;
                 $data['image'] = $imageName;
             }
 
@@ -181,9 +160,18 @@ class SupplyService
 
             DB::commit();
 
+            if ($newImageStored && $oldImageName && Storage::disk('public')->exists('supplies/' . $oldImageName)) {
+                Storage::disk('public')->delete('supplies/' . $oldImageName);
+            }
+
             return $supply;
         } catch (\Exception $e) {
             DB::rollBack();
+
+            if ($newImageStored && $imageName && Storage::disk('public')->exists('supplies/' . $imageName)) {
+                Storage::disk('public')->delete('supplies/' . $imageName);
+            }
+
             throw $e;
         }
     }
@@ -196,8 +184,8 @@ class SupplyService
         try {
             DB::beginTransaction();
 
-            if ($supply->image && Storage::exists('public/supplies/' . $supply->image)) {
-                Storage::delete('public/supplies/' . $supply->image);
+            if ($supply->image && Storage::disk('public')->exists('supplies/' . $supply->image)) {
+                Storage::disk('public')->delete('supplies/' . $supply->image);
             }
 
             ActivityLog::create([
@@ -224,49 +212,53 @@ class SupplyService
      */
     public function processStockTransaction(Supply $supply, array $data): Transaction
     {
-        try {
-            DB::beginTransaction();
+        $quantity = $data['quantity'] ?? null;
+        $transactionType = strtoupper((string) ($data['type'] ?? 'IN'));
 
-            $quantity = $data['quantity'];
-            $transactionType = strtoupper($data['type'] ?? 'IN'); // IN or OUT
+        if (filter_var($quantity, FILTER_VALIDATE_INT) === false || (int) $quantity < 1) {
+            throw new \InvalidArgumentException('Transaction quantity must be a positive whole number.');
+        }
 
-            // Update supply quantity
-            if ($transactionType === 'OUT') {
-                $newQuantity = $supply->quantity - $quantity;
-            } else {
-                $newQuantity = $supply->quantity + $quantity;
+        if (!in_array($transactionType, ['IN', 'OUT'], true)) {
+            throw new \InvalidArgumentException('Transaction type must be either IN or OUT.');
+        }
+
+        $quantity = (int) $quantity;
+
+        return DB::transaction(function () use ($supply, $data, $quantity, $transactionType): Transaction {
+            $lockedSupply = Supply::whereKey($supply->id)->lockForUpdate()->firstOrFail();
+
+            if ($transactionType === 'OUT' && $lockedSupply->quantity < $quantity) {
+                throw new \DomainException("Insufficient stock. Available: {$lockedSupply->quantity}");
             }
 
-            $supply->update(['quantity' => $newQuantity]);
+            $newQuantity = $transactionType === 'OUT'
+                ? $lockedSupply->quantity - $quantity
+                : $lockedSupply->quantity + $quantity;
 
-            // Create transaction record
+            $lockedSupply->update(['quantity' => $newQuantity]);
+
             $transaction = Transaction::create([
-                'item_id' => $supply->id,
+                'item_id' => $lockedSupply->id,
                 'item_type' => 'supplies',
                 'transaction_type' => $transactionType,
                 'quantity' => $quantity,
-                'supplier' => $data['supplier'] ?? $supply->supplier,
+                'supplier' => $data['supplier'] ?? $lockedSupply->supplier,
                 'transaction_date' => $data['transaction_date'] ?? date('Y-m-d'),
                 'remarks' => $data['remarks'] ?? '',
                 'date_time' => now()
             ]);
 
-            // Log activity
             ActivityLog::create([
                 'user_id' => Auth::id(),
                 'action' => 'Transaction',
-                'description' => "Stock {$transactionType}: {$supply->article} ({$quantity} units)",
+                'description' => "Stock {$transactionType}: {$lockedSupply->article} ({$quantity} units)",
                 'ip_address' => request()->ip(),
                 'user_agent' => request()->userAgent()
             ]);
 
-            DB::commit();
-
             return $transaction;
-        } catch (\Exception $e) {
-            DB::rollBack();
-            throw $e;
-        }
+        });
     }
 
     /**
