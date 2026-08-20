@@ -131,7 +131,7 @@
     <div class="header-actions">
         
         <div class="global-search-container" id="searchContainer">
-            <input type="text" id="globalSearchInput" placeholder="Search inventory, requests, barcodes..." autocomplete="off">
+            <input type="text" id="globalSearchInput" placeholder="Search inventory, requests, QR codes..." autocomplete="off">
             <i class="fas fa-search search-icon"></i>
             <i class="fas fa-times clear-icon" id="globalClearBtn" title="Clear Search"></i>
             <div class="search-results-dropdown" id="globalSearchResults"></div>

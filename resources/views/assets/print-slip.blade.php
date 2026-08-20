@@ -109,13 +109,13 @@
             border-left: 1px solid #111;
         }
 
-        .barcode {
+        .qr-code {
             display: block;
-            width: 100%;
-            height: 0.75cm;
+            width: 2.2cm;
+            height: 2.2cm;
             object-fit: contain;
             object-position: center;
-            margin-top: 0.08cm;
+            margin: 0.08cm auto 0;
         }
 
         .property-number {
@@ -177,7 +177,7 @@
 
         <section class="field tall">
             <span class="label">Property No:</span>
-            <img class="barcode" src="https://bwipjs-api.metafloor.com/?bcid=code128&amp;text={{ urlencode($asset->barcode_id) }}&amp;scale=2&amp;height=8&amp;includetext=false" alt="Barcode {{ $asset->barcode_id }}">
+            <img class="qr-code" src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&amp;data={{ urlencode($asset->barcode_id) }}" alt="QR code {{ $asset->barcode_id }}">
             <span class="property-number">{{ $asset->barcode_id ?: 'N/A' }}</span>
         </section>
 

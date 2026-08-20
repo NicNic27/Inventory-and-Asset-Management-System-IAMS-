@@ -209,19 +209,19 @@ class RisController extends Controller
 
 ---
 
-### 4. **BarcodeService** (`app/Services/BarcodeService.php`)
+### 4. **QR Identity Service** (`app/Services/BarcodeService.php`)
 
-Handles barcode generation, scanning, and retrieval.
+Handles QR-oriented inventory identity lookup, rendering support, scanning, and retrieval. The class name and `barcode_id` database column are retained for compatibility with existing records and routes.
 
 #### Methods:
 
 - **`getAllBarcodes(string $search = '', string $category = 'all'): object`**
-  - Gets all barcodes (assets + supplies) with optional search and category filtering
+  - Gets all QR inventory identities (assets + supplies) with optional search and category filtering
   - Category: `all`, `supply`, or `asset`
   - Returns collection of barcodes with item type
 
 - **`processScan(string $barcode, array $data): array`**
-  - Processes barcode scan for stock transaction
+  - Processes a decoded QR value for a stock transaction
   - Data array: `transaction_type` (IN/OUT), `quantity`, `supplier`, `remarks`
   - Returns array with: `success`, `message`, `barcode`, `item_type`, `item_name`, `current_stock`
   - Validates stock before OUT transaction
@@ -230,14 +230,14 @@ Handles barcode generation, scanning, and retrieval.
   - Returns recent barcode scans
 
 - **`generateBarcode(string $itemType, int $itemId): ?GeneratedBarcode`**
-  - Generates barcode record for item
+  - Generates a registry record for an item's QR identity
   - itemType: `supply` or `asset`
 
 - **`barcodeExists(string $barcode): bool`**
-  - Checks if barcode exists in system
+  - Checks if the decoded QR value exists in the system
 
 - **`findByBarcode(string $barcode): ?object`**
-  - Finds item by barcode
+  - Finds an item by its decoded QR value
   - Returns object with: `type` (supply/asset), `item` (the model)
 
 #### Usage Example:

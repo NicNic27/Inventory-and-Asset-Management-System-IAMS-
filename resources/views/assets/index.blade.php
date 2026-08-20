@@ -7,6 +7,7 @@
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     <meta name="csrf-token" content="{{ csrf_token() }}">
     
     <style>
@@ -152,7 +153,7 @@
             </div>
             <div class="col-12 col-md-6 d-flex flex-column flex-md-row gap-2 justify-content-md-end">
                 <button class="btn btn-outline-dark fw-bold shadow-sm mobile-stack" onclick="scanAssetStatus()">
-                    <i class="fas fa-barcode me-1"></i> Scan Asset for Custody
+                    <i class="fas fa-qrcode me-1"></i> Scan Asset QR for Custody
                 </button>
                 <button class="btn btn-primary shadow-sm mobile-stack" data-bs-toggle="modal" data-bs-target="#addAssetModal">
                     <i class="fas fa-plus me-2"></i> Add New Asset
@@ -418,7 +419,7 @@
                                         <input type="text" name="supplier" id="add_supplier" class="form-control" placeholder="e.g. PC Express">
                                     </div>
                                     <div class="col-md-6">
-                                        <label class="form-label fw-bold text-primary">Property No. / Barcode</label>
+                                        <label class="form-label fw-bold text-primary">Property No. / QR Code</label>
                                         <input type="text" class="form-control border-primary border-2 bg-light" value="Generated after saving" readonly>
                                     </div>
                                     <div class="col-12 d-none" id="assetSetItems">
@@ -491,7 +492,7 @@
                             <div class="col-md-9 ps-md-4">
                                 <div class="row g-3">
                                     <div class="col-md-6">
-                                        <label class="form-label fw-bold text-primary">Property No. / Barcode</label>
+                                        <label class="form-label fw-bold text-primary">Property No. / QR Code</label>
                                         <input type="text" id="edit_stock" class="form-control border-primary border-2 bg-light" readonly>
                                     </div>
                                     <div class="col-md-6">
@@ -599,17 +600,20 @@
         <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content">
                 <div class="modal-header bg-primary text-white">
-                    <h5 class="modal-title"><i class="fas fa-barcode me-2"></i>Asset Custody Scanner</h5>
+                    <h5 class="modal-title"><i class="fas fa-qrcode me-2"></i>Asset Custody QR Scanner</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <form id="assetCustodyForm">
                     <div class="modal-body p-4">
                         <div id="custodyLookupSection">
-                            <label for="custodyBarcode" class="form-label fw-bold">Property No. / Barcode</label>
+                            <label for="custodyBarcode" class="form-label fw-bold">Scan Asset QR Code</label>
                             <div class="input-group">
-                                <input type="text" id="custodyBarcode" class="form-control form-control-lg" autocomplete="off" placeholder="Scan or enter the asset barcode">
+                                <input type="text" id="custodyBarcode" class="form-control form-control-lg" autocomplete="off" placeholder="Scan or enter the QR value">
+                                <button type="button" id="startQrCamera" class="btn btn-outline-primary" title="Use camera to scan QR code"><i class="fas fa-camera"></i></button>
                                 <button type="button" id="lookupAssetButton" class="btn btn-primary"><i class="fas fa-search"></i></button>
                             </div>
+                            <div id="qrReader" class="mt-3 d-none"></div>
+                            <small class="text-muted d-block mt-2">Camera scanning requires HTTPS or localhost and browser camera permission.</small>
                         </div>
 
                         <div id="custodyDetailsSection" class="d-none">
@@ -788,7 +792,7 @@
                         
                         Swal.fire({
                             title: 'Duplicate Asset Found!',
-                            text: 'This Property No. (Barcode ID) already exists in the inventory. Individual assets must have unique Property Numbers. Please change it to proceed.',
+                            text: 'This Property No. (QR value) already exists in the inventory. Individual assets must have unique Property Numbers. Please change it to proceed.',
                             icon: 'warning',
                             confirmButtonText: 'Okay, let me change it',
                             confirmButtonColor: '#101954'
@@ -820,15 +824,58 @@
         const issueTransferFields = document.getElementById('issueTransferFields');
         const returnFields = document.getElementById('returnFields');
         const saveCustodyButton = document.getElementById('saveCustodyButton');
+        const qrReaderElement = document.getElementById('qrReader');
+        let qrScanner = null;
 
         function scanAssetStatus() {
             document.getElementById('assetCustodyForm').reset();
             document.getElementById('custodyBarcode').value = '';
+            stopQrCamera();
+            qrReaderElement.classList.add('d-none');
             custodyDetailsSection.classList.add('d-none');
             saveCustodyButton.classList.add('d-none');
             custodyModal.show();
             custodyModalElement.addEventListener('shown.bs.modal', () => document.getElementById('custodyBarcode').focus(), { once: true });
         }
+
+        function stopQrCamera() {
+            if (!qrScanner) return;
+            qrScanner.stop().catch(() => {}).finally(() => {
+                qrScanner.clear();
+                qrScanner = null;
+            });
+        }
+
+        document.getElementById('startQrCamera').addEventListener('click', async () => {
+            if (qrScanner) {
+                stopQrCamera();
+                qrReaderElement.classList.add('d-none');
+                return;
+            }
+
+            qrReaderElement.classList.remove('d-none');
+            qrScanner = new Html5Qrcode('qrReader');
+
+            try {
+                await qrScanner.start(
+                    { facingMode: 'environment' },
+                    { fps: 10, qrbox: { width: 220, height: 220 } },
+                    decodedText => {
+                        document.getElementById('custodyBarcode').value = decodedText.trim();
+                        stopQrCamera();
+                        qrReaderElement.classList.add('d-none');
+                        lookupAssetForCustody().catch(error => Swal.fire('Asset not found', error.message, 'error'));
+                    },
+                    () => {}
+                );
+            } catch (error) {
+                stopQrCamera();
+                qrReaderElement.classList.add('d-none');
+                Swal.fire('Camera unavailable', 'Allow camera access or enter the QR value manually.', 'warning');
+            }
+        });
+
+        custodyModalElement.addEventListener('hidden.bs.modal', stopQrCamera);
 
         function setCustodyMode(activeCustody) {
             const isReturned = Boolean(activeCustody);
@@ -847,18 +894,18 @@
         });
 
         async function lookupAssetForCustody() {
-            const barcode = document.getElementById('custodyBarcode').value.trim();
-            if (!barcode) return;
+            const qrCode = document.getElementById('custodyBarcode').value.trim();
+            if (!qrCode) return;
 
-            const normalizedBarcode = barcode.toUpperCase();
-            const response = await fetch(`{{ url('/asset-custody/scan') }}?barcode_id=${encodeURIComponent(normalizedBarcode)}`);
+            const normalizedQrCode = qrCode.toUpperCase();
+            const response = await fetch(`{{ url('/asset-custody/scan') }}?qr_code=${encodeURIComponent(normalizedQrCode)}`);
             const responseText = await response.text();
             let data;
 
             try {
                 data = JSON.parse(responseText);
             } catch (error) {
-                throw new Error('The scan response was invalid. Please check the barcode and try again.');
+                throw new Error('The scan response was invalid. Please check the QR code and try again.');
             }
 
             if (!response.ok) throw new Error(data.message || 'Unable to find this asset.');

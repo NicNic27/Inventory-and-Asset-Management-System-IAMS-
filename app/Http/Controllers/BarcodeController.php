@@ -160,7 +160,7 @@ class BarcodeController extends Controller
     public function printAll(Request $request)
     {
         $items = Asset::whereNotNull('barcode_id')->orderBy('article', 'asc')->get();
-        $title = "Asset Barcodes Master List";
+        $title = "Asset QR Code Master List";
 
         $html = '<!DOCTYPE html>
         <html lang="en">
@@ -173,14 +173,14 @@ class BarcodeController extends Controller
                 table { width: 100%; border-collapse: collapse; margin-top: 20px; }
                 th, td { border: 1px solid #ddd; padding: 12px 8px; text-align: left; vertical-align: middle; }
                 th { background-color: #f4f6f9; color: #101954; font-weight: bold; }
-                .barcode-cell { text-align: center; width: 250px; }
+                .qr-cell { text-align: center; width: 250px; }
                 .desc { font-size: 0.85rem; color: #555; }
                 @media print { 
                     button { display: none; } 
                     @page { margin: 10mm; }
                 }
             </style>
-            <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.0/dist/JsBarcode.all.min.js"></script>
+            <meta name="viewport" content="width=device-width, initial-scale=1">
         </head>
         <body>
             <h2 class="text-center" style="color: #101954; margin-bottom: 5px;">'.$title.'</h2>
@@ -190,7 +190,7 @@ class BarcodeController extends Controller
                     <tr>
                         <th style="width: 30%">Article / Item</th>
                         <th style="width: 40%">Description</th>
-                        <th class="barcode-cell">Barcode</th>
+                        <th class="qr-cell">QR Code</th>
                     </tr>
                 </thead>
                 <tbody>';
@@ -203,8 +203,8 @@ class BarcodeController extends Controller
             $html .= '<tr>
                         <td><strong>' . $article . '</strong></td>
                         <td class="desc">' . $desc . '</td>
-                        <td class="barcode-cell">
-                            <svg class="barcode" jsbarcode-format="CODE128" jsbarcode-value="'.$code.'" jsbarcode-displayvalue="true" jsbarcode-height="40" jsbarcode-width="1.5"></svg>
+                        <td class="qr-cell">
+                            <img src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data='.urlencode($code).'" alt="QR code '.$code.'" style="width: 120px; height: 120px;">
                         </td>
                       </tr>';
         }
@@ -212,7 +212,6 @@ class BarcodeController extends Controller
         $html .= '</tbody>
             </table>
             <script>
-                JsBarcode(".barcode").init();
                 setTimeout(function() { 
                     window.print(); 
                 }, 800);

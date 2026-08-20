@@ -266,8 +266,8 @@ class AssetController extends Controller
             </div>
             
             <div class="bg-light p-3 rounded text-center border mb-3">
-                <span class="text-muted d-block small fw-bold text-uppercase mb-2">Property No. (Barcode ID)</span>
-                <img src="https://bwipjs-api.metafloor.com/?bcid=code128&text='.urlencode($asset->barcode_id).'&scale=3&height=10&includetext=false" style="max-height: 50px; max-width: 100%; mix-blend-mode: multiply;">
+                <span class="text-muted d-block small fw-bold text-uppercase mb-2">Property No. (QR Code)</span>
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data='.urlencode($asset->barcode_id).'" style="width: 120px; height: 120px;">
                 <div class="font-monospace fw-bold mt-1 fs-5" style="letter-spacing: 2px; color: #101954;">'.$asset->barcode_id.'</div>
             </div>
 

@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Barcode Master List - Admin</title>
+    <title>QR Code Master List - Admin</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.0/dist/JsBarcode.all.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
         /* --- CORE LAYOUT & DESKTOP APP-LIKE VIEW --- */
@@ -73,8 +73,9 @@
         }
         
         /* --- VISUAL ELEMENTS --- */
-        .barcode-svg { max-height: 40px; width: auto; display: block; margin: 0 auto; }
-        .barcode-text { font-family: 'Courier New', Courier, monospace; font-size: 0.85rem; font-weight: bold; color: #101954; text-align: center; margin-top: 2px; }
+        .qr-code { width: 86px; height: 86px; margin: 0 auto; }
+        .qr-code img { width: 86px; height: 86px; display: block; }
+        .qr-text { font-family: 'Courier New', Courier, monospace; font-size: 0.85rem; font-weight: bold; color: #101954; text-align: center; margin-top: 4px; }
 
         .item-row { cursor: pointer; transition: background-color 0.2s; }
         .item-row:hover { background-color: #f8f9fa !important; }
@@ -151,9 +152,9 @@
         <div class="d-flex justify-content-between align-items-center mb-4 no-print title-section border-bottom pb-2" style="border-color: #003366 !important;">
             <div>
                 <h2 style="color: #003366; margin: 0;">
-                    <i class="fas fa-barcode me-2"></i> Barcode Master List
+                    <i class="fas fa-qrcode me-2"></i> QR Code Master List
                 </h2>
-                <small class="text-muted">Live directory of all system-generated inventory barcodes.</small>
+                <small class="text-muted">Live directory of all system-generated inventory QR codes.</small>
             </div>
         </div>
 
@@ -173,7 +174,7 @@
                         <label class="form-label fw-bold small text-muted">SEARCH</label>
                         <div class="input-group">
                             <span class="input-group-text bg-white border-end-0"><i class="fas fa-search text-muted"></i></span>
-                            <input type="text" name="search" id="searchInput" class="form-control border-start-0 border-end-0 shadow-none" placeholder="Start typing Article Name or Barcode ID to search..." value="{{ $search ?? '' }}">
+                            <input type="text" name="search" id="searchInput" class="form-control border-start-0 border-end-0 shadow-none" placeholder="Search article or QR code value..." value="{{ $search ?? '' }}">
                             <span class="input-group-text bg-white border-start-0 text-muted {{ empty($search) ? 'd-none' : '' }}" id="clearSearchBtn">
                                 <i class="fas fa-times"></i>
                             </span>
@@ -195,7 +196,7 @@
                             <th class="ps-4">Type</th>
                             <th style="width: 25%;">Article / Item</th>
                             <th style="width: 35%;">Description</th>
-                            <th class="text-center" style="width: 20%;">Barcode</th>
+                            <th class="text-center" style="width: 20%;">QR Code</th>
                             <th class="text-end pe-4 no-print">Action</th>
                         </tr>
                     </thead>
@@ -216,11 +217,11 @@
                                 <td class="fw-bold text-dark">{{ $row->article }}</td>
                                 <td class="text-muted small text-truncate" style="max-width: 250px;">{{ $description ?: 'No description available' }}</td>
                                 <td class="text-center">
-                                    <svg class="barcode-render barcode-svg" id="bc-{{ $index }}" data-value="{{ $row->barcode_code }}"></svg>
-                                    <div class="barcode-text">{{ $row->barcode_code }}</div>
+                                    <div class="qr-code" id="qr-{{ $index }}" data-value="{{ $row->barcode_code }}"></div>
+                                    <div class="qr-text">{{ $row->barcode_code }}</div>
                                 </td>
                                 <td class="text-end pe-4 no-print" onclick="event.stopPropagation();">
-                                    <button class="btn btn-sm btn-outline-dark" onclick="printSingle('{{ $row->barcode_code }}')" title="Print Individual Barcode">
+                                    <button class="btn btn-sm btn-outline-dark" onclick="printSingle('{{ $row->barcode_code }}')" title="Print Individual QR Code">
                                         <i class="fas fa-print"></i>
                                     </button>
                                 </td>
@@ -233,7 +234,7 @@
                                         <br>
                                         <a href="{{ url('/admin/barcodes') }}" class="btn btn-sm btn-outline-primary mt-2">Clear Search</a>
                                     @else
-                                        No asset barcodes found yet.
+                                        No asset QR codes found yet.
                                     @endif
                                 </td>
                             </tr>
@@ -271,20 +272,16 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Render Barcode SVGs (No text attached directly to SVG, custom text div below it)
-        document.querySelectorAll('.barcode-render').forEach(function(el) {
-            try {
-                let val = el.getAttribute('data-value');
-                if(val && val.trim() !== '') {
-                    JsBarcode("#" + el.id, val, {
-                        format: "CODE128", 
-                        width: 1.5, 
-                        height: 35, 
-                        displayValue: false, 
-                        margin: 0
-                    });
-                }
-            } catch(e) { console.error("Barcode format error"); }
+        document.querySelectorAll('.qr-code').forEach(function(el) {
+            const value = el.getAttribute('data-value');
+            if (value && value.trim() !== '') {
+                new QRCode(el, {
+                    text: value,
+                    width: 86,
+                    height: 86,
+                    correctLevel: QRCode.CorrectLevel.M
+                });
+            }
         });
 
         // --- NEW: Engaging Custom Print List Logic ---
@@ -292,7 +289,7 @@
             Swal.fire({
                 title: '<span style="color: #101954; font-weight: bold;">Print Master List</span>',
                 html: `
-                    <p class="text-muted mb-4">Generate a barcode print list for registered assets:</p>
+                    <p class="text-muted mb-4">Generate a QR code print list for registered assets:</p>
                     <div class="row g-3 px-2">
                         <div class="col-12">
                             <div class="p-4 rounded-4 border border-2 border-primary text-center shadow-sm" 
@@ -336,7 +333,7 @@
                         <p class="text-muted small mb-4">${desc || 'No description available'}</p>
                         
                         <div class="bg-light p-3 rounded-3 text-center mb-3 border">
-                            <img src="https://bwipjs-api.metafloor.com/?bcid=code128&text=${encodeURIComponent(code)}&scale=3&height=10&includetext=false" style="max-height: 60px; max-width: 100%; mix-blend-mode: multiply;">
+                            <img src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(code)}" style="width: 120px; height: 120px;">
                             <div class="font-monospace fw-bold mt-2" style="font-size: 1.1rem; letter-spacing: 2px;">${code}</div>
                         </div>
 
@@ -425,17 +422,15 @@
 
         function printSingle(code) {
             let win = window.open('', '', 'width=400,height=400');
-            win.document.write('<html><head><title>Print Barcode</title></head><body style="text-align:center; padding-top:20px;">');
-            let svg = document.querySelector(`svg[data-value="${code}"]`);
-            if(svg) {
-                let xml = new XMLSerializer().serializeToString(svg);
-                let svg64 = btoa(xml);
-                let image64 = 'data:image/svg+xml;base64,' + svg64;
-                win.document.write('<img src="' + image64 + '" style="max-width:100%;" />');
+            win.document.write('<html><head><title>Print QR Code</title></head><body style="text-align:center; padding-top:20px;">');
+            let qr = document.querySelector(`.qr-code[data-value="${code}"]`);
+            let image = qr ? qr.querySelector('img') : null;
+            if(image) {
+                win.document.write('<img src="' + image.src + '" style="max-width:100%;" />');
                 win.document.write('<h2 style="font-family:sans-serif; margin-top:10px;">'+code+'</h2>');
                 win.document.write('<script>setTimeout(function(){ window.print(); window.close(); }, 500);<\/script>');
             } else {
-                win.document.write('Error generating barcode image.');
+                win.document.write('Error generating QR code image.');
             }
             win.document.write('</body></html>');
             win.document.close();

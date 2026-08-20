@@ -16,34 +16,34 @@ class AssetCustodyController extends Controller
     public function scan(Request $request)
     {
         $request->merge([
-            'barcode_id' => strtoupper(trim((string) $request->input('barcode_id'))),
+            'qr_code' => strtoupper(trim((string) ($request->input('qr_code') ?? $request->input('barcode_id')))),
         ]);
 
         $validator = Validator::make($request->all(), [
-            'barcode_id' => [
+            'qr_code' => [
                 'required',
                 'string',
                 'max:255',
                     'regex:/^(PPE|HV|LV)-\d{4}-\d{2}-\d{2}-\d{5}(-\d{2})?-\d{2}$/',
             ],
         ], [
-            'barcode_id.required' => 'Please scan a barcode first.',
-            'barcode_id.regex' => 'Please check if this barcode is valid.',
+            'qr_code.required' => 'Please scan a QR code first.',
+            'qr_code.regex' => 'Please check if this QR code is valid.',
         ]);
 
         if ($validator->fails()) {
             return response()->json([
-                'message' => $validator->errors()->first('barcode_id'),
+                'message' => $validator->errors()->first('qr_code'),
             ], 422);
         }
 
         $data = $validator->validated();
-        $barcodeId = strtoupper(trim($data['barcode_id']));
-        $asset = Asset::where('barcode_id', $barcodeId)->first();
+        $qrCode = strtoupper(trim($data['qr_code']));
+        $asset = Asset::where('barcode_id', $qrCode)->first();
 
         if (!$asset) {
             return response()->json([
-                'message' => 'Please check if this barcode is valid.',
+                'message' => 'Please check if this QR code is valid.',
             ], 404);
         }
 

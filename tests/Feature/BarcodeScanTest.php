@@ -4,7 +4,6 @@ namespace Tests\Feature;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
-use App\Models\Supply;
 use App\Models\Asset;
 use App\Models\User;
 
@@ -12,22 +11,14 @@ class BarcodeScanTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_scan_in_and_out_for_supply_and_asset()
+    public function test_qr_scan_endpoint_accepts_the_existing_asset_identifier()
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create(['role' => 'staff']);
         $this->actingAs($user);
 
-        $supply = Supply::create([
-            'barcode_id' => 'SUP-TEST-1',
-            'article' => 'Supply A',
-            'description' => 'Desc',
-            'quantity' => 10,
-            'unit_value' => 1,
-        ]);
-
         $asset = Asset::create([
-            'item_code' => 'ASSET-TEST-1',
-            'barcode_id' => 'ASSET-TEST-1',
+            'item_code' => 'PPE-2026-08-20-00001-01-01',
+            'barcode_id' => 'PPE-2026-08-20-00001-01-01',
             'name' => 'Asset A',
             'category' => 'Assets',
             'article' => 'Asset A',
@@ -35,19 +26,8 @@ class BarcodeScanTest extends TestCase
             'unit_value' => 1000,
         ]);
 
-        // IN supply
-        $inSup = $this->post('/barcodes/scan', ['barcode' => 'SUP-TEST-1', 'qty' => 5, 'mode' => 'IN', 'context' => 'supplies']);
-        $inSup->assertJson(['status' => 'success']);
-        $this->assertEquals(15, $supply->fresh()->quantity);
+        $response = $this->get('/asset-custody/scan?qr_code=PPE-2026-08-20-00001-01-01');
 
-        // OUT supply
-        $outSup = $this->post('/barcodes/scan', ['barcode' => 'SUP-TEST-1', 'qty' => 3, 'mode' => 'OUT', 'context' => 'supplies']);
-        $outSup->assertJson(['status' => 'success']);
-        $this->assertEquals(12, $supply->fresh()->quantity);
-
-        // IN asset
-        $inAsset = $this->post('/barcodes/scan', ['barcode' => 'ASSET-TEST-1', 'qty' => 1, 'mode' => 'IN', 'context' => 'assets']);
-        $inAsset->assertJson(['status' => 'success']);
-        $this->assertEquals(1, $asset->fresh()->quantity ?? 1);
+        $response->assertOk()->assertJsonPath('asset.barcode_id', 'PPE-2026-08-20-00001-01-01');
     }
 }

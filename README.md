@@ -5,7 +5,11 @@
 ![Bootstrap](https://img.shields.io/badge/Bootstrap-5.3-7952B3?style=for-the-badge&logo=bootstrap&logoColor=white)
 ![MySQL](https://img.shields.io/badge/MySQL-005C84?style=for-the-badge&logo=mysql&logoColor=white)
 
-A comprehensive, role-based Asset and Supply Management System designed for the Department of Education (DepEd). This system streamlines inventory tracking, barcode generation, stock transactions, and Requisition and Issue Slips (RIS) management across different divisions and offices.
+A comprehensive, role-based Asset and Supply Management System designed for the Department of Education (DepEd). This system streamlines inventory tracking, QR code scanning, stock transactions, and Requisition and Issue Slips (RIS) management across different divisions and offices.
+
+## Architecture
+
+The project uses a **Modular Monolithic Architecture**: one Laravel application with explicit business modules, application services, a shared relational database, and role-specific workflows. See [ARCHITECTURE.md](ARCHITECTURE.md) for module boundaries, transaction rules, and the planned path for internal events.
 
 ---
 
@@ -13,13 +17,13 @@ A comprehensive, role-based Asset and Supply Management System designed for the 
 
 ### 🔐 Role-Based Access Control (RBAC)
 * **Admin (System Owner):** Full access to user management, system settings, report generation, and overarching transaction controls (including deleting erroneous logs).
-* **Personnel / Staff (Inventory Manager):** Access to manage assets, supplies, process barcode scans, and review RIS requests.
+* **Personnel / Staff (Inventory Manager):** Access to manage assets, supplies, process QR scans, and review RIS requests.
 * **Frontuser (Requestor):** End-users restricted to their specific division/office. Can request supplies via RIS, view their own request history, and track status.
 
-### 📦 Inventory & Barcode Management
-* **Auto-Generated Barcodes:** Automatically generates unique tracking codes (e.g., `SUP-YYYYMMDD-XXXX`) upon item creation.
-* **Barcode Master List:** A dedicated registry of all generated barcodes rendered dynamically using `JsBarcode`. Includes individual print capabilities.
-* **Scanner Integration:** AJAX-powered endpoint to process live barcode scans for Stock IN and Stock OUT operations.
+### 📦 Inventory & QR Management
+* **Auto-Generated Inventory Identifiers:** Automatically generates unique property/tracking values upon item creation.
+* **QR Master List:** A dedicated registry of inventory QR codes with individual print capabilities.
+* **Scanner Integration:** AJAX and camera-enabled endpoints support QR lookup and custody workflows.
 * **Dynamic Media Handling:** Integrated image uploads for user profiles and inventory items with lightbox previews.
 
 ### 🔍 Advanced Global Search
@@ -41,7 +45,7 @@ A comprehensive, role-based Asset and Supply Management System designed for the 
 * **UI Framework:** Bootstrap 5.3
 * **Icons:** FontAwesome 6
 * **Database:** MySQL
-* **Libraries:** `JsBarcode` (Barcode Rendering)
+* **Libraries:** `QRCode.js` and `html5-qrcode` (QR rendering and camera scanning)
 
 ---
 
