@@ -41,7 +41,7 @@
         <div class="modal-content">
             <div class="modal-header bg-light">
                 <h5 class="modal-title fw-bold text-primary align-items-center d-flex m-0">
-                    <i class="fas fa-file-invoice me-2"></i> Receive Purchase Order
+                    <i class="fas fa-file-invoice me-2"></i> Add Purchase Order
                     <span id="po_type_badge" class="badge ms-3 fs-6 rounded-pill text-white" style="display: none; background-color: #101954;"></span>
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -152,6 +152,55 @@
                 <button type="button" class="btn btn-secondary px-4 fw-bold shadow-sm" data-bs-dismiss="modal">Cancel</button>
                 <button type="submit" form="poForm" class="btn btn-primary px-4 fw-bold shadow-sm"><i class="fa-solid fa-save me-2"></i>Save P.O. Record</button>
             </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade no-print" id="recordDeliveryModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-light">
+                <h5 class="modal-title fw-bold text-primary m-0"><i class="fas fa-truck-loading me-2"></i> Record Delivery (DR)</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="recordDeliveryForm">
+                <div class="modal-body">
+                    <input type="hidden" id="dr_po_item_id">
+                    <div class="mb-3 bg-light border rounded p-2 small">
+                        <span class="text-muted">Item:</span> <strong id="dr_item_desc">-</strong><br>
+                        <span class="text-muted">Delivered so far:</span> <strong id="dr_item_progress">-</strong>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <label class="form-label">DR Number <span class="text-danger">*</span></label>
+                            <input type="text" id="dr_number" class="form-control" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">DR Date <span class="text-danger">*</span></label>
+                            <input type="date" id="dr_date" class="form-control" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">Quantity Delivered <span class="text-danger">*</span></label>
+                            <input type="number" id="dr_quantity" class="form-control" min="1" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">Unit Price</label>
+                            <div class="input-group">
+                                <span class="input-group-text">₱</span>
+                                <input type="number" step="0.01" id="dr_unit_price" class="form-control" placeholder="Defaults to PO unit cost">
+                            </div>
+                        </div>
+                        <div class="col-12" id="dr_office_wrapper" style="display:none;">
+                            <label class="form-label">Requesting Office <span class="text-danger">*</span></label>
+                            <input type="text" id="dr_requesting_office" class="form-control">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-top-0">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success fw-bold"><i class="fas fa-check me-1"></i> Save Delivery</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>

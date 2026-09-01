@@ -22,6 +22,11 @@ class PurchaseOrderItem extends Model
         return $this->hasMany(SupplyBatch::class, 'po_item_id');
     }
 
+    public function assets()
+    {
+        return $this->hasMany(Asset::class, 'po_item_id');
+    }
+
     public function referrals()
     {
         return $this->belongsToMany(PrReferral::class, 'po_item_referrals', 'po_item_id', 'pr_referral_id')
@@ -29,9 +34,13 @@ class PurchaseOrderItem extends Model
             ->withTimestamps();
     }
 
-    /** Sum of quantities delivered so far across all supply_batches for this line */
+    /** Sum of quantities delivered so far, from supply_batches (supply) or linked assets (asset) */
     public function getDeliveredQuantity(): int
     {
+        if (($this->item_type ?? 'supply') === 'asset') {
+            return (int) $this->assets()->count();
+        }
+
         return (int) $this->batches()->sum('quantity');
     }
 
@@ -47,10 +56,16 @@ class PurchaseOrderItem extends Model
         return $delivered >= $this->qty ? 'complete' : 'partial';
     }
 
-    /** Adds a delivered_quantity column via subquery, for listing/filtering by delivery status */
+    /** Adds a delivered_quantity column via subquery, for listing/filtering by delivery status (supply batches or linked assets) */
     public function scopeWithDeliveredQuantity($query)
     {
-        return $query->selectRaw('purchase_order_items.*, (SELECT COALESCE(SUM(quantity), 0) FROM supply_batches WHERE supply_batches.po_item_id = purchase_order_items.id) as delivered_quantity');
+        return $query->selectRaw(
+            "purchase_order_items.*, " .
+            "CASE WHEN purchase_order_items.item_type = 'asset' " .
+            "THEN (SELECT COUNT(*) FROM assets WHERE assets.po_item_id = purchase_order_items.id) " .
+            "ELSE (SELECT COALESCE(SUM(quantity), 0) FROM supply_batches WHERE supply_batches.po_item_id = purchase_order_items.id) " .
+            "END as delivered_quantity"
+        );
     }
 
     /** Report: PO items whose derived delivery status matches pending/partial/complete */

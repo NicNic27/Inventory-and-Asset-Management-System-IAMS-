@@ -392,13 +392,13 @@
 
                 <div class="row text-center g-4 mb-4 mt-2">
                     <div class="col-md-6 border-end">
-                        <label class="d-block mb-3 text-uppercase small text-muted" id="sig_left_label">Received From</label>
+                        <label class="d-block mb-3 text-uppercase small text-muted" id="sig_left_label">Received By</label>
                         <input type="text" name="sig_from_name" id="sig_from_name" class="form-control sig-line" placeholder="Printed Name">
                         <input type="text" name="sig_from_pos" id="sig_from_pos" class="form-control desig-input mt-2 mb-3" placeholder="Position / Title">
                     </div>
                     
                     <div class="col-md-6">
-                        <label class="d-block mb-3 text-uppercase small text-muted" id="sig_right_label">Received By</label>
+                        <label class="d-block mb-3 text-uppercase small text-muted" id="sig_right_label">Received From</label>
                         <input type="text" name="sig_by_name" id="sig_by_name" class="form-control sig-line" placeholder="Printed Name">
                         <input type="text" name="sig_by_pos" id="sig_by_pos" class="form-control desig-input mt-2 mb-3" placeholder="Position / Title">
                     </div>

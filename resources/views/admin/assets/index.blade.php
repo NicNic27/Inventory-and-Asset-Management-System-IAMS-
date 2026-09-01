@@ -312,30 +312,47 @@
                             </div>
                             
                             <div class="col-md-9 ps-4">
+                                <input type="hidden" name="po_item_id" id="add_po_item_id" value="">
                                 @if(isset($deliveredPoItems) && count($deliveredPoItems) > 0)
                                     <div class="mb-4 bg-light p-3 rounded border">
-                                        <label class="form-label text-primary fw-bold mb-2"><i class="fas fa-magic me-1"></i> Auto-Fill from Delivered P.O. (Optional)</label>
-                                        <select id="po_autofill_select" class="form-select border-primary shadow-sm" onchange="autoFillAssetForm(this)">
-                                            <option value="">Select a delivered item to auto-fill the form...</option>
-                                                @php
-                                                    $groupedItems = $deliveredPoItems->groupBy(function($item) {
-                                                        return $item->purchaseOrder->po_no ?? 'Unknown PO';
-                                                    });
-                                                @endphp
-                                                @foreach($groupedItems as $poNo => $items)
-                                                    <optgroup label="P.O. {{ $poNo }}">
-                                                        @foreach($items as $item)
-                                                            <option value="{{ $item->id }}" 
-                                                                    data-desc="{{ $item->description }}"
-                                                                    data-supplier="{{ $item->purchaseOrder->supplier_name ?? '' }}"
-                                                                    data-unit="{{ $item->unit }}"
-                                                                    data-val="{{ $item->unit_cost }}">
-                                                                {{ Str::limit($item->description, 45) }}
-                                                            </option>
-                                                        @endforeach
-                                                    </optgroup>
-                                                @endforeach
-                                        </select>
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <label class="form-label text-primary fw-bold mb-0"><i class="fas fa-magic me-1"></i> Auto-Fill from a Completed P.O. (Optional)</label>
+                                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="autoFillAssetForm(null)">Clear</button>
+                                        </div>
+                                        <div class="accordion" id="assetPoAutofillAccordion">
+                                            @php
+                                                $groupedItems = $deliveredPoItems->groupBy(function($item) {
+                                                    return $item->purchaseOrder->po_no ?? 'Unknown PO';
+                                                });
+                                            @endphp
+                                            @foreach($groupedItems as $poNo => $items)
+                                                @php $poAccId = 'asset-po-autofill-' . \Illuminate\Support\Str::slug($poNo); @endphp
+                                                <div class="accordion-item">
+                                                    <h2 class="accordion-header">
+                                                        <button class="accordion-button collapsed py-2" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-{{ $poAccId }}">
+                                                            P.O. {{ $poNo }} <span class="badge bg-secondary ms-2">{{ $items->count() }} item(s)</span>
+                                                        </button>
+                                                    </h2>
+                                                    <div id="collapse-{{ $poAccId }}" class="accordion-collapse collapse" data-bs-parent="#assetPoAutofillAccordion">
+                                                        <div class="accordion-body p-2">
+                                                            <div class="list-group">
+                                                                @foreach($items as $item)
+                                                                    <button type="button" class="list-group-item list-group-item-action po-autofill-item"
+                                                                            onclick="autoFillAssetForm(this)"
+                                                                            data-id="{{ $item->id }}"
+                                                                            data-desc="{{ $item->description }}"
+                                                                            data-supplier="{{ $item->purchaseOrder->supplier_name ?? '' }}"
+                                                                            data-unit="{{ $item->unit }}"
+                                                                            data-val="{{ $item->unit_cost }}">
+                                                                        {{ Str::limit($item->description, 60) }}
+                                                                    </button>
+                                                                @endforeach
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            @endforeach
+                                        </div>
                                     </div>
                                 @endif
 
@@ -661,23 +678,27 @@
         attachDuplicateCheck('editForm');
 
 
-        function autoFillAssetForm(selectElement) {
-            const selectedOption = selectElement.options[selectElement.selectedIndex];
-            
-            if (!selectedOption.value) {
+        function autoFillAssetForm(source) {
+            if (!source) {
                 document.getElementById('add_article').value = '';
                 document.getElementById('add_desc').value = '';
                 document.getElementById('add_supplier').value = '';
                 document.getElementById('add_unit').value = '';
                 document.getElementById('add_val').value = '';
+                document.getElementById('add_po_item_id').value = '';
+                document.querySelectorAll('.po-autofill-item').forEach(b => b.classList.remove('active'));
                 return;
             }
 
-            document.getElementById('add_article').value = selectedOption.getAttribute('data-desc').split(' ')[0]; 
-            document.getElementById('add_desc').value = selectedOption.getAttribute('data-desc');
-            document.getElementById('add_supplier').value = selectedOption.getAttribute('data-supplier');
-            document.getElementById('add_unit').value = selectedOption.getAttribute('data-unit') || 'Unit';
-            document.getElementById('add_val').value = selectedOption.getAttribute('data-val');
+            document.querySelectorAll('.po-autofill-item').forEach(b => b.classList.remove('active'));
+            source.classList.add('active');
+
+            document.getElementById('add_article').value = source.getAttribute('data-desc').split(' ')[0]; 
+            document.getElementById('add_desc').value = source.getAttribute('data-desc');
+            document.getElementById('add_supplier').value = source.getAttribute('data-supplier');
+            document.getElementById('add_unit').value = source.getAttribute('data-unit') || 'Unit';
+            document.getElementById('add_val').value = source.getAttribute('data-val');
+            document.getElementById('add_po_item_id').value = source.getAttribute('data-id');
         }
 
         function loadViewModal(id) {

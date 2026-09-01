@@ -156,133 +156,144 @@
                 @endif
             </form>
 
-            <div class="table-responsive">
-                <table class="table align-middle mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th class="text-nowrap">Article / Item</th>
-                            <th class="text-nowrap">Brand / Model</th>
-                            <th class="text-nowrap" style="min-width: 200px;">Description</th>
-                            <th>Unit Value</th>
-                            <th class="text-center">Remaining Stock</th>
-                            <th class="text-center">Status</th>
-                            <th class="text-center">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse($supplies as $row)
-                            @php
-                                $threshold = $row->low_stock_threshold ?? 10;
-                                $status_class = 'status-available';
-                                $status_text = 'Available';
-                                $qtyColor = 'text-dark';
-
-                                if($row->quantity == 0) { 
-                                    $status_class = 'status-out'; 
-                                    $status_text = 'Out of Stock'; 
-                                    $qtyColor = 'text-danger';
-                                } elseif($row->quantity <= $threshold) { 
-                                    $status_class = 'status-low'; 
-                                    $status_text = 'Low Stock'; 
-                                    $qtyColor = 'text-warning text-dark';
-                                }
-
-                            @endphp
-                            <tr class="clickable-row" data-id="{{ $row->id }}">
-                                <td class="fw-bold">
-                                    {{ $row->article }}
-                                    @if($row->classification)
-                                        <small class="d-block text-muted fw-normal">{{ $row->classification }}</small>
-                                    @endif
-                                </td>
-                                <td>
-                                    @if($row->brand || $row->model)
-                                        <small>{{ $row->brand }}{{ $row->brand && $row->model ? ' / ' : '' }}{{ $row->model }}</small>
-                                    @else
-                                        <span class="text-muted">&mdash;</span>
-                                    @endif
-                                </td>
-                                <td><small class="text-muted">{{ Str::limit($row->description, 40) }}</small></td>
-                                <td>₱{{ number_format($row->unit_value, 2) }}</td>
-                                
-                                <td class="text-center" style="min-width: 120px;">
-                                    <div class="d-flex align-items-center justify-content-center gap-1">
-                                        <span class="fw-bold fs-5 {{ $qtyColor }}">{{ $row->quantity }}</span>
-                                    </div>
-                                    <div class="text-muted" style="font-size: 0.7rem;">({{ $row->unit_measure }})</div>
-                                </td>
-
-                                <td class="text-center"><span class="badge rounded-pill {{ $status_class }} px-2 py-1">{{ $status_text }}</span></td>
-                                <td>
-                                    <div class="d-flex justify-content-center gap-1">
-                                        <button class="btn btn-sm btn-light border text-primary view-btn" 
-                                                title="View" 
-                                                data-id="{{ $row->id }}">
-                                            <i class="fas fa-eye"></i>
-                                        </button>
-
-                                        <button class="btn btn-sm btn-light border text-success edit-btn" 
-                                                title="Edit"
-                                                data-bs-toggle="modal" 
-                                                data-bs-target="#editSupplyModal"
-                                                data-id="{{ $row->id }}"
-                                                data-article="{{ $row->article }}"
-                                                data-desc="{{ $row->description }}"
-                                                data-brand="{{ $row->brand }}"
-                                                data-model="{{ $row->model }}"
-                                                data-classification="{{ $row->classification }}"
-                                                data-unit="{{ $row->unit_measure }}"
-                                                data-value="{{ $row->unit_value }}"
-                                                data-qty="{{ $row->quantity }}"
-                                                data-threshold="{{ $row->low_stock_threshold ?? 10 }}"
-                                                data-image="{{ $row->image }}"
-                                                data-supplier="{{ $row->supplier }}">
-                                            <i class="fas fa-edit"></i>
-                                        </button>
-
-                                        <button class="btn btn-sm btn-light border text-danger delete-btn" 
-                                                title="Delete"
-                                                data-bs-toggle="modal" 
-                                                data-bs-target="#deleteSupplyModal"
-                                                data-id="{{ $row->id }}">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="7" class="text-center py-5 text-muted border-bottom-0">
-                                    <i class="fas fa-box-open fa-3x mb-3 opacity-25 d-block"></i>
-                                    No supplies match your search.
-                                </td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <div class="text-muted small">{{ $totalSupplyCount }} item(s) across {{ $suppliesGrouped->count() }} section(s)</div>
+                <div class="btn-group btn-group-sm">
+                    <button type="button" class="btn btn-outline-secondary" onclick="document.querySelectorAll('#sectionsAccordion .accordion-collapse').forEach(el => bootstrap.Collapse.getOrCreateInstance(el).show())">Expand All</button>
+                    <button type="button" class="btn btn-outline-secondary" onclick="document.querySelectorAll('#sectionsAccordion .accordion-collapse').forEach(el => bootstrap.Collapse.getOrCreateInstance(el).hide())">Collapse All</button>
+                </div>
             </div>
 
-            <div class="d-flex justify-content-between align-items-center border-top pt-3 mt-2">
-                <div class="text-muted small">
-                    Showing {{ $supplies->firstItem() ?? 0 }} to {{ $supplies->lastItem() ?? 0 }} of {{ $supplies->total() }} results
-                </div>
+            <div class="table-responsive">
+                <div class="accordion" id="sectionsAccordion">
+                    @forelse($suppliesGrouped as $sectionName => $classificationGroups)
+                        @php
+                            $sectionId = 'sec-' . \Illuminate\Support\Str::slug($sectionName ?: 'uncategorized');
+                            $sectionItemCount = $classificationGroups->flatten(1)->count();
+                        @endphp
+                        <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-{{ $sectionId }}">
+                                    <i class="fas fa-layer-group text-primary me-2"></i> {{ $sectionName ?: 'Uncategorized' }}
+                                    <span class="badge bg-secondary ms-2">{{ $sectionItemCount }} item(s)</span>
+                                </button>
+                            </h2>
+                            <div id="collapse-{{ $sectionId }}" class="accordion-collapse collapse" data-bs-parent="#sectionsAccordion">
+                                <div class="accordion-body p-2">
+                                    <div class="accordion" id="classAccordion-{{ $sectionId }}">
+                                        @foreach($classificationGroups as $classificationName => $rows)
+                                            @php $classId = $sectionId . '-' . \Illuminate\Support\Str::slug($classificationName ?: 'general'); @endphp
+                                            <div class="accordion-item">
+                                                <h2 class="accordion-header">
+                                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-{{ $classId }}">
+                                                        <i class="fas fa-tag text-muted me-2"></i> {{ $classificationName ?: 'General' }}
+                                                        <span class="badge bg-light text-dark border ms-2">{{ $rows->count() }} item(s)</span>
+                                                    </button>
+                                                </h2>
+                                                <div id="collapse-{{ $classId }}" class="accordion-collapse collapse" data-bs-parent="#classAccordion-{{ $sectionId }}">
+                                                    <div class="accordion-body p-0">
+                                                        <table class="table align-middle mb-0">
+                                                            <thead class="table-light">
+                                                                <tr>
+                                                                    <th class="text-nowrap">Brand / Model</th>
+                                                                    <th class="text-nowrap" style="min-width: 200px;">Description</th>
+                                                                    <th>Unit Value</th>
+                                                                    <th class="text-center">Remaining Stock</th>
+                                                                    <th class="text-center">Status</th>
+                                                                    <th class="text-center">Actions</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                @foreach($rows as $row)
+                                                                    @php
+                                                                        $threshold = $row->low_stock_threshold ?? 10;
+                                                                        $status_class = 'status-available';
+                                                                        $status_text = 'Available';
+                                                                        $qtyColor = 'text-dark';
 
-                <div class="d-flex align-items-center">
-                    <span class="text-muted small me-2">Per page</span>
-                    <form action="{{ url('/admin/supplies') }}" method="GET" id="perPageForm">
-                        @if(request('search')) <input type="hidden" name="search" value="{{ request('search') }}"> @endif
-                        @if(request('status_filter')) <input type="hidden" name="status_filter" value="{{ request('status_filter') }}"> @endif
-                        <select name="per_page" class="form-select form-select-sm shadow-none" style="width: 70px; border-color: #101954; color: #101954; font-weight: 500;" onchange="document.getElementById('perPageForm').submit();">
-                            <option value="5" {{ $perPage == 5 ? 'selected' : '' }}>5</option>
-                            <option value="10" {{ $perPage == 10 ? 'selected' : '' }}>10</option>
-                            <option value="25" {{ $perPage == 25 ? 'selected' : '' }}>25</option>
-                            <option value="50" {{ $perPage == 50 ? 'selected' : '' }}>50</option>
-                        </select>
-                    </form>
-                </div>
+                                                                        if($row->quantity == 0) {
+                                                                            $status_class = 'status-out';
+                                                                            $status_text = 'Out of Stock';
+                                                                            $qtyColor = 'text-danger';
+                                                                        } elseif($row->quantity <= $threshold) {
+                                                                            $status_class = 'status-low';
+                                                                            $status_text = 'Low Stock';
+                                                                            $qtyColor = 'text-warning text-dark';
+                                                                        }
+                                                                    @endphp
+                                                                    <tr class="clickable-row" data-id="{{ $row->id }}">
+                                                                        <td>
+                                                                            @if($row->brand || $row->model)
+                                                                                <small>{{ $row->brand }}{{ $row->brand && $row->model ? ' / ' : '' }}{{ $row->model }}</small>
+                                                                            @else
+                                                                                <span class="text-muted">&mdash;</span>
+                                                                            @endif
+                                                                        </td>
+                                                                        <td><small class="text-muted">{{ Str::limit($row->description, 40) }}</small></td>
+                                                                        <td>₱{{ number_format($row->unit_value, 2) }}</td>
 
-                <div class="custom-pagination-wrapper" id="scrollablePagination">
-                    {{ $supplies->onEachSide(1)->appends(request()->query())->links() }}
+                                                                        <td class="text-center" style="min-width: 120px;">
+                                                                            <div class="d-flex align-items-center justify-content-center gap-1">
+                                                                                <span class="fw-bold fs-5 {{ $qtyColor }}">{{ $row->quantity }}</span>
+                                                                            </div>
+                                                                            <div class="text-muted" style="font-size: 0.7rem;">({{ $row->unit_measure }})</div>
+                                                                        </td>
+
+                                                                        <td class="text-center"><span class="badge rounded-pill {{ $status_class }} px-2 py-1">{{ $status_text }}</span></td>
+                                                                        <td>
+                                                                            <div class="d-flex justify-content-center gap-1">
+                                                                                <button class="btn btn-sm btn-light border text-primary view-btn"
+                                                                                        title="View"
+                                                                                        data-id="{{ $row->id }}">
+                                                                                    <i class="fas fa-eye"></i>
+                                                                                </button>
+
+                                                                                <button class="btn btn-sm btn-light border text-success edit-btn"
+                                                                                        title="Edit"
+                                                                                        data-bs-toggle="modal"
+                                                                                        data-bs-target="#editSupplyModal"
+                                                                                        data-id="{{ $row->id }}"
+                                                                                        data-article="{{ $row->article }}"
+                                                                                        data-desc="{{ $row->description }}"
+                                                                                        data-brand="{{ $row->brand }}"
+                                                                                        data-model="{{ $row->model }}"
+                                                                                        data-classification="{{ $row->classification }}"
+                                                                                        data-unit="{{ $row->unit_measure }}"
+                                                                                        data-value="{{ $row->unit_value }}"
+                                                                                        data-qty="{{ $row->quantity }}"
+                                                                                        data-threshold="{{ $row->low_stock_threshold ?? 10 }}"
+                                                                                        data-image="{{ $row->image }}"
+                                                                                        data-supplier="{{ $row->supplier }}">
+                                                                                    <i class="fas fa-edit"></i>
+                                                                                </button>
+
+                                                                                <button class="btn btn-sm btn-light border text-danger delete-btn"
+                                                                                        title="Delete"
+                                                                                        data-bs-toggle="modal"
+                                                                                        data-bs-target="#deleteSupplyModal"
+                                                                                        data-id="{{ $row->id }}">
+                                                                                    <i class="fas fa-trash"></i>
+                                                                                </button>
+                                                                            </div>
+                                                                        </td>
+                                                                    </tr>
+                                                                @endforeach
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    @empty
+                        <div class="text-center py-5 text-muted">
+                            <i class="fas fa-box-open fa-3x mb-3 opacity-25 d-block"></i>
+                            No supplies match your search.
+                        </div>
+                    @endforelse
                 </div>
             </div>
 

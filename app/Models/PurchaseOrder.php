@@ -18,4 +18,28 @@ class PurchaseOrder extends Model
     {
         return $this->hasMany(PurchaseOrderItem::class);
     }
+
+    /** Recompute Pending/Partial/Complete from each item's actual delivered vs ordered quantity */
+    public function recomputeStatus(): string
+    {
+        $items = $this->items()->get();
+
+        if ($items->isEmpty()) {
+            return $this->status ?? 'Pending';
+        }
+
+        $statuses = $items->map(fn (PurchaseOrderItem $item) => $item->getDeliveryStatus());
+
+        if ($statuses->every(fn ($s) => $s === 'complete')) {
+            $status = 'Complete';
+        } elseif ($statuses->every(fn ($s) => $s === 'pending')) {
+            $status = 'Pending';
+        } else {
+            $status = 'Partial';
+        }
+
+        $this->update(['status' => $status]);
+
+        return $status;
+    }
 }

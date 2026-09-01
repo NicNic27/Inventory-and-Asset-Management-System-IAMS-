@@ -7,6 +7,7 @@ use App\Models\Transaction;
 use App\Models\ActivityLog;
 use App\Models\IcsRequest;
 use App\Models\AssetCustody;
+use App\Models\PurchaseOrderItem;
 use App\Models\SystemSetting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -17,6 +18,10 @@ use Illuminate\Validation\ValidationException;
 
 class AssetService
 {
+    public function __construct(private IcsAutoIssueService $icsAutoIssueService)
+    {
+    }
+
     /**
      * Check if asset barcode already exists
      */
@@ -131,7 +136,8 @@ class AssetService
                     'supplier' => $data['supplier'] ?? null,
                     'unit_value' => $member['unit_value'],
                     'status' => $data['status'] ?? 'Serviceable',
-                    'image' => $imageName
+                    'image' => $imageName,
+                    'po_item_id' => $data['po_item_id'] ?? null,
                 ]);
                 $createdAssets[] = $asset;
 
@@ -148,6 +154,19 @@ class AssetService
             }
 
             $asset = $createdAssets[0];
+
+            // Direct-issuance PO items auto-generate their ICS/PAR record instead of sitting in plain inventory
+            if (!empty($data['po_item_id'])) {
+                $poItem = PurchaseOrderItem::find($data['po_item_id']);
+                if ($poItem) {
+                    if (($poItem->source_type ?? 'procurement_stock') === 'direct_issuance') {
+                        foreach ($createdAssets as $createdAsset) {
+                            $this->icsAutoIssueService->issueAsset($createdAsset, $poItem);
+                        }
+                    }
+                    $poItem->purchaseOrder?->recomputeStatus();
+                }
+            }
 
             // Log activity
             ActivityLog::create([

@@ -9,6 +9,7 @@ use App\Services\SupplyService;
 use App\Services\RisService;
 use App\Services\BarcodeService;
 use App\Services\TransactionService;
+use App\Services\IcsAutoIssueService;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -19,7 +20,7 @@ class AppServiceProvider extends ServiceProvider
     {
         // Register services as singletons
         $this->app->singleton(AssetService::class, function ($app) {
-            return new AssetService();
+            return new AssetService($app->make(IcsAutoIssueService::class));
         });
 
         $this->app->singleton(SupplyService::class, function ($app) {

@@ -6,11 +6,15 @@ use Illuminate\Http\Request;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderItem;
 use App\Models\ActivityLog;
+use App\Models\Supply;
+use App\Models\PoItemReferral;
+use App\Models\PrReferral;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Auth;
 use App\Services\SupplyService;
+use App\Services\PoDeliveryService;
 
 class PurchaseOrderController extends Controller
 {
@@ -42,10 +46,12 @@ class PurchaseOrderController extends Controller
         }
 
         $purchaseOrders = $query->get();
-        return view('po.index', compact('purchaseOrders'));
+        $supplies = Supply::orderBy('article')->get(['id', 'article', 'description', 'unit_measure']);
+
+        return view('po.index', compact('purchaseOrders', 'supplies'));
     }
 
-    public function store(Request $request, SupplyService $supplyService)
+    public function store(Request $request, SupplyService $supplyService, PoDeliveryService $poDeliveryService)
     {
         if (!Schema::hasColumn('purchase_orders', 'po_type')) {
             Schema::table('purchase_orders', function (Blueprint $table) {
@@ -100,9 +106,14 @@ class PurchaseOrderController extends Controller
                     'unit_cost' => $item['cost'],
                     'amount' => $item['qty'] * $item['cost'],
                     'is_delivered' => (!empty($item['is_delivered']) && ($item['is_delivered'] === true || $item['is_delivered'] === 'true')),
+                    'item_type' => $item['item_type'] ?? 'supply',
+                    'supply_id' => $item['supply_id'] ?? null,
+                    'source_type' => $item['source_type'] ?? 'procurement_stock',
+                    'requesting_office' => $item['requesting_office'] ?? null,
                 ]);
 
                 $supplyService->syncDeliveredPurchaseOrderItem($poItem);
+                $this->linkReferralIfSelected($poItem, $item, $poDeliveryService);
             }
 
             ActivityLog::create([
@@ -123,11 +134,22 @@ class PurchaseOrderController extends Controller
 
     public function show($id)
     {
-        $po = PurchaseOrder::with('items')->findOrFail($id);
+        $po = PurchaseOrder::with(['items' => function ($q) {
+            $q->withDeliveredQuantity();
+        }])->findOrFail($id);
+
+        $po->items->each(function (PurchaseOrderItem $item) {
+            $item->delivery_status = $item->getDeliveryStatus();
+
+            $linkedReferral = $item->referrals()->with('risRequest')->first();
+            $item->pr_referral_id = $linkedReferral->id ?? null;
+            $item->requesting_ris_no = $linkedReferral->risRequest->ris_no ?? null;
+        });
+
         return response()->json($po);
     }
 
-    public function update(Request $request, $id, SupplyService $supplyService)
+    public function update(Request $request, $id, SupplyService $supplyService, PoDeliveryService $poDeliveryService)
     {
         if (!Schema::hasColumn('purchase_orders', 'po_type')) {
             Schema::table('purchase_orders', function (Blueprint $table) {
@@ -174,21 +196,38 @@ class PurchaseOrderController extends Controller
                 'status' => $calculatedStatus,
             ]);
 
-            $po->items()->delete();
+            $keptItemIds = [];
 
             foreach ($request->items as $item) {
-                $poItem = PurchaseOrderItem::create([
-                    'purchase_order_id' => $po->id,
+                $payload = [
                     'unit' => $item['unit'],
                     'description' => $item['description'],
                     'qty' => $item['qty'],
                     'unit_cost' => $item['cost'],
                     'amount' => $item['qty'] * $item['cost'],
                     'is_delivered' => (!empty($item['is_delivered']) && ($item['is_delivered'] === true || $item['is_delivered'] === 'true')),
-                ]);
+                    'item_type' => $item['item_type'] ?? 'supply',
+                    'supply_id' => $item['supply_id'] ?? null,
+                    'source_type' => $item['source_type'] ?? 'procurement_stock',
+                    'requesting_office' => $item['requesting_office'] ?? null,
+                ];
+
+                // Update existing items in place so recorded delivery batches stay linked
+                if (!empty($item['id'])) {
+                    $poItem = $po->items()->whereKey($item['id'])->firstOrFail();
+                    $poItem->update($payload);
+                } else {
+                    $payload['purchase_order_id'] = $po->id;
+                    $poItem = PurchaseOrderItem::create($payload);
+                }
+
+                $keptItemIds[] = $poItem->id;
 
                 $supplyService->syncDeliveredPurchaseOrderItem($poItem);
+                $this->linkReferralIfSelected($poItem, $item, $poDeliveryService);
             }
+
+            $po->items()->whereNotIn('id', $keptItemIds)->delete();
 
             ActivityLog::create([
                 'user_id' => Auth::id(),
@@ -206,10 +245,39 @@ class PurchaseOrderController extends Controller
         }
     }
 
+    /** Links a direct-issuance PO item to the RIS referral it's fulfilling, if one was picked in the UI */
+    private function linkReferralIfSelected(PurchaseOrderItem $poItem, array $item, PoDeliveryService $poDeliveryService): void
+    {
+        $referralId = $item['pr_referral_id'] ?? null;
+
+        // Clear any existing stale referral links so a changed selection doesn't leave duplicates
+        PoItemReferral::where('po_item_id', $poItem->id)->delete();
+
+        if (empty($referralId)) {
+            return;
+        }
+
+        $referral = PrReferral::find($referralId);
+        if (!$referral) {
+            return;
+        }
+
+        $remaining = max(0, (int) $referral->quantity_needed - $referral->getFulfilledQuantity());
+        $allocate = min((int) $poItem->qty, $remaining);
+
+        if ($allocate < 1) {
+            return;
+        }
+
+        $poDeliveryService->linkPoToReferrals($poItem->id, [
+            ['pr_referral_id' => $referral->id, 'quantity_allocated' => $allocate],
+        ]);
+    }
+
     public function destroy($id)
     {
         $po = PurchaseOrder::findOrFail($id);
-        
+
         ActivityLog::create([
             'user_id' => Auth::id(),
             'action' => 'Deleted',

@@ -6,6 +6,7 @@ use App\Models\RisRequest;
 use App\Models\RisItem;
 use App\Models\Supply; 
 use App\Models\ActivityLog;
+use App\Services\PrReferralService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -55,7 +56,7 @@ class RisController extends Controller
         return view('ris.review', compact('req'));
     }
 
-    public function update(Request $request, $id)
+    public function update(Request $request, $id, PrReferralService $prReferralService)
     {
         $ris = RisRequest::findOrFail($id);
 
@@ -123,8 +124,26 @@ class RisController extends Controller
 
                     if ($itemId > 0) {
                         RisItem::where('id', $itemId)->update($itemData);
+                        $savedItem = RisItem::find($itemId);
                     } else {
-                        RisItem::create($itemData);
+                        $savedItem = RisItem::create($itemData);
+                    }
+
+                    // No stock on hand: refer this line item to BAC for procurement
+                    if (strtolower((string) $avail) === 'no' && $savedItem) {
+                        $supply = Supply::where('barcode_id', $stockNo)->first();
+                        $alreadyReferred = \App\Models\PrReferral::where('ris_item_id', $savedItem->id)
+                            ->whereIn('status', ['referred', 'po_issued'])
+                            ->exists();
+
+                        if ($supply && !$alreadyReferred) {
+                            $prReferralService->createReferral([
+                                'ris_id' => $ris->id,
+                                'ris_item_id' => $savedItem->id,
+                                'supply_id' => $supply->id,
+                                'quantity_needed' => $request->req_quantity[$i] ?? 1,
+                            ]);
+                        }
                     }
                 }
             }

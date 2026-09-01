@@ -62,19 +62,17 @@ class AssetController extends Controller
 
         $deliveredPoItems = collect();
         if (class_exists(PurchaseOrderItem::class)) {
-            $existingAssetDescriptions = Asset::pluck('description')->map(function($desc) {
-                return strtolower(trim($desc));
-            });
-
             $rawPoItems = PurchaseOrderItem::with('purchaseOrder')
                 ->whereHas('purchaseOrder', function($q) {
                     $q->where('po_type', 'Asset'); 
                 })
+                ->where('item_type', 'asset')
+                ->where('source_type', '!=', 'direct_issuance')
                 ->where('is_delivered', true)
                 ->get();
 
-            $deliveredPoItems = $rawPoItems->reject(function($item) use ($existingAssetDescriptions) {
-                return in_array(strtolower(trim($item->description)), $existingAssetDescriptions->toArray());
+            $deliveredPoItems = $rawPoItems->reject(function($item) {
+                return $item->getDeliveredQuantity() >= $item->qty;
             });
         }
 
@@ -105,6 +103,7 @@ class AssetController extends Controller
             'supplier' => ['nullable', 'string', 'max:255'],
             'status' => ['nullable', 'string', 'max:255'],
             'image' => ['nullable', 'image', 'max:5120'],
+            'po_item_id' => ['nullable', 'integer', 'exists:purchase_order_items,id'],
         ]);
 
         $asset = $this->assetService->create([

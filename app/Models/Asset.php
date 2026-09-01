@@ -32,7 +32,8 @@ class Asset extends Model
         'supplier',
         'unit_value',
         'status',
-        'image'
+        'image',
+        'po_item_id'
     ];
 
     protected function casts(): array
@@ -43,5 +44,10 @@ class Asset extends Model
             'unit_value' => 'decimal:2',
             'set_sequence' => 'integer',
         ];
+    }
+
+    public function poItem()
+    {
+        return $this->belongsTo(PurchaseOrderItem::class, 'po_item_id');
     }
 }

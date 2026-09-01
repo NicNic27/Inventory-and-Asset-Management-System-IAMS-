@@ -17,7 +17,6 @@ class SupplyController extends Controller
 {
     public function index(Request $request)
     {
-        $perPage = $request->input('per_page', 10);
         $query = Supply::select('supplies.*')
             ->selectRaw('(SELECT COALESCE(SUM(quantity), 0) FROM transactions WHERE transactions.item_id = supplies.id AND transactions.item_type = "supplies" AND transactions.transaction_type IN ("IN", "Added")) as total_input');
 
@@ -46,7 +45,13 @@ class SupplyController extends Controller
             }
         }
 
-        $supplies = $query->orderBy('id', 'desc')->paginate($perPage);
+        $supplies = $query->orderBy('article')->orderByRaw('classification IS NULL, classification')->orderBy('id', 'desc')->get();
+
+        // Two-level accordion grouping: Section (article) -> Classification -> items
+        $suppliesGrouped = $supplies->groupBy(fn ($s) => $s->article ?: 'Uncategorized')
+            ->map(fn ($bySection) => $bySection->groupBy(fn ($s) => $s->classification ?: 'General'));
+
+        $totalSupplyCount = $supplies->count();
 
         $brandOptions = Supply::whereNotNull('brand')->where('brand', '!=', '')->distinct()->orderBy('brand')->pluck('brand');
 
@@ -69,6 +74,8 @@ class SupplyController extends Controller
                 ->whereHas('purchaseOrder', function($q) {
                     $q->where('po_type', 'Supply'); 
                 })
+                ->where('item_type', 'supply')
+                ->where('source_type', '!=', 'direct_issuance')
                 ->where('is_delivered', true)
                 ->get();
 
@@ -77,7 +84,7 @@ class SupplyController extends Controller
             });
         }
 
-        return view('supplies.index', compact('supplies', 'perPage', 'deliveredPoItems', 'brandOptions', 'sections'));
+        return view('supplies.index', compact('suppliesGrouped', 'totalSupplyCount', 'deliveredPoItems', 'brandOptions', 'sections'));
     }
 
     public function store(Request $request)
