@@ -188,16 +188,21 @@
         }
     };
 
-    window.addEmptyItemRow = function(data = {unit: 'pc', desc: '', qty: 0, cost: 0.00, is_delivered: false}) {
+    window.addEmptyItemRow = function(data = {unit: 'pc', desc: '', qty: 0, cost: 0.00, is_delivered: false, item_type: 'supply', source_type: 'procurement_stock'}) {
         const container = document.getElementById('itemsContainer');
         const q = parseFloat(data.qty) || 0;
         const c = parseFloat(data.cost) || 0;
         const total = (q * c).toLocaleString(undefined, {minimumFractionDigits: 2});
         const isSelected = (val) => data.unit === val ? 'selected' : '';
         const isChecked = data.is_delivered ? 'checked' : '';
+        const itemType = data.item_type || 'supply';
+        const sourceType = data.source_type || 'procurement_stock';
+        const cardBorderClass = sourceType === 'direct_issuance' ? 'item-card direct-card' : 'item-card supply-card';
+        const subtitleText = sourceType === 'direct_issuance' ? 'Supply \u2014 Direct Issuance' : 'Supply \u2014 For Inventory';
+        const officeVisible = sourceType === 'direct_issuance' ? '' : 'display:none;';
 
         const templateHtml = `
-            <div class="card position-relative item-row p-3 mb-3 border-0 shadow-sm border-start border-4 border-success">
+            <div class="${cardBorderClass} card position-relative item-row p-3 mb-3 border-0 shadow-sm border-start border-4 border-success">
                 <div class="row g-3 align-items-center">
                     <div class="col-md-1 text-center pt-2">
                         <label class="form-label d-block text-success mb-2" title="Mark as Delivered">RCVD</label>
@@ -231,12 +236,91 @@
                         <label class="form-label">Total Amount</label>
                         <input type="text" class="form-control bg-light fw-bold total-output" readonly value="${total}">
                     </div>
+                    <div class="col-md-12">
+                        <label class="form-label">Fulfillment</label>
+                        <div class="d-flex gap-2 align-items-center">
+                            <div class="d-inline-flex rounded border overflow-hidden" style="border-color: #e2e8f0;">
+                                <button type="button" class="btn btn-sm ${sourceType === 'procurement_stock' ? 'text-white' : ''}" style="font-size:0.75rem; font-weight:600; background:${sourceType === 'procurement_stock' ? '#059669' : '#f8fafc'}; color:${sourceType === 'procurement_stock' ? 'white' : '#64748b'};" onclick="onFulfillmentToggle(this, 'procurement_stock')"><i class="fas fa-warehouse me-1"></i> Inventory</button>
+                                <button type="button" class="btn btn-sm ${sourceType === 'direct_issuance' ? 'text-white' : ''}" style="font-size:0.75rem; font-weight:600; background:${sourceType === 'direct_issuance' ? '#ea580c' : '#f8fafc'}; color:${sourceType === 'direct_issuance' ? 'white' : '#64748b'};" onclick="onFulfillmentToggle(this, 'direct_issuance')"><i class="fas fa-truck me-1"></i> Direct</button>
+                            </div>
+                            <input type="hidden" class="source-type-select" value="${sourceType}">
+                            <input type="hidden" class="item-type-select" value="${itemType}">
+                        </div>
+                    </div>
+                    <div class="col-md-12 office-wrapper" style="${officeVisible}">
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <label class="form-label">Requesting Division <span class="text-danger">*</span></label>
+                                <select class="form-select requesting-division-select" onchange="onOfficeChanged(this)" required>
+                                    <option value="">-- Select Division --</option>
+                                    ${Object.keys(window.officeMapping || {}).map(d => `<option value="${d}" ${data.requesting_office && data.requesting_office.startsWith(d) ? 'selected' : ''}>${d}</option>`).join('')}
+                                </select>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label">Office / Section <span class="text-danger">*</span></label>
+                                <select class="form-select requesting-unit-select" required>
+                                    <option value="">-- Select Division First --</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 <button type="button" class="btn btn-sm btn-danger position-absolute" style="top: 10px; right: 10px; border-radius: 50%; width: 30px; height: 30px;" onclick="this.closest('.item-row').remove(); autoUpdatePoStatus();"><i class="fa-solid fa-trash"></i></button>
             </div>
         `;
         container.insertAdjacentHTML('beforeend', templateHtml);
         autoUpdatePoStatus(); 
+    };
+
+    window.officeMapping = {
+        "Administrative Division": ["Asset Management Section", "General Services Unit", "Payroll Services Unit", "Records Section", "Personnel Section", "Cash Section"],
+        "Curriculum and Learning Management Division": ["Learning Resource Management Section"],
+        "Education Support Services Division": ["Health and Nutrition", "Programs and Projects", "Facilities"],
+        "Finance Division": ["Budget Section", "Accounting Section"],
+        "Human Resource Development Division": ["NEAP"],
+        "Office of the Regional Director": ["Procurement Unit", "Information and Communications Technology Unit", "Public Affairs Unit", "Legal Unit"]
+    };
+
+    window.onOfficeChanged = function(divisionSelect) {
+        const row = divisionSelect.closest('.item-row');
+        const unitSelect = row.querySelector('.requesting-unit-select');
+        const selectedDivision = divisionSelect.value;
+        unitSelect.innerHTML = '<option value="">-- Select Office/Section --</option>';
+        if (selectedDivision && window.officeMapping[selectedDivision]) {
+            window.officeMapping[selectedDivision].forEach(function(unit) {
+                const opt = document.createElement('option');
+                opt.value = unit; opt.textContent = unit;
+                unitSelect.appendChild(opt);
+            });
+        }
+    };
+
+    window.parseRequestingOffice = function(row, value) {
+        if (!value) return;
+        const parts = value.split(' > ');
+        const divSel = row.querySelector('.requesting-division-select');
+        const unitSel = row.querySelector('.requesting-unit-select');
+        if (divSel && parts[0]) {
+            divSel.value = parts[0];
+            window.onOfficeChanged(divSel);
+            if (unitSel && parts[1]) unitSel.value = parts[1];
+        }
+    };
+
+    window.onFulfillmentToggle = function(btn, sourceType) {
+        const row = btn.closest('.item-row');
+        const toggleBtns = btn.parentElement.querySelectorAll('.btn');
+        toggleBtns.forEach(b => {
+            b.classList.remove('text-white');
+            b.style.background = '#f8fafc';
+            b.style.color = '#64748b';
+        });
+        btn.classList.add('text-white');
+        btn.style.background = sourceType === 'procurement_stock' ? '#059669' : '#ea580c';
+        btn.style.color = 'white';
+        row.querySelector('.source-type-select').value = sourceType;
+        const wrapper = row.querySelector('.office-wrapper');
+        if (wrapper) wrapper.style.display = sourceType === 'direct_issuance' ? '' : 'none';
     };
 
     // Attach Calculation Listeners globally
@@ -308,7 +392,11 @@
                 description: row.querySelector('.desc-input').value,
                 qty: q,
                 cost: c,
-                is_delivered: isD
+                is_delivered: isD,
+                item_type: row.querySelector('.item-type-select')?.value || 'supply',
+                supply_id: row.querySelector('.supply-select')?.value || null,
+                source_type: row.querySelector('.source-type-select')?.value || 'procurement_stock',
+                requesting_office: (() => { const d = row.querySelector('.requesting-division-select')?.value; const u = row.querySelector('.requesting-unit-select')?.value; return d ? (u ? d + ' > ' + u : d) : null; })()
             });
         });
 

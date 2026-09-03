@@ -402,6 +402,42 @@
         window.SUPPLIES_LIST = @json($supplies ?? []);
         let currentPoData = null;
 
+        window.officeMapping = {
+            "Administrative Division": ["Asset Management Section", "General Services Unit", "Payroll Services Unit", "Records Section", "Personnel Section", "Cash Section"],
+            "Curriculum and Learning Management Division": ["Learning Resource Management Section"],
+            "Education Support Services Division": ["Health and Nutrition", "Programs and Projects", "Facilities"],
+            "Finance Division": ["Budget Section", "Accounting Section"],
+            "Human Resource Development Division": ["NEAP"],
+            "Office of the Regional Director": ["Procurement Unit", "Information and Communications Technology Unit", "Public Affairs Unit", "Legal Unit"]
+        };
+
+        window.onOfficeChanged = function(divisionSelect) {
+            const row = divisionSelect.closest('.item-row');
+            const unitSelect = row.querySelector('.requesting-unit-select');
+            const selectedDivision = divisionSelect.value;
+            unitSelect.innerHTML = '<option value="">-- Select Office/Section --</option>';
+            if (selectedDivision && window.officeMapping[selectedDivision]) {
+                window.officeMapping[selectedDivision].forEach(function(unit) {
+                    const opt = document.createElement('option');
+                    opt.value = unit; opt.textContent = unit;
+                    unitSelect.appendChild(opt);
+                });
+            }
+        };
+
+        // Parse "Division > Section" back into two selects
+        window.parseRequestingOffice = function(row, value) {
+            if (!value) return;
+            const parts = value.split(' > ');
+            const divSel = row.querySelector('.requesting-division-select');
+            const unitSel = row.querySelector('.requesting-unit-select');
+            if (divSel && parts[0]) {
+                divSel.value = parts[0];
+                window.onOfficeChanged(divSel);
+                if (unitSel && parts[1]) unitSel.value = parts[1];
+            }
+        };
+
         window.autoUpdatePoStatus = function() {
             const rows = document.querySelectorAll('.item-row');
             if (rows.length === 0) return;
@@ -419,9 +455,10 @@
             } else {
                 statusSelect.value = 'Partial';
             }
+            if (typeof updateItemCount === 'function') updateItemCount();
         };
 
-        window.addEmptyItemRow = function(data = {unit: 'pc', desc: '', qty: 0, cost: 0.00, is_delivered: false}) {
+        window.addEmptyItemRow = function(data = {unit: 'pc', desc: '', qty: 0, cost: 0.00, is_delivered: false, source_type: window.globalIssuanceMode || 'procurement_stock'}) {
             const container = document.getElementById('itemsContainer');
             const q = parseFloat(data.qty) || 0;
             const c = parseFloat(data.cost) || 0;
@@ -431,12 +468,23 @@
             const poItemId = data.id || '';
             const itemType = data.item_type || 'supply';
             const sourceType = data.source_type || 'procurement_stock';
-            const supplyOptions = (window.SUPPLIES_LIST || []).map(s =>
-                `<option value="${s.id}" ${String(data.supply_id) === String(s.id) ? 'selected' : ''}>${s.article} - ${s.description} (${s.unit_measure})</option>`
-            ).join('');
+            const groupedSupplies = {};
+            (window.SUPPLIES_LIST || []).forEach(s => {
+                const key = s.article || 'Other';
+                if (!groupedSupplies[key]) groupedSupplies[key] = [];
+                groupedSupplies[key].push(s);
+            });
+            let supplyOptions = '<option value="">\u2014 Not linked \u2014</option>';
+            Object.keys(groupedSupplies).sort().forEach(article => {
+                supplyOptions += `<optgroup label="${article}">`;
+                groupedSupplies[article].forEach(s => {
+                    const label = (s.classification || s.description) + ' (' + s.unit_measure + ')';
+                    supplyOptions += `<option value="${s.id}" ${String(data.supply_id) === String(s.id) ? 'selected' : ''}>${label}</option>`;
+                });
+                supplyOptions += '</optgroup>';
+            });
             const officeVisible = sourceType === 'direct_issuance' ? '' : 'display:none;';
             const supplyLinkVisible = itemType === 'asset' ? 'display:none;' : '';
-            const risPickerVisible = itemType === 'asset' ? 'display:none;' : '';
             const deliveryInfo = !poItemId
                 ? `<span class="text-muted small fst-italic">Save the P.O. first to record deliveries</span>`
                 : itemType === 'asset'
@@ -445,20 +493,80 @@
                     : `<span class="badge ${data.delivery_status === 'complete' ? 'bg-success' : data.delivery_status === 'partial' ? 'bg-warning text-dark' : 'bg-secondary'}">${(data.delivered_quantity ?? 0)}/${q} ${data.delivery_status || 'pending'}</span>
                        <button type="button" class="btn btn-sm btn-outline-primary ms-2" onclick="openRecordDeliveryModal(this)"><i class="fas fa-truck-loading me-1"></i>Record Delivery</button>`;
 
+            const cardBorderClass = itemType === 'asset' ? 'item-card asset-card' : (sourceType === 'direct_issuance' ? 'item-card direct-card' : 'item-card supply-card');
+            const subtitleText = itemType === 'asset' ? 'Asset / Equipment' : (sourceType === 'direct_issuance' ? 'Supply \u2014 Direct Issuance' : 'Supply \u2014 For Inventory');
+            let inventoryPreviewHtml = '';
+            if (itemType === 'supply' && sourceType === 'procurement_stock') {
+                if (data.supply_id) {
+                    const linkedSupply = (window.SUPPLIES_LIST || []).find(s => String(s.id) === String(data.supply_id));
+                    if (linkedSupply) {
+                        inventoryPreviewHtml = `<div class="col-12"><div class="inventory-preview"><i class="fas fa-arrow-right"></i> Will be added to: <strong>${linkedSupply.article || '\u2014'} \u203A ${linkedSupply.classification || linkedSupply.description || '\u2014'}</strong></div></div>`;
+                    }
+                }
+            }
+            let assetFieldsHtml = '';
+            if (itemType === 'asset') {
+                assetFieldsHtml = `<div class="col-12 asset-fields"><div class="row g-3">
+                    <div class="col-12 col-md-4"><label class="form-label">Model / Brand</label><input type="text" class="form-control asset-model-input" value="${data.asset_model || ''}" placeholder="e.g. Dell Latitude 5520"></div>
+                    <div class="col-12 col-md-4"><label class="form-label">Serial Number</label><input type="text" class="form-control asset-serial-input" value="${data.asset_serial || ''}" placeholder="Auto or manual"></div>
+                    <div class="col-12 col-md-4"><label class="form-label">Warranty Expiry</label><input type="date" class="form-control asset-warranty-input" value="${data.asset_warranty || ''}"></div>
+                </div></div>`;
+            }
             const templateHtml = `
-                <div class="card position-relative item-row p-3 mb-3 border-0 shadow-sm border-start border-4 border-success" data-po-item-id="${poItemId}">
-                    <div class="row g-3 align-items-center">
-                        <div class="col-4 col-md-1 text-center pt-md-2">
-                            <label class="form-label d-block text-success mb-2" title="Mark as Delivered">RCVD</label>
-                            <input type="checkbox" class="form-check-input item-delivered-cb shadow-sm border-secondary" style="width: 22px; height: 22px; cursor: pointer;" ${isChecked} onchange="autoUpdatePoStatus()">
+                <div class="${cardBorderClass} item-row" data-po-item-id="${poItemId}">
+                    <div class="item-header">
+                        <div class="item-number">${document.querySelectorAll('.item-row').length + 1}</div>
+                        <div>
+                            <div class="item-title">${data.desc || 'New Item'}</div>
+                            <div class="item-subtitle">${subtitleText}</div>
                         </div>
+                        <div class="ms-auto d-flex align-items-center gap-3">
+                            <div class="rcvd-toggle"><label title="Mark as Delivered">RCVD</label>
+                            <input type="checkbox" class="item-delivered-cb" ${isChecked} onchange="autoUpdatePoStatus()"></div>
+                        </div>
+                    </div>
+                    <div class="row g-3 align-items-center">
                         <div class="col-8 col-md-2">
                             <label class="form-label">Unit <span class="text-danger">*</span></label>
                             <select class="form-select unit-select" required>
-                                <option value="pc" ${isSelected('pc')}>pc</option>
-                                <option value="pcs" ${isSelected('pcs')}>pcs</option>
-                                <option value="unit" ${isSelected('unit')}>unit</option>
-                                <option value="set" ${isSelected('set')}>set</option>
+                                <option value="" disabled>Select Unit</option>
+                                <optgroup label="Individual Pieces">
+                                    <option value="Piece(s)" ${isSelected('Piece(s)')}>Piece(s)</option>
+                                    <option value="Unit" ${isSelected('Unit')}>Unit</option>
+                                    <option value="Set" ${isSelected('Set')}>Set</option>
+                                    <option value="Pair" ${isSelected('Pair')}>Pair</option>
+                                </optgroup>
+                                <optgroup label="Paper Products">
+                                    <option value="Ream" ${isSelected('Ream')}>Ream</option>
+                                    <option value="Pad" ${isSelected('Pad')}>Pad</option>
+                                    <option value="Book" ${isSelected('Book')}>Book</option>
+                                    <option value="Sheet" ${isSelected('Sheet')}>Sheet</option>
+                                </optgroup>
+                                <optgroup label="Bulk/Packaging">
+                                    <option value="Box" ${isSelected('Box')}>Box</option>
+                                    <option value="Carton" ${isSelected('Carton')}>Carton</option>
+                                    <option value="Pack" ${isSelected('Pack')}>Pack</option>
+                                    <option value="Bundle" ${isSelected('Bundle')}>Bundle</option>
+                                    <option value="Case" ${isSelected('Case')}>Case</option>
+                                </optgroup>
+                                <optgroup label="Liquids/Chemicals">
+                                    <option value="Bottle" ${isSelected('Bottle')}>Bottle</option>
+                                    <option value="Can" ${isSelected('Can')}>Can</option>
+                                    <option value="Gallon" ${isSelected('Gallon')}>Gallon</option>
+                                    <option value="Liter" ${isSelected('Liter')}>Liter</option>
+                                    <option value="Milliliter" ${isSelected('Milliliter')}>Milliliter</option>
+                                </optgroup>
+                                <optgroup label="Length/Volume">
+                                    <option value="Roll" ${isSelected('Roll')}>Roll</option>
+                                    <option value="Meter" ${isSelected('Meter')}>Meter</option>
+                                    <option value="Tube" ${isSelected('Tube')}>Tube</option>
+                                    <option value="Jar" ${isSelected('Jar')}>Jar</option>
+                                </optgroup>
+                                <optgroup label="Weight">
+                                    <option value="Kilogram" ${isSelected('Kilogram')}>Kilogram</option>
+                                    <option value="Gram" ${isSelected('Gram')}>Gram</option>
+                                    <option value="Bag" ${isSelected('Bag')}>Bag</option>
+                                </optgroup>
                             </select>
                         </div>
                         <div class="col-12 col-md-4">
@@ -480,12 +588,13 @@
                             <label class="form-label">Total Amount</label>
                             <input type="text" class="form-control bg-light fw-bold total-output" readonly value="${total}">
                         </div>
-                        <div class="col-6 col-md-3">
+                        <div class="col-12 col-md-3">
                             <label class="form-label">Item Type</label>
-                            <select class="form-select item-type-select" onchange="onItemTypeChanged(this)">
-                                <option value="supply" ${itemType === 'supply' ? 'selected' : ''}>Supply (Consumable)</option>
-                                <option value="asset" ${itemType === 'asset' ? 'selected' : ''}>Asset / Equipment</option>
-                            </select>
+                            <div class="item-type-toggle">
+                                <button type="button" class="toggle-btn ${itemType === 'supply' ? 'active-supply' : ''}" onclick="onItemTypeToggle(this, 'supply')"><i class="fas fa-box-open"></i> Supply</button>
+                                <button type="button" class="toggle-btn ${itemType === 'asset' ? 'active-asset' : ''}" onclick="onItemTypeToggle(this, 'asset')"><i class="fas fa-laptop"></i> Asset</button>
+                            </div>
+                            <input type="hidden" class="item-type-select" value="${itemType}">
                         </div>
                         <div class="col-12 col-md-5 supply-link-wrapper" style="${supplyLinkVisible}">
                             <label class="form-label">Link to Supply</label>
@@ -494,20 +603,33 @@
                                 ${supplyOptions}
                             </select>
                         </div>
-                        <div class="col-6 col-md-3">
+                        <div class="col-12 col-md-3">
                             <label class="form-label">Fulfillment</label>
-                            <select class="form-select source-type-select" onchange="onSourceTypeChanged(this)">
-                                <option value="procurement_stock" ${sourceType === 'procurement_stock' ? 'selected' : ''}>Procurement Stock (Warehouse)</option>
-                                <option value="direct_issuance" ${sourceType === 'direct_issuance' ? 'selected' : ''}>Direct Issuance (Bypass Warehouse)</option>
-                            </select>
+                            <div class="fulfillment-toggle">
+                                <button type="button" class="toggle-btn ${sourceType === 'procurement_stock' ? 'active-inventory' : ''}" onclick="onFulfillmentToggle(this, 'procurement_stock')"><i class="fas fa-warehouse"></i> Inventory</button>
+                                <button type="button" class="toggle-btn ${sourceType === 'direct_issuance' ? 'active-direct' : ''}" onclick="onFulfillmentToggle(this, 'direct_issuance')"><i class="fas fa-truck"></i> Direct</button>
+                            </div>
+                            <input type="hidden" class="source-type-select" value="${sourceType}">
                         </div>
-                        <div class="col-12 col-md-4 office-wrapper" style="${officeVisible}">
-                            <label class="form-label ris-picker-label" style="${risPickerVisible}">Requesting RIS</label>
-                            <select class="form-select ris-referral-select" onchange="onReferralSelected(this)" style="${risPickerVisible}">
-                                <option value="">— No specific RIS / manual entry —</option>
-                            </select>
-                            <input type="text" class="form-control requesting-office-input mt-2" value="${data.requesting_office || ''}" placeholder="Requesting office">
+                        <div class="col-12 col-md-6 office-wrapper" style="${officeVisible}">
+                            <div class="row g-2">
+                                <div class="col-6">
+                                    <label class="form-label">Requesting Division <span class="text-danger">*</span></label>
+                                    <select class="form-select requesting-division-select" onchange="onOfficeChanged(this)" required>
+                                        <option value="">-- Select Division --</option>
+                                        ${Object.keys(window.officeMapping || {}).map(d => `<option value="${d}" ${data.requesting_office && data.requesting_office.startsWith(d) ? 'selected' : ''}>${d}</option>`).join('')}
+                                    </select>
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label">Office / Section <span class="text-danger">*</span></label>
+                                    <select class="form-select requesting-unit-select" required>
+                                        <option value="">-- Select Division First --</option>
+                                    </select>
+                                </div>
+                            </div>
                         </div>
+                        ${inventoryPreviewHtml}
+                        ${assetFieldsHtml}
                         <div class="col-12 border-top pt-2 mt-1 d-flex align-items-center flex-wrap gap-2">
                             ${deliveryInfo}
                         </div>
@@ -517,70 +639,80 @@
             `;
             container.insertAdjacentHTML('beforeend', templateHtml);
             const newRow = container.lastElementChild;
-            if (sourceType === 'direct_issuance') {
-                loadReferralOptions(newRow, data.supply_id || '', data.pr_referral_id, data.requesting_ris_no, data.requesting_office);
-            }
             autoUpdatePoStatus(); 
         };
 
-        // Populates the "Requesting RIS" dropdown with pending referrals for the linked supply
-        window.loadReferralOptions = function(row, supplyId, preselectId, preselectRisNo, preselectOffice) {
-            const select = row.querySelector('.ris-referral-select');
-            if (!select) return;
-            select.innerHTML = '<option value="">— No specific RIS / manual entry —</option>';
 
-            const qs = supplyId ? `?supply_id=${encodeURIComponent(supplyId)}` : '';
-            fetch(`/pr-referrals/pending${qs}`)
-                .then(r => r.json())
-                .then(list => {
-                    let hasPreselect = false;
-                    (list || []).forEach(ref => {
-                        const isSelected = String(ref.id) === String(preselectId);
-                        if (isSelected) hasPreselect = true;
-                        select.insertAdjacentHTML('beforeend',
-                            `<option value="${ref.id}" data-office="${ref.office || ''}" ${isSelected ? 'selected' : ''}>RIS# ${ref.ris_no || ref.id} — ${ref.office || 'N/A'} (needs ${ref.remaining})</option>`);
-                    });
-                    if (preselectId && !hasPreselect) {
-                        select.insertAdjacentHTML('beforeend',
-                            `<option value="${preselectId}" data-office="${preselectOffice || ''}" selected>RIS# ${preselectRisNo || preselectId} — ${preselectOffice || 'N/A'} (already linked)</option>`);
-                    }
-                })
-                .catch(() => {});
-        };
-
-        window.onReferralSelected = function(select) {
-            const row = select.closest('.item-row');
-            const officeInput = row.querySelector('.requesting-office-input');
-            const opt = select.selectedOptions[0];
-            if (opt && opt.value) {
-                officeInput.value = opt.dataset.office || '';
+        window.onItemTypeToggle = function(btn, type) {
+            const row = btn.closest('.item-row');
+            const toggleBtns = row.querySelectorAll('.item-type-toggle .toggle-btn');
+            toggleBtns.forEach(b => b.classList.remove('active-supply', 'active-asset'));
+            btn.classList.add(type === 'supply' ? 'active-supply' : 'active-asset');
+            row.querySelector('.item-type-select').value = type;
+            const supplyWrapper = row.querySelector('.supply-link-wrapper');
+            if (supplyWrapper) supplyWrapper.style.display = type === 'asset' ? 'none' : '';
+            const existingAssetFields = row.querySelector('.asset-fields');
+            if (existingAssetFields) existingAssetFields.closest('.col-12').remove();
+            const existingPreview = row.querySelector('.inventory-preview');
+            if (existingPreview) existingPreview.closest('.col-12')?.remove();
+            if (type === 'asset') {
+                const fieldsHtml = `<div class="col-12 asset-fields"><div class="row g-3">
+                    <div class="col-12 col-md-4"><label class="form-label">Model / Brand</label><input type="text" class="form-control asset-model-input" placeholder="e.g. Dell Latitude 5520"></div>
+                    <div class="col-12 col-md-4"><label class="form-label">Serial Number</label><input type="text" class="form-control asset-serial-input" placeholder="Auto or manual"></div>
+                    <div class="col-12 col-md-4"><label class="form-label">Warranty Expiry</label><input type="date" class="form-control asset-warranty-input"></div>
+                </div></div>`;
+                const deliveryCol = row.querySelector('.border-top');
+                if (deliveryCol) deliveryCol.insertAdjacentHTML('beforebegin', fieldsHtml);
             }
+            updateItemCardVisuals(row);
         };
 
-        window.onSourceTypeChanged = function(select) {
-            const row = select.closest('.item-row');
+        window.onFulfillmentToggle = function(btn, sourceType) {
+            const row = btn.closest('.item-row');
+            const toggleBtns = row.querySelectorAll('.fulfillment-toggle .toggle-btn');
+            toggleBtns.forEach(b => b.classList.remove('active-inventory', 'active-direct'));
+            btn.classList.add(sourceType === 'procurement_stock' ? 'active-inventory' : 'active-direct');
+            row.querySelector('.source-type-select').value = sourceType;
             const wrapper = row.querySelector('.office-wrapper');
-            const isDirect = select.value === 'direct_issuance';
-            wrapper.style.display = isDirect ? '' : 'none';
-            if (isDirect) {
-                loadReferralOptions(row, row.querySelector('.supply-select').value, '', '', '');
-            }
+            if (wrapper) wrapper.style.display = sourceType === 'direct_issuance' ? '' : 'none';
+            updateItemCardVisuals(row);
         };
 
         window.onSupplyLinkChanged = function(select) {
             const row = select.closest('.item-row');
-            if (row.querySelector('.source-type-select').value === 'direct_issuance') {
-                loadReferralOptions(row, select.value, '', '', '');
+            updateInventoryPreview(row);
+        };
+
+        window.updateInventoryPreview = function(row) {
+            const supplyId = row.querySelector('.supply-select')?.value;
+            const sourceType = row.querySelector('.source-type-select')?.value;
+            const itemType = row.querySelector('.item-type-select')?.value;
+            const existing = row.querySelector('.inventory-preview')?.closest('.col-12');
+            if (existing) existing.remove();
+            if (itemType === 'supply' && sourceType === 'procurement_stock' && supplyId) {
+                const supply = (window.SUPPLIES_LIST || []).find(s => String(s.id) === String(supplyId));
+                if (supply) {
+                    const previewHtml = `<div class="col-12"><div class="inventory-preview"><i class="fas fa-arrow-right"></i> Will be added to: <strong>${supply.article || '\u2014'} \u203A ${supply.classification || supply.description || '\u2014'}</strong></div></div>`;
+                    const deliveryCol = row.querySelector('.border-top');
+                    if (deliveryCol) deliveryCol.insertAdjacentHTML('beforebegin', previewHtml);
+                }
             }
         };
 
-        // Supply items link to warehouse stock + an optional RIS; Asset items are entered later via Add Asset (serial numbers required)
-        window.onItemTypeChanged = function(select) {
-            const row = select.closest('.item-row');
-            const isAsset = select.value === 'asset';
-            row.querySelector('.supply-link-wrapper').style.display = isAsset ? 'none' : '';
-            row.querySelector('.ris-picker-label').style.display = isAsset ? 'none' : '';
-            row.querySelector('.ris-referral-select').style.display = isAsset ? 'none' : '';
+        window.updateItemCardVisuals = function(row) {
+            const typeSel = row.querySelector('.item-type-select');
+            const srcSel = row.querySelector('.source-type-select');
+            if (!typeSel || !srcSel) return;
+            row.classList.remove('supply-card', 'asset-card', 'direct-card');
+            if (typeSel.value === 'asset') row.classList.add('asset-card');
+            else if (srcSel.value === 'direct_issuance') row.classList.add('direct-card');
+            else row.classList.add('supply-card');
+            const subtitle = row.querySelector('.item-subtitle');
+            if (subtitle) {
+                if (typeSel.value === 'asset') subtitle.textContent = 'Asset / Equipment';
+                else if (srcSel.value === 'direct_issuance') subtitle.textContent = 'Supply \u2014 Direct Issuance';
+                else subtitle.textContent = 'Supply \u2014 For Inventory';
+            }
         };
 
         // Attach Calculation Listeners globally
@@ -594,12 +726,6 @@
         });
 
         document.addEventListener("DOMContentLoaded", function() {
-            // Re-attach Add Item Button Listener
-            const addItemBtn = document.getElementById('addItemBtn');
-            if (addItemBtn) {
-                addItemBtn.addEventListener('click', () => window.addEmptyItemRow());
-            }
-
             const poSearchInput = document.getElementById('poSearchInput');
             const filterForm = document.getElementById('filterForm');
             let typingTimer;
@@ -852,11 +978,15 @@
                             supply_id: item.supply_id || '',
                             source_type: item.source_type || 'procurement_stock',
                             requesting_office: item.requesting_office || '',
-                            pr_referral_id: item.pr_referral_id || '',
-                            requesting_ris_no: item.requesting_ris_no || '',
                             delivered_quantity: item.delivered_quantity ?? 0,
-                            delivery_status: item.delivery_status || 'pending'
+                            delivery_status: item.delivery_status || 'pending',
+                            asset_model: item.asset_model || '',
+                            asset_serial: item.asset_serial || '',
+                            asset_warranty: item.asset_warranty || ''
                         });
+                        // Parse combined "Division > Section" into the two selects
+                        const lastRow = document.querySelector('#itemsContainer .item-row:last-child');
+                        if (lastRow && item.requesting_office) window.parseRequestingOffice(lastRow, item.requesting_office);
                     }
                 });
             } else {
@@ -926,10 +1056,12 @@
                     cost: c,
                     is_delivered: isD,
                     item_type: row.querySelector('.item-type-select').value,
-                    supply_id: row.querySelector('.supply-select').value || null,
+                    supply_id: row.querySelector('.supply-select')?.value || null,
                     source_type: row.querySelector('.source-type-select').value,
-                    requesting_office: row.querySelector('.requesting-office-input').value || null,
-                    pr_referral_id: row.querySelector('.ris-referral-select').value || null
+                    requesting_office: (() => { const d = row.querySelector('.requesting-division-select')?.value; const u = row.querySelector('.requesting-unit-select')?.value; return d ? (u ? d + ' > ' + u : d) : null; })(),
+                    asset_model: row.querySelector('.asset-model-input')?.value || null,
+                    asset_serial: row.querySelector('.asset-serial-input')?.value || null,
+                    asset_warranty: row.querySelector('.asset-warranty-input')?.value || null
                 });
             });
 
@@ -960,7 +1092,9 @@
             const row = btn.closest('.item-row');
             const poItemId = row.dataset.poItemId;
             const sourceType = row.querySelector('.source-type-select').value;
-            const office = row.querySelector('.requesting-office-input').value;
+            const d = row.querySelector('.requesting-division-select')?.value || '';
+            const u = row.querySelector('.requesting-unit-select')?.value || '';
+            const office = d ? (u ? d + ' > ' + u : d) : '';
 
             document.getElementById('recordDeliveryForm').reset();
             document.getElementById('dr_po_item_id').value = poItemId;

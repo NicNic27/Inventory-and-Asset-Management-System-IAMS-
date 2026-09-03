@@ -274,6 +274,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        window.SUPPLIES_LIST = @json($supplies ?? []);
         let currentPoData = null;
 
         // Auto-search logic (Debounce)
@@ -551,8 +552,13 @@
                             desc: item.description || '', 
                             qty: item.qty || 0, 
                             cost: uCost,
-                            is_delivered: isD
+                            is_delivered: isD,
+                            item_type: item.item_type || 'supply',
+                            source_type: item.source_type || 'procurement_stock',
+                            requesting_office: item.requesting_office || ''
                         });
+                        const lastRow = document.querySelector('#itemsContainer .item-row:last-child');
+                        if (lastRow && item.requesting_office && typeof window.parseRequestingOffice === 'function') window.parseRequestingOffice(lastRow, item.requesting_office);
                     }
                 });
             } else {

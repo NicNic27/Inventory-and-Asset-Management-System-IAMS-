@@ -15,6 +15,9 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Auth;
 use App\Services\SupplyService;
 use App\Services\PoDeliveryService;
+use App\Models\RisRequest;
+use App\Models\RisItem;
+use App\Models\SystemSetting;
 
 class PurchaseOrderController extends Controller
 {
@@ -113,8 +116,9 @@ class PurchaseOrderController extends Controller
                 ]);
 
                 $supplyService->syncDeliveredPurchaseOrderItem($poItem);
-                $this->linkReferralIfSelected($poItem, $item, $poDeliveryService);
             }
+
+            $this->autoCreateRisForDirectIssuance($po);
 
             ActivityLog::create([
                 'user_id' => Auth::id(),
@@ -224,10 +228,17 @@ class PurchaseOrderController extends Controller
                 $keptItemIds[] = $poItem->id;
 
                 $supplyService->syncDeliveredPurchaseOrderItem($poItem);
-                $this->linkReferralIfSelected($poItem, $item, $poDeliveryService);
             }
 
             $po->items()->whereNotIn('id', $keptItemIds)->delete();
+
+            // Re-create RIS for direct issuance items (clear old auto-generated ones first)
+            $autoRisNos = RisRequest::where('purpose', 'like', "%from PO {$po->po_no}%")
+                ->where('status', 'Pending Staff Review')
+                ->pluck('id');
+            RisItem::whereIn('ris_id', $autoRisNos)->delete();
+            RisRequest::whereIn('id', $autoRisNos)->delete();
+            $this->autoCreateRisForDirectIssuance($po);
 
             ActivityLog::create([
                 'user_id' => Auth::id(),
@@ -245,33 +256,82 @@ class PurchaseOrderController extends Controller
         }
     }
 
-    /** Links a direct-issuance PO item to the RIS referral it's fulfilling, if one was picked in the UI */
-    private function linkReferralIfSelected(PurchaseOrderItem $poItem, array $item, PoDeliveryService $poDeliveryService): void
+    /**
+     * Auto-create a RIS for all direct-issuance items in a PO.
+     * One RIS per unique requesting office, with all direct-issuance items grouped under it.
+     * Two default signatories (Approved By, Issued By) are pre-filled per the RIS form convention.
+     */
+    private function autoCreateRisForDirectIssuance(PurchaseOrder $po): void
     {
-        $referralId = $item['pr_referral_id'] ?? null;
+        $directItems = $po->items()
+            ->where('source_type', 'direct_issuance')
+            ->get()
+            ->groupBy('requesting_office');
 
-        // Clear any existing stale referral links so a changed selection doesn't leave duplicates
-        PoItemReferral::where('po_item_id', $poItem->id)->delete();
+        $user = Auth::user();
 
-        if (empty($referralId)) {
-            return;
+        foreach ($directItems as $office => $items) {
+            if (empty($office)) continue;
+
+            $risNo = $this->generateRisNumber();
+
+            $risRequest = RisRequest::create([
+                'user_id' => $user?->id,
+                'ris_no' => $risNo,
+                'entity_name' => $po->entity_name,
+                'office' => $office,
+                'purpose' => "Direct issuance from PO {$po->po_no}",
+                'date_requested' => now()->toDateString(),
+                'status' => 'Pending Staff Review',
+                // Two default signatories pre-filled from the RIS form
+                'sig_approved_by' => 'JEFFREY B. PAGATPAT',
+                'desig_approved' => 'Admin, Officer V (Supply Officer)',
+                'sig_issued_by' => 'ALDRIN RELLAMA',
+                'desig_issued' => 'AA-VI (Storekeeper II)',
+            ]);
+
+            foreach ($items as $item) {
+                RisItem::create([
+                    'ris_id' => $risRequest->id,
+                    'stock_no' => $item->supply->barcode_id ?? null,
+                    'unit' => $item->unit,
+                    'description' => $item->description,
+                    'req_quantity' => $item->qty,
+                    'stock_avail' => 'no',
+                    'issue_quantity' => 0,
+                    'remarks' => "Auto-generated from PO {$po->po_no}",
+                ]);
+            }
+        }
+    }
+
+    /**
+     * Generate a unique RIS number in format: RIS-YYYY-MM-NNNN.
+     * Uses the SystemSetting counter (same as the user-facing RIS form) to stay in sync
+     * and avoid collisions with manually-created RIS entries.
+     */
+    private function generateRisNumber(): string
+    {
+        $seqSetting = SystemSetting::firstOrCreate(
+            ['key' => 'seq_ris_no'],
+            ['value' => '1']
+        );
+
+        $yearMonth = now()->format('Y-m');
+        $currentNumber = (int) $seqSetting->value;
+        $sequenceFormatted = str_pad($currentNumber, 4, '0', STR_PAD_LEFT);
+        $generatedRisNo = 'RIS-' . $yearMonth . '-' . $sequenceFormatted;
+
+        // Safety: skip any already-used number (edge case if manual & auto run simultaneously)
+        while (RisRequest::where('ris_no', $generatedRisNo)->exists()) {
+            $currentNumber++;
+            $sequenceFormatted = str_pad($currentNumber, 4, '0', STR_PAD_LEFT);
+            $generatedRisNo = 'RIS-' . $yearMonth . '-' . $sequenceFormatted;
         }
 
-        $referral = PrReferral::find($referralId);
-        if (!$referral) {
-            return;
-        }
+        $seqSetting->update(['value' => $currentNumber + 1]);
 
-        $remaining = max(0, (int) $referral->quantity_needed - $referral->getFulfilledQuantity());
-        $allocate = min((int) $poItem->qty, $remaining);
-
-        if ($allocate < 1) {
-            return;
-        }
-
-        $poDeliveryService->linkPoToReferrals($poItem->id, [
-            ['pr_referral_id' => $referral->id, 'quantity_allocated' => $allocate],
-        ]);
+        return $generatedRisNo;
     }
 
     public function destroy($id)

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\RisRequest;
 use App\Models\RisItem;
 use App\Models\Supply; 
+use App\Models\Transaction;
 use App\Models\ActivityLog;
 use App\Services\PrReferralService;
 use Illuminate\Http\Request;
@@ -50,7 +51,22 @@ class RisController extends Controller
         
         foreach ($req->items as $item) {
             $supply = Supply::where('barcode_id', $item->stock_no)->first();
-            $item->current_stock = $supply ? $supply->quantity : 0;
+            
+            if ($supply) {
+                // Compute actual on-hand from transactions (true source of truth)
+                // instead of supply.quantity which can drift out of sync
+                $totalIn = Transaction::where('item_id', $supply->id)
+                    ->where('item_type', 'supplies')
+                    ->whereIn('transaction_type', ['IN', 'ADDED', 'RETURNED'])
+                    ->sum('quantity');
+                $totalOut = Transaction::where('item_id', $supply->id)
+                    ->where('item_type', 'supplies')
+                    ->where('transaction_type', 'OUT')
+                    ->sum('quantity');
+                $item->current_stock = max(0, (int) $totalIn - (int) $totalOut);
+            } else {
+                $item->current_stock = 0;
+            }
         }
 
         return view('ris.review', compact('req'));

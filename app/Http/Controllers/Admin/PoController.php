@@ -3,20 +3,21 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
+use App\Http\Controllers\PurchaseOrderController;
 use App\Models\PurchaseOrder;
-use App\Models\PurchaseOrderItem;
-use App\Models\ActivityLog;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Auth;
+use App\Models\Supply;
+use Illuminate\Http\Request;
 
+/**
+ * Admin Purchase Orders — delegates store/update/show/destroy to the staff
+ * PurchaseOrderController so both sides share the same features (auto-RIS for
+ * direct issuance, supply syncing, item types, fulfillment modes, etc.).
+ * Index is overridden to render the admin-specific view.
+ */
 class PoController extends Controller
 {
     public function index(Request $request)
     {
-        $user_name = auth()->user() ? auth()->user()->firstname : 'Admin';
         $query = PurchaseOrder::with('items');
 
         if ($request->filled('search')) {
@@ -37,185 +38,34 @@ class PoController extends Controller
         } elseif ($sort === 'supplier_desc') {
             $query->orderBy('supplier_name', 'desc');
         } elseif ($sort === 'date_asc') {
-            $query->orderBy('po_date', 'asc'); 
+            $query->orderBy('po_date', 'asc');
         } else {
             $query->orderBy('po_date', 'desc');
         }
 
         $purchaseOrders = $query->get();
-        return view('admin.po.index', compact('purchaseOrders', 'user_name'));
+        $supplies = Supply::orderBy('article')->get(['id', 'article', 'description', 'unit_measure']);
+
+        return view('admin.po.index', compact('purchaseOrders', 'supplies'));
     }
 
     public function store(Request $request)
     {
-        if (!Schema::hasColumn('purchase_orders', 'po_type')) {
-            Schema::table('purchase_orders', function (Blueprint $table) {
-                $table->string('po_type')->nullable()->default('Supply')->after('id');
-            });
-        }
-
-        try {
-            DB::beginTransaction();
-
-            $totalItems = count($request->items ?? []);
-            $deliveredItems = 0;
-            foreach ($request->items ?? [] as $item) {
-                if (!empty($item['is_delivered']) && ($item['is_delivered'] === true || $item['is_delivered'] === 'true')) {
-                    $deliveredItems++;
-                }
-            }
-
-            $calculatedStatus = 'Pending';
-            if ($totalItems > 0) {
-                if ($deliveredItems == 0) $calculatedStatus = 'Pending';
-                elseif ($deliveredItems == $totalItems) $calculatedStatus = 'Complete';
-                else $calculatedStatus = 'Partial';
-            }
-
-            $po = PurchaseOrder::create([
-                'po_type' => $request->po_type,
-                'entity_name' => $request->entity_name,
-                'po_no' => $request->po_no,
-                'supplier_name' => $request->supplier_name,
-                'supplier_address' => $request->supplier_address,
-                'po_date' => $request->po_date,
-                'procurement_mode' => $request->procurement_mode,
-                'auth_official' => $request->auth_official,
-                'auth_official_designation' => $request->auth_official_designation,
-                'chief_accountant' => $request->chief_accountant,
-                'chief_accountant_designation' => $request->chief_accountant_designation,
-                'place_of_delivery' => $request->place_of_delivery,
-                'date_of_delivery' => $request->date_of_delivery,
-                'delivery_term' => $request->delivery_term,
-                'payment_term' => $request->payment_term,
-                'total_amount' => $request->total_amount,
-                'status' => $calculatedStatus,
-            ]);
-
-            foreach ($request->items as $item) {
-                PurchaseOrderItem::create([
-                    'purchase_order_id' => $po->id,
-                    'unit' => $item['unit'],
-                    'description' => $item['description'],
-                    'qty' => $item['qty'],
-                    'unit_cost' => $item['cost'],
-                    'amount' => $item['qty'] * $item['cost'],
-                    'is_delivered' => (!empty($item['is_delivered']) && ($item['is_delivered'] === true || $item['is_delivered'] === 'true'))
-                ]);
-            }
-
-            ActivityLog::create([
-                'user_id' => Auth::id(),
-                'action' => 'Created',
-                'description' => "Created Purchase Order: {$po->po_no}",
-                'ip_address' => request()->ip(),
-                'user_agent' => request()->userAgent()
-            ]);
-
-            DB::commit();
-            return response()->json(['success' => true, 'message' => 'Purchase Order successfully created.']);
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return response()->json(['success' => false, 'message' => 'Error: ' . $e->getMessage()]);
-        }
+        return app(PurchaseOrderController::class)->store($request);
     }
 
     public function show($id)
     {
-        $po = PurchaseOrder::with('items')->findOrFail($id);
-        return response()->json($po);
+        return app(PurchaseOrderController::class)->show($id);
     }
 
     public function update(Request $request, $id)
     {
-        if (!Schema::hasColumn('purchase_orders', 'po_type')) {
-            Schema::table('purchase_orders', function (Blueprint $table) {
-                $table->string('po_type')->nullable()->default('Supply')->after('id');
-            });
-        }
-
-        try {
-            DB::beginTransaction();
-
-            $totalItems = count($request->items ?? []);
-            $deliveredItems = 0;
-            foreach ($request->items ?? [] as $item) {
-                if (!empty($item['is_delivered']) && ($item['is_delivered'] === true || $item['is_delivered'] === 'true')) {
-                    $deliveredItems++;
-                }
-            }
-
-            $calculatedStatus = 'Pending';
-            if ($totalItems > 0) {
-                if ($deliveredItems == 0) $calculatedStatus = 'Pending';
-                elseif ($deliveredItems == $totalItems) $calculatedStatus = 'Complete';
-                else $calculatedStatus = 'Partial';
-            }
-
-            $po = PurchaseOrder::findOrFail($id);
-            $po->update([
-                'po_type' => $request->po_type,
-                'entity_name' => $request->entity_name,
-                'po_no' => $request->po_no,
-                'supplier_name' => $request->supplier_name,
-                'supplier_address' => $request->supplier_address,
-                'po_date' => $request->po_date,
-                'procurement_mode' => $request->procurement_mode,
-                'auth_official' => $request->auth_official,
-                'auth_official_designation' => $request->auth_official_designation,
-                'chief_accountant' => $request->chief_accountant,
-                'chief_accountant_designation' => $request->chief_accountant_designation,
-                'place_of_delivery' => $request->place_of_delivery,
-                'date_of_delivery' => $request->date_of_delivery,
-                'delivery_term' => $request->delivery_term,
-                'payment_term' => $request->payment_term,
-                'total_amount' => $request->total_amount,
-                'status' => $calculatedStatus,
-            ]);
-
-            $po->items()->delete();
-
-            foreach ($request->items as $item) {
-                PurchaseOrderItem::create([
-                    'purchase_order_id' => $po->id,
-                    'unit' => $item['unit'],
-                    'description' => $item['description'],
-                    'qty' => $item['qty'],
-                    'unit_cost' => $item['cost'],
-                    'amount' => $item['qty'] * $item['cost'],
-                    'is_delivered' => (!empty($item['is_delivered']) && ($item['is_delivered'] === true || $item['is_delivered'] === 'true'))
-                ]);
-            }
-
-            ActivityLog::create([
-                'user_id' => Auth::id(),
-                'action' => 'Updated',
-                'description' => "Updated Purchase Order: {$po->po_no}",
-                'ip_address' => request()->ip(),
-                'user_agent' => request()->userAgent()
-            ]);
-
-            DB::commit();
-            return response()->json(['success' => true, 'message' => 'Purchase Order successfully updated.']);
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return response()->json(['success' => false, 'message' => 'Error: ' . $e->getMessage()]);
-        }
+        return app(PurchaseOrderController::class)->update($request, $id);
     }
 
     public function destroy($id)
     {
-        $po = PurchaseOrder::findOrFail($id);
-        
-        ActivityLog::create([
-            'user_id' => Auth::id(),
-            'action' => 'Deleted',
-            'description' => "Deleted Purchase Order: {$po->po_no}",
-            'ip_address' => request()->ip(),
-            'user_agent' => request()->userAgent()
-        ]);
-
-        $po->delete(); 
-        return redirect()->back()->with('success', 'Purchase Order Deleted');
+        return app(PurchaseOrderController::class)->destroy($id);
     }
 }

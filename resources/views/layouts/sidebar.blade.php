@@ -203,7 +203,7 @@
         </a>
 
         <a href="{{ url('/barcodes') }}" class="nav-link {{ request()->is('barcodes*') ? 'active' : '' }}">
-            <i class="fas fa-barcode fa-fw"></i> Barcodes List
+            <i class="fas fa-barcode fa-fw"></i> QR List
         </a>
 
         <a href="{{ url('/transactions') }}" class="nav-link {{ request()->is('transactions*') ? 'active' : '' }}">

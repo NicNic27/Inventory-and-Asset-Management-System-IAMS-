@@ -285,13 +285,13 @@
                                     <input type="number" id="issue_qty_{{ $i }}" name="issue_quantity[{{ $i }}]" class="form-control form-control-sm border-success text-center fw-bold v-issue"
                                         style="margin-top: 1.29rem;"
                                         data-price="{{ $unitPrice }}"
-                                        value="{{ $item->issue_quantity }}" min="0" max="{{ $item->current_stock }}" 
+                                        value="{{ $item->issue_quantity }}" min="0"
                                         oninput="calculateTotalAmount(this, {{ $i }})" 
-                                        placeholder="0" title="Max available: {{ $item->current_stock }}" required>
+                                        placeholder="0" required>
                                     
                                     <div class="mt-1 text-center" style="font-size: 0.75rem; white-space: nowrap;">
                                         <span class="text-{{ $stockColor }} fw-bold">
-                                            <i class="fas fa-box"></i> Left: <span id="rem_stock_{{ $i }}">{{ $currentRemaining }}</span> / {{ $item->current_stock }}
+                                            <i class="fas fa-box"></i> Qty: <span id="rem_stock_{{ $i }}">{{ $item->current_stock }}</span>
                                         </span>
                                     </div>
                                 </td>
@@ -486,23 +486,19 @@
         const remStockSpan = document.getElementById('rem_stock_' + index);
         const remarksInput = document.getElementById('remarks_' + index);
         
-        let maxStock = parseInt(issueInput.getAttribute('max')) || 0;
         let reqQty = parseInt(reqInput.value) || 0;
         let unitPrice = parseFloat(issueInput.getAttribute('data-price')) || 0;
 
         if (selectElement.value === 'yes') {
-            let fillQty = Math.min(reqQty, maxStock);
-            issueInput.value = fillQty;
-            remStockSpan.innerText = (maxStock - fillQty);
+            issueInput.value = reqQty;
 
-            if (fillQty > 0 && unitPrice > 0) {
-                let totalAmount = fillQty * unitPrice;
+            if (reqQty > 0 && unitPrice > 0) {
+                let totalAmount = reqQty * unitPrice;
                 remarksInput.value = '₱ ' + totalAmount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
             }
 
         } else if (selectElement.value === 'no') {
             issueInput.value = 0;
-            remStockSpan.innerText = maxStock;
             remarksInput.value = 'Out of Stock';
         }
         
@@ -511,16 +507,12 @@
 
     // Handles manual edits to Issue Quantity field
     function calculateTotalAmount(inputElement, index) {
-        let max = parseInt(inputElement.getAttribute('max')) || 0;
         let val = parseInt(inputElement.value) || 0;
         let unitPrice = parseFloat(inputElement.getAttribute('data-price')) || 0;
         const remarksInput = document.getElementById('remarks_' + index);
         const availSelect = document.getElementsByName('stock_avail_' + index)[0];
 
-        if(val > max) { inputElement.value = max; val = max; }
         if(val < 0) { inputElement.value = 0; val = 0; }
-        
-        document.getElementById('rem_stock_' + index).innerText = (max - val);
 
         if (availSelect.value === 'yes' && val > 0 && unitPrice > 0) {
             let totalAmount = val * unitPrice;
