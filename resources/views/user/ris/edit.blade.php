@@ -54,26 +54,26 @@
             <div class="row g-3">
                 
                 <div class="col-md-4">
-                    <label class="fw-bold small text-muted">Office Name <span class="text-danger">*</span></label>
-                    <select name="office" id="officeSelect" class="form-select" onchange="updateUnits()" required>
-                        <option value="">-- Select Office --</option>
-                        <option value="Administrative Division" {{ $req->office == 'Administrative Division' ? 'selected' : '' }}>Administrative Division</option>
-                        <option value="Curriculum and Learning Management Division" {{ $req->office == 'Curriculum and Learning Management Division' ? 'selected' : '' }}>Curriculum and Learning Management Division</option>
-                        <option value="Education Support Services Division" {{ $req->office == 'Education Support Services Division' ? 'selected' : '' }}>Education Support Services Division</option>
-                        <option value="Field Technical Assistance Division" {{ $req->office == 'Field Technical Assistance Division' ? 'selected' : '' }}>Field Technical Assistance Division</option>
-                        <option value="Finance Division" {{ $req->office == 'Finance Division' ? 'selected' : '' }}>Finance Division</option>
-                        <option value="Human Resource Development Division" {{ $req->office == 'Human Resource Development Division' ? 'selected' : '' }}>Human Resource Development Division</option>
-                        <option value="Office of the Assistant Regional Director" {{ $req->office == 'Office of the Assistant Regional Director' ? 'selected' : '' }}>Office of the Assistant Regional Director</option>
-                        <option value="Office of the Regional Director" {{ $req->office == 'Office of the Regional Director' ? 'selected' : '' }}>Office of the Regional Director</option>
-                        <option value="Policy Planning and Research Division" {{ $req->office == 'Policy Planning and Research Division' ? 'selected' : '' }}>Policy Planning and Research Division</option>
-                        <option value="Quality Assurance Division" {{ $req->office == 'Quality Assurance Division' ? 'selected' : '' }}>Quality Assurance Division</option>
+                    <label class="fw-bold small text-muted">Division Name <span class="text-danger">*</span></label>
+                    <select name="division" id="officeSelect" class="form-select" onchange="updateUnits()" required>
+                        <option value="">-- Select Division --</option>
+                        <option value="Administrative Division" {{ $req->division == 'Administrative Division' ? 'selected' : '' }}>Administrative Division</option>
+                        <option value="Curriculum and Learning Management Division" {{ $req->division == 'Curriculum and Learning Management Division' ? 'selected' : '' }}>Curriculum and Learning Management Division</option>
+                        <option value="Education Support Services Division" {{ $req->division == 'Education Support Services Division' ? 'selected' : '' }}>Education Support Services Division</option>
+                        <option value="Field Technical Assistance Division" {{ $req->division == 'Field Technical Assistance Division' ? 'selected' : '' }}>Field Technical Assistance Division</option>
+                        <option value="Finance Division" {{ $req->division == 'Finance Division' ? 'selected' : '' }}>Finance Division</option>
+                        <option value="Human Resource Development Division" {{ $req->division == 'Human Resource Development Division' ? 'selected' : '' }}>Human Resource Development Division</option>
+                        <option value="Office of the Assistant Regional Director" {{ $req->division == 'Office of the Assistant Regional Director' ? 'selected' : '' }}>Office of the Assistant Regional Director</option>
+                        <option value="Office of the Regional Director" {{ $req->division == 'Office of the Regional Director' ? 'selected' : '' }}>Office of the Regional Director</option>
+                        <option value="Policy Planning and Research Division" {{ $req->division == 'Policy Planning and Research Division' ? 'selected' : '' }}>Policy Planning and Research Division</option>
+                        <option value="Quality Assurance Division" {{ $req->division == 'Quality Assurance Division' ? 'selected' : '' }}>Quality Assurance Division</option>
                     </select>
                 </div>
 
                 <div class="col-md-4">
-                    <label class="fw-bold small text-muted">Unit / Section</label>
+                    <label class="fw-bold small text-muted">Office Name / Unit / Section</label>
                     <select name="unit_section" id="unitSelect" class="form-select">
-                        <option value="">-- Select Office First --</option>
+                        <option value="">-- Select Division First --</option>
                     </select>
                 </div>
 
@@ -273,7 +273,7 @@
     }
 
     document.addEventListener("DOMContentLoaded", function() {
-        const savedUnit = "{{ $req->division }}"; 
+        const savedUnit = "{{ $req->office }}"; 
         updateUnits(savedUnit);
     });
 

@@ -21,7 +21,8 @@ class RisController extends Controller
         );
         $risNumber = 'RIS-' . date('Y-m') . '-' . str_pad($seqSetting->value, 4, '0', STR_PAD_LEFT);
         $supplies = Supply::orderBy('article', 'asc')->get();
-        return view('user.ris.create', compact('risNumber', 'supplies'));
+        $user = Auth::user();
+        return view('user.ris.create', compact('risNumber', 'supplies', 'user'));
     }
 
     public function store(Request $request)
@@ -50,8 +51,8 @@ class RisController extends Controller
         $ris->user_id = $user->id; 
         $ris->ris_no = $generatedRisNo; 
         $ris->entity_name = $request->entity_name;
-        $ris->division = $request->unit_section;
-        $ris->office = $request->office;
+        $ris->division = $request->division;
+        $ris->office = $request->unit_section;
         $ris->fund_cluster = $request->fund_cluster;
         $ris->rcc = $request->center_code;
         $ris->purpose = is_array($request->purpose) ? implode('; ', array_filter(array_unique($request->purpose))) : $request->purpose;
@@ -130,7 +131,7 @@ class RisController extends Controller
             if ($status == 'approved') {
                 $query->where('status', 'Approved');
             } elseif ($status == 'pending') {
-                $query->whereIn('status', ['Pending Staff Review', 'Forwarded to Admin']); 
+                $query->whereIn('status', ['Pending Staff Review', 'Forwarded to Admin', 'Redirected to Procurement']); 
             } elseif ($status == 'declined') {
                 $query->whereIn('status', ['Declined', 'Cancelled', 'Rejected']);
             }
@@ -188,8 +189,8 @@ class RisController extends Controller
         }
 
         $ris->update([
-            'office' => $request->office,
-            'division' => $request->unit_section ?? $ris->division,
+            'division' => $request->division ?? $ris->division,
+            'office' => $request->unit_section,
             'fund_cluster' => $request->fund_cluster,
             'rcc' => $request->center_code,
             'purpose' => is_array($request->purpose) ? implode('; ', array_filter(array_unique($request->purpose))) : $request->purpose,

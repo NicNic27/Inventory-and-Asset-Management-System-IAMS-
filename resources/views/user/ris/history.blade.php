@@ -94,6 +94,16 @@
         .status-pending { background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
         .status-declined { background-color: #f8d7da; color: #842029; border: 1px solid #f5c2c7; }
         .status-forwarded { background-color: #cff4fc; color: #055160; border: 1px solid #b6effb; }
+        .status-redirected { background-color: #cfe2ff; color: #084298; border: 1px solid #b6d4fe; }
+
+        .redirect-notice {
+            background: linear-gradient(135deg, #cfe2ff 0%, #e7f1ff 100%);
+            border: 1px solid #b6d4fe;
+            border-left: 4px solid #0d6efd;
+            border-radius: 8px;
+            padding: 15px 20px;
+            margin-top: 10px;
+        }
 
         .filter-input {
             background-color: #f8f9fc;
@@ -249,6 +259,9 @@
                                 } elseif ($ris->status == 'Forwarded to Admin') {
                                     $badgeClass = 'status-forwarded';
                                     $icon = 'fa-solid fa-share';
+                                } elseif ($ris->status == 'Redirected to Procurement') {
+                                    $badgeClass = 'status-redirected';
+                                    $icon = 'fa-solid fa-arrow-right-arrow-left';
                                 }
 
                                 $itemSummary = '';
@@ -275,6 +288,12 @@
                                 </td>
                                 <td>
                                     <span class="status-badge {{ $badgeClass }}"><i class="{{ $icon }} me-1"></i> {{ $ris->status }}</span>
+                                    @if($ris->status == 'Redirected to Procurement')
+                                        <div class="redirect-notice mt-2">
+                                            <small class="fw-bold text-primary"><i class="fas fa-info-circle me-1"></i> Action Required:</small>
+                                            <small class="d-block text-muted mt-1">Please visit the <strong>Procurement Unit / BAC</strong> office to fill out a Purchase Request for the out-of-stock items.</small>
+                                        </div>
+                                    @endif
                                 </td>
                                 <td class="text-center">
                                     <a href="{{ url('/user/ris/' . $ris->id) }}" class="btn-action btn-view shadow-sm"><i class="fa-regular fa-eye"></i> View</a>

@@ -198,9 +198,29 @@
             <i class="fas fa-file-invoice-dollar fa-fw"></i> Delivery Orders
         </a>
         
-        <a href="{{ url('/ris') }}" class="nav-link {{ request()->is('ris*') ? 'active' : '' }}">
-            <i class="fas fa-clipboard-list fa-fw"></i> Requests (RIS)
-        </a>
+        <div class="nav-item">
+            @php
+                $isRisActive = request()->is('ris*');
+                $isRisCreateActive = request()->is('ris/create*');
+            @endphp
+            <a href="#risSubmenu" 
+               data-bs-toggle="collapse" 
+               role="button"
+               id="risToggle"
+               class="nav-link {{ $isRisActive ? 'active' : '' }}" 
+               aria-expanded="{{ $isRisActive ? 'true' : 'false' }}">
+                <i class="fas fa-clipboard-list fa-fw"></i> RIS
+                <i class="fas fa-chevron-down menu-arrow"></i>
+            </a>
+            <div class="collapse submenu {{ $isRisActive ? 'show' : '' }}" id="risSubmenu">
+                <a href="{{ url('/ris') }}" class="nav-link {{ $isRisActive && !$isRisCreateActive ? 'active' : '' }}">
+                    <i class="fas fa-inbox fa-fw"></i> Requests (RIS)
+                </a>
+                <a href="{{ url('/ris/create') }}" class="nav-link {{ $isRisCreateActive ? 'active' : '' }}">
+                    <i class="fas fa-square-plus fa-fw"></i> Create RIS
+                </a>
+            </div>
+        </div>
 
         <a href="{{ url('/barcodes') }}" class="nav-link {{ request()->is('barcodes*') ? 'active' : '' }}">
             <i class="fas fa-barcode fa-fw"></i> QR List
@@ -267,6 +287,10 @@
 
         setupSubmenuMemory(inventoryToggle, inventorySubmenu, 'staffInventoryMenuOpen', {{ $isInventoryActive ? 'true' : 'false' }});
         setupSubmenuMemory(icsToggle, icsSubmenu, 'staffIcsMenuOpen', {{ isset($isIcsActive) && $isIcsActive ? 'true' : 'false' }});
+
+        const risToggle = document.getElementById('risToggle');
+        const risSubmenu = document.getElementById('risSubmenu');
+        setupSubmenuMemory(risToggle, risSubmenu, 'staffRisMenuOpen', {{ isset($isRisActive) && $isRisActive ? 'true' : 'false' }});
     });
 
     // --- Idle Timer Logic ---

@@ -127,11 +127,7 @@
         </a>
         
         <a href="{{ url('/user/ris/create') }}" class="nav-link {{ request()->is('user/ris/create*') ? 'active' : '' }}">
-            <i class="fa-solid fa-file-signature"></i> RIS
-        </a>
-        
-        <a href="{{ url('/user/ris/history') }}" class="nav-link {{ request()->is('user/ris/history*') ? 'active' : '' }}">
-            <i class="fa-solid fa-clock-rotate-left"></i> RIS History
+            <i class="fa-solid fa-file-signature"></i> Fill Out RIS
         </a>
     
     </div>

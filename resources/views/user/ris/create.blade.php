@@ -147,7 +147,83 @@
         .modal { z-index: 1060 !important; }
         .modal-backdrop { z-index: 1055 !important; }
 
+        /* --- Compact Items Entry Table --- */
+        .items-entry-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0 6px;
+            min-width: 640px;
+        }
+        .items-entry-table thead th {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #666;
+            font-weight: 700;
+            padding: 4px 8px;
+            border-bottom: 2px solid #e0e0e0;
+            white-space: nowrap;
+        }
+        .items-entry-table td {
+            padding: 2px 4px;
+            vertical-align: middle;
+        }
+        .items-entry-table .form-control-sm { min-height: 34px; font-size: 0.85rem; }
+        .items-entry-table .select2-container--bootstrap-5 .select2-selection--single {
+            min-height: 34px !important;
+            padding: 2px 0px !important;
+            border-radius: 6px !important;
+            font-size: 0.85rem;
+        }
+        .items-entry-table .btn-remove-row {
+            float: none;
+            font-size: 1.15rem;
+            padding: 0;
+            margin: 0;
+            color: #dc3545;
+        }
+        .items-entry-table .btn-remove-row:hover { color: #a71d2a; }
+
         @media (max-width: 992px) { .main-content { margin-left: 0; } }
+
+        /* Print Styles */
+        #print-area { display: none; }
+
+        @media print {
+            @page { size: A4 portrait; margin: 10mm; }
+
+            body * { visibility: hidden; }
+            .sidebar, .main-content { display: none !important; margin: 0 !important; padding: 0 !important; }
+
+            #print-area, #print-area * {
+                visibility: visible;
+            }
+
+            #print-area {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                color: #000;
+                display: block;
+                font-family: 'Times New Roman', Times, serif;
+                font-size: 10pt;
+            }
+
+            #print-area table {
+                display: table !important;
+                width: 100% !important;
+                border-collapse: collapse !important;
+                table-layout: fixed !important;
+            }
+            #print-area thead { display: table-header-group !important; }
+            #print-area tbody { display: table-row-group !important; }
+            #print-area tr { display: table-row !important; page-break-inside: avoid; }
+            #print-area th, #print-area td {
+                display: table-cell !important;
+                float: none !important;
+            }
+        }
     </style>
 </head>
 <body>
@@ -161,15 +237,15 @@
         <div id="clock"><i class="fa-regular fa-clock me-2"></i> Loading time...</div>
     </div>
 
-    <form action="{{ url('/user/ris') }}" id="requisitionForm" method="POST">
-        @csrf
+    <form id="requisitionForm" onsubmit="return false;">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
                 <h3 class="fw-bold m-0" style="color: var(--deped-blue);">REQUISITION AND ISSUE SLIP</h3>
-                <p class="text-muted small">RIS before Release!</p>
+                <p class="text-muted small">Fill out the form, then download/print to submit to AMS staff.</p>
             </div>
-            <div>
-                <button type="button" class="btn btn-submit shadow-sm" onclick="showConfirmModal()"><i class="fa-solid fa-paper-plane me-1"></i> Submit Request</button>
+            <div class="d-flex gap-2">
+                <button type="button" class="btn btn-outline-secondary shadow-sm" onclick="resetForm()"><i class="fa-solid fa-rotate-left me-1"></i> Reset</button>
+                <button type="button" class="btn btn-submit shadow-sm" onclick="showDownloadModal()"><i class="fa-solid fa-download me-1"></i> Download / Print RIS</button>
             </div>
         </div>
 
@@ -182,9 +258,9 @@
                         <input type="text" name="entity_name" id="entity_name" class="form-control bg-light" value="Department of Education - ROV" readonly>
                     </div>
                     <div class="mb-3">
-                        <label>Office Name  <span class="text-danger">*</span></label>
-                        <select name="office" id="officeSelect" class="form-select" onchange="updateUnits()" required>
-                            <option value="">-- Select Office --</option>
+                        <label>Division Name <span class="text-danger">*</span></label>
+                        <select name="division" id="officeSelect" class="form-select" onchange="updateUnits()" required>
+                            <option value="">-- Select Division --</option>
                             <option value="Administrative Division">Administrative Division</option>
                             <option value="Curriculum and Learning Management Division">Curriculum and Learning Management Division</option>
                             <option value="Education Support Services Division">Education Support Services Division</option>
@@ -198,9 +274,9 @@
                         </select>
                     </div>
                     <div>
-                        <label>Unit / Section</label>
+                        <label>Office Name / Unit / Section</label>
                         <select name="unit_section" id="unitSelect" class="form-select">
-                            <option value="">-- Select Office First --</option>
+                            <option value="">-- Select Division First --</option>
                         </select>
                     </div>
                 </div>
@@ -216,7 +292,8 @@
                     </div>
                     <div>
                         <label>RIS Number</label>
-                        <input type="text" name="ris_no" id="ris_no" class="form-control fw-bold text-danger bg-light" value="{{ $risNumber }}" readonly>
+                        <input type="text" id="ris_no" class="form-control bg-light text-muted" value="" readonly placeholder="Assigned by AMS upon receipt">
+                        <small class="text-muted"><i class="fas fa-info-circle me-1"></i>Blank for now — AMS staff assigns the RIS No. when your form is received.</small>
                     </div>
                 </div>
             </div>
@@ -224,46 +301,46 @@
 
         <div class="section-box requisition-block">
             <h6 class="section-title"><i class="fa-solid fa-list-check"></i> Requisition Details</h6>
-            
-            <div id="items-container">
-                <div class="row g-3 mb-4 item-row border-bottom pb-3">
-                    <div class="col-md-12 text-end">
-                        <a href="javascript:void(0)" class="btn-remove-row" onclick="removeRow(this)"><i class="fa-solid fa-trash-can"></i> Remove Item</a>
-                    </div>
-                    <div class="col-md-2">
-                        <label>Stock No.</label>
-                        <input type="text" name="stock_no[]" class="form-control bg-light stock-input" readonly placeholder="Auto-filled">
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label">Unit Measure <span class="text-danger">*</span></label>
-                        <input type="text" name="unit_measure[]" class="form-control bg-light unit-input" readonly placeholder="Auto-filled" required>
-                    </div>
-                    <div class="col-md-2">
-                        <label>Quantity <span class="text-danger">*</span></label>
-                        <input type="number" name="quantity[]" class="form-control" required>
-                    </div>
-                    <div class="col-md-5">
-                        <label>Item Description <span class="text-danger">*</span></label>
-                        <select name="description[]" class="form-select select2-supply" required>
-                            <option value="" selected disabled>-- Select Supply Item --</option>
-                            <option value="Others" class="fw-bold text-primary">Others (Please specify)</option>
-                            @foreach($supplies as $supply)
-                                <option value="{{ $supply->article }}, {{ $supply->description }}" data-barcode="{{ $supply->barcode_id }}" data-qty="{{ $supply->quantity }}" data-unit="{{ $supply->unit_measure }}">{{ $supply->article }} - {{ $supply->description }}</option>
-                            @endforeach
-                        </select>
-                        <input type="text" name="manual_description[]" class="form-control mt-2 manual-desc-input shadow-sm border-primary" style="display: none;" placeholder="Specify custom item name and description">
-                    </div>
-                    <div class="col-md-12">
-                        <label>Remarks</label>
-                        <input type="text" name="remarks[]" class="form-control" readonly placeholder="Leave it blank">
-                    </div>
-                </div>
+
+            <div class="items-table-wrapper table-responsive">
+                <table class="items-entry-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 15%;">Stock No.</th>
+                            <th style="width: 10%;">Unit</th>
+                            <th style="width: 47%;">Item Description</th>
+                            <th style="width: 14%;">Qty</th>
+                            <th style="width: 8%;"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="items-container">
+                        <tr class="item-row">
+                            <td><input type="text" name="stock_no[]" class="form-control form-control-sm bg-light stock-input" readonly placeholder="Auto"></td>
+                            <td><input type="text" name="unit_measure[]" class="form-control form-control-sm bg-light unit-input" readonly placeholder="Auto" required></td>
+                            <td>
+                                <select name="description[]" class="form-select form-select-sm select2-supply" required>
+                                    <option value="" selected disabled>-- Search item... --</option>
+                                    <option value="Others" class="fw-bold text-primary">Others (Please specify)</option>
+                                    @foreach($supplies as $supply)
+                                        <option value="{{ $supply->article }}, {{ $supply->description }}" data-barcode="{{ $supply->barcode_id }}" data-qty="{{ $supply->quantity }}" data-unit="{{ $supply->unit_measure }}">{{ $supply->article }} - {{ $supply->description }}</option>
+                                    @endforeach
+                                </select>
+                                <input type="text" name="manual_description[]" class="form-control form-control-sm manual-desc-input mt-1 border-primary" style="display: none;" placeholder="Specify item name & description">
+                            </td>
+                            <td><input type="number" name="quantity[]" class="form-control form-control-sm text-center qty-input" min="1" required></td>
+                            <td class="text-center align-middle">
+                                <a href="javascript:void(0)" class="btn-remove-row" onclick="removeRow(this)" title="Remove item"><i class="fa-solid fa-circle-xmark"></i></a>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
-            
-            <div class="mt-3">
+
+            <div class="mt-3 d-flex justify-content-between align-items-center">
                 <button type="button" class="btn btn-outline-primary btn-sm" onclick="addItem()">
-                    <i class="fa-solid fa-plus me-1"></i> Add Item Row
+                    <i class="fa-solid fa-plus me-1"></i> Add Item
                 </button>
+                <small class="text-muted"><i class="fas fa-box-open me-1"></i> Live stock counts are shown in the item dropdown.</small>
             </div>
         </div>
         <div class="section-box purpose-block">
@@ -292,34 +369,44 @@
                     <input type="text" name="desig_issued" id="desig_iss" class="form-control desig-input mt-2" value="AA-VI (Storekeeper II)" readonly>
                 </div>
                 <div class="col-md-3">
-                    <label class="d-block mb-3 text-uppercase small text-muted">Received By <span class="text-danger">*</span></label>
-                    <input type="text" name="received_by" id="rec_by" class="form-control sig-line text-center" placeholder="Printed Name" required>
-                    <input type="text" name="desig_received" id="desig_rec" class="form-control desig-input mt-2" placeholder="Enter Designation" required>
+                    <label class="d-block mb-3 text-uppercase small text-muted">Received By</label>
+                    <input type="text" name="received_by" id="rec_by" class="form-control sig-line text-center" placeholder="Printed Name">
+                    <input type="text" name="desig_received" id="desig_rec" class="form-control desig-input mt-2" placeholder="Enter Designation">
                 </div>
             </div>
         </div>
     </form>
 </div>
 
-<button type="button" id="hiddenSubmitTrigger" class="d-none" data-bs-toggle="modal" data-bs-target="#submitConfirmModal"></button>
+<button type="button" id="hiddenDownloadTrigger" class="d-none" data-bs-toggle="modal" data-bs-target="#downloadConfirmModal"></button>
 
-<div class="modal fade" id="submitConfirmModal" tabindex="-1" aria-hidden="true" style="z-index: 1060;">
+<div class="modal fade" id="downloadConfirmModal" tabindex="-1" aria-hidden="true" style="z-index: 1060;">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg">
             <div class="modal-header text-white" style="background-color: var(--deped-blue);">
-                <h5 class="modal-title"><i class="fas fa-paper-plane me-2"></i>Confirm Submission</h5>
+                <h5 class="modal-title"><i class="fas fa-download me-2"></i>Download / Print RIS</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body p-4 text-center">
-                <div class="mb-3">
-                    <i class="fas fa-circle-question text-warning" style="font-size: 4rem;"></i>
+            <div class="modal-body p-4">
+                <div class="text-center mb-3">
+                    <i class="fas fa-file-pdf text-danger" style="font-size: 4rem;"></i>
                 </div>
-                <h5 class="fw-bold text-dark">Submit Requisition Request?</h5>
-                <p class="text-muted mb-0">Are you sure all the details and items in this RIS form are correct? Once submitted, it will be forwarded for staff review.</p>
+                <h5 class="fw-bold text-dark text-center">Ready to Download?</h5>
+                <p class="text-muted text-center mb-3">This will generate a printable RIS form. Print it and submit to the AMS staff for processing.</p>
+                <div class="alert alert-info border-0 mb-0">
+                    <small><i class="fas fa-info-circle me-1"></i> <strong>Next steps:</strong></small>
+                    <ol class="mb-0 mt-1" style="font-size: 0.85rem;">
+                        <li>Print the generated RIS form</li>
+                        <li>Sign the "Requested By" section</li>
+                        <li>Submit the printed form to the AMS Unit</li>
+                    </ol>
+                </div>
             </div>
             <div class="modal-footer bg-light border-0 justify-content-center py-3">
-                <button type="button" class="btn btn-secondary px-4 fw-bold" data-bs-dismiss="modal">Review Again</button>
-                <button type="button" class="btn px-4 fw-bold text-white" style="background-color: var(--deped-blue);" id="confirmSubmitBtn" onclick="executeSubmit()">Yes, Submit Now</button>
+                <button type="button" class="btn btn-secondary px-4 fw-bold" data-bs-dismiss="modal">Go Back</button>
+                <button type="button" class="btn px-4 fw-bold text-white" style="background-color: var(--deped-blue);" id="confirmDownloadBtn" onclick="generateAndPrint()">
+                    <i class="fas fa-print me-1"></i> Generate & Print
+                </button>
             </div>
         </div>
     </div>
@@ -328,30 +415,9 @@
 <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-    // --- Safe Modal Trigger Logic ---
-    function showConfirmModal() {
-        const form = document.getElementById('requisitionForm');
-        // Validate form manually
-        if (form.checkValidity()) {
-            // If valid, click the hidden native bootstrap toggle to prevent backdrop bugs
-            document.getElementById('hiddenSubmitTrigger').click();
-        } else {
-            // Show standard HTML5 validation messages
-            form.reportValidity(); 
-        }
-    }
-
-    function executeSubmit() {
-        const btn = document.getElementById('confirmSubmitBtn');
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Submitting...';
-        btn.disabled = true;
-        // Submit the form
-        document.getElementById('requisitionForm').submit();
-    }
-
-
     function formatSupplyOption(state) {
         if (!state.id) { return state.text; }
         
@@ -359,15 +425,13 @@
             return $(`<span class="text-primary fw-bold"><i class="fas fa-pen me-2"></i>${state.text}</span>`);
         }
         
-        let qty = $(state.element).data('qty');
+        let qty = parseInt($(state.element).data('qty')) || 0;
         let badgeHtml = '';
         
-        if (qty !== undefined) {
-            if (parseInt(qty) > 0) {
-                badgeHtml = `<span class="badge bg-success ms-2 py-1" style="font-size:0.7rem;">Available</span>`;
-            } else {
-                badgeHtml = `<span class="badge bg-danger ms-2 py-1" style="font-size:0.7rem;">Out of Stock</span>`;
-            }
+        if (qty > 0) {
+            badgeHtml = `<span class="badge bg-success ms-2 py-1" style="font-size:0.7rem;"><i class="fas fa-box-open me-1"></i>${qty} available</span>`;
+        } else {
+            badgeHtml = `<span class="badge bg-danger ms-2 py-1" style="font-size:0.7rem;"><i class="fas fa-xmark me-1"></i>Out of Stock</span>`;
         }
         
         return $(`<span>${state.text} ${badgeHtml}</span>`);
@@ -423,6 +487,22 @@
 
     $(document).ready(function() {
         initSelect2Fields();
+
+        // D: Auto-fill office/division from user profile
+        const userDept = '{{ $user->department ?? '' }}';
+
+        if (userDept) {
+            // Find matching office in the dropdown
+            const officeSelect = document.getElementById('officeSelect');
+            for (let i = 0; i < officeSelect.options.length; i++) {
+                if (officeSelect.options[i].value === userDept) {
+                    officeSelect.selectedIndex = i;
+                    break;
+                }
+            }
+            // Trigger unit population
+            updateUnits();
+        }
     });
 
     function updateClock() {
@@ -506,6 +586,267 @@
             alert("The form must have at least one item.");
         }
     }
+
+    function showDownloadModal() {
+        const form = document.getElementById('requisitionForm');
+        if (!form.checkValidity()) {
+            form.reportValidity(); 
+            return;
+        }
+
+        // Check stock levels against requested quantities
+        const issues = [];
+        document.querySelectorAll('#items-container .item-row').forEach(row => {
+            const sel = row.querySelector('.select2-supply');
+            if (!sel.value || sel.value === 'Others') return;
+            const stock = parseInt($(sel).find(':selected').data('qty')) || 0;
+            const qty = parseInt(row.querySelector('input[name="quantity[]"]').value) || 0;
+            if (stock <= 0) {
+                issues.push(`<li class="text-danger fw-bold">${sel.value} — out of stock</li>`);
+            } else if (qty > stock) {
+                issues.push(`<li class="fw-bold">${sel.value} — requested ${qty}, only ${stock} on hand</li>`);
+            }
+        });
+
+        if (issues.length > 0) {
+            Swal.fire({
+                title: 'Stock Availability Notice',
+                html: `<ul class="text-start">${issues.join('')}</ul>
+                       <p class="text-muted mb-0">Unavailable items may be referred to the Procurement Unit / BAC. You can still print and submit your RIS.</p>`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#1a237e',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Proceed Anyway',
+                cancelButtonText: 'Go Back & Edit',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    document.getElementById('hiddenDownloadTrigger').click();
+                }
+            });
+            return;
+        }
+
+        document.getElementById('hiddenDownloadTrigger').click();
+    }
+
+    function resetForm() {
+        if (confirm('Are you sure you want to reset the form? All entered data will be cleared.')) {
+            document.getElementById('requisitionForm').reset();
+            // Reset selects
+            document.getElementById('officeSelect').selectedIndex = 0;
+            document.getElementById('unitSelect').innerHTML = '<option value="">-- Select Division First --</option>';
+            // Reset item rows to just one
+            const container = document.getElementById('items-container');
+            const rows = container.querySelectorAll('.item-row');
+            for (let i = 1; i < rows.length; i++) {
+                $(rows[i]).find('.select2-supply').select2('destroy');
+                rows[i].remove();
+            }
+            initSelect2Fields();
+        }
+    }
+
+    function generateAndPrint() {
+        const btn = document.getElementById('confirmDownloadBtn');
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Generating...';
+        btn.disabled = true;
+
+        // Close the modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('downloadConfirmModal'));
+        modal.hide();
+
+        // Small delay for modal to close
+        setTimeout(() => {
+            prepareAndPrint();
+            btn.innerHTML = '<i class="fas fa-print me-1"></i> Generate & Print';
+            btn.disabled = false;
+        }, 300);
+    }
+
+    function prepareAndPrint() {
+        // Map header fields
+        document.getElementById('p-entity').innerText = document.getElementById('entity_name').value;
+        document.getElementById('p-division').innerText = document.getElementById('officeSelect').value || '';
+        document.getElementById('p-office').innerText = document.getElementById('unitSelect').value || '';
+        document.getElementById('p-fund').innerText = document.getElementById('fund_cluster').value || '';
+        document.getElementById('p-center').innerText = document.getElementById('center_code').value || '';
+        document.getElementById('p-ris').innerText = document.getElementById('ris_no').value;
+
+        // Map signatures
+        document.getElementById('p-req-name').innerText = document.getElementById('req_by').value;
+        document.getElementById('p-req-des').innerText = document.getElementById('desig_req').value;
+        document.getElementById('p-app-name').innerText = document.getElementById('app_by').value;
+        document.getElementById('p-app-des').innerText = document.getElementById('desig_app').value;
+        document.getElementById('p-iss-name').innerText = document.getElementById('iss_by').value;
+        document.getElementById('p-iss-des').innerText = document.getElementById('desig_iss').value;
+        document.getElementById('p-rec-name').innerText = document.getElementById('rec_by').value || '';
+        document.getElementById('p-rec-des').innerText = document.getElementById('desig_rec').value || '';
+
+        // Map items (original fixed RIS format: REQUISITION | Stock Available? | ISSUE)
+        const printBody = document.getElementById('print-items-body');
+        printBody.innerHTML = '';
+        let rowsAdded = 0;
+
+        document.querySelectorAll('#items-container .item-row').forEach(row => {
+            const stock = row.querySelector('.stock-input').value || '';
+            const unit = row.querySelector('.unit-input').value || '';
+            const qty = row.querySelector('input[name="quantity[]"]').value || '';
+            const descSelect = row.querySelector('select[name="description[]"]');
+            const manualInput = row.querySelector('.manual-desc-input');
+            let desc = '';
+            if (descSelect.value === 'Others' && manualInput) {
+                desc = manualInput.value || 'Others';
+            } else if (descSelect.value) {
+                desc = descSelect.value;
+            }
+
+            if (desc || stock || qty) {
+                printBody.innerHTML += `<tr>
+                    <td style="border: 1px solid black; padding: 4px; text-align: center;">${stock || '&nbsp;'}</td>
+                    <td style="border: 1px solid black; padding: 4px; text-align: center;">${unit || '&nbsp;'}</td>
+                    <td style="border: 1px solid black; padding: 4px; text-align: left;">${desc || '&nbsp;'}</td>
+                    <td style="border: 1px solid black; padding: 4px; text-align: center;">${qty || '&nbsp;'}</td>
+                    <td style="border: 1px solid black; padding: 4px; text-align: center;">&nbsp;</td>
+                    <td style="border: 1px solid black; padding: 4px; text-align: center;">&nbsp;</td>
+                    <td style="border: 1px solid black; padding: 4px; text-align: center;">&nbsp;</td>
+                    <td style="border: 1px solid black; padding: 4px; text-align: left;">&nbsp;</td>
+                </tr>`;
+                rowsAdded++;
+            }
+        });
+
+        // Pad to min rows (open lines, no horizontal borders)
+        for (let j = rowsAdded; j < 10; j++) {
+            printBody.innerHTML += `<tr>
+                <td style="border-left: 1px solid black; border-right: 1px solid black; padding: 6px;">&nbsp;</td>
+                <td style="border-left: 1px solid black; border-right: 1px solid black; padding: 6px;">&nbsp;</td>
+                <td style="border-left: 1px solid black; border-right: 1px solid black; padding: 6px;">&nbsp;</td>
+                <td style="border-left: 1px solid black; border-right: 1px solid black; padding: 6px;">&nbsp;</td>
+                <td style="border-left: 1px solid black; border-right: 1px solid black; padding: 6px;">&nbsp;</td>
+                <td style="border-left: 1px solid black; border-right: 1px solid black; padding: 6px;">&nbsp;</td>
+                <td style="border-left: 1px solid black; border-right: 1px solid black; padding: 6px;">&nbsp;</td>
+                <td style="border-left: 1px solid black; border-right: 1px solid black; padding: 6px;">&nbsp;</td>
+            </tr>`;
+        }
+
+        // Set purpose
+        document.getElementById('p-purpose').innerText = document.querySelector('textarea[name="purpose[]"]').value || '';
+
+        window.print();
+    }
 </script>
+
+<!-- PRINT AREA (hidden on screen, shown only when printing) -->
+<div id="print-area">
+    <div style="text-align: center; font-family: 'Times New Roman', Times, serif; margin-bottom: 5px;">
+        <img src="{{ asset('assets/images/DepEdseal.png') }}" style="width: 60px; margin: 0 auto 2px auto; display: block;">
+        <div style="font-size: 9pt; font-family: 'Old English Text MT', 'Engravers Old English', serif;">Republic of the Philippines</div>
+        <div style="font-size: 18pt; font-family: 'Old English Text MT', 'Engravers Old English', serif; line-height: 1;">Department of Education</div>
+        <div style="font-size: 10pt;">Region V - Bicol</div>
+        <div style="font-size: 12pt; font-weight: bold; margin-top: 5px;">REQUISITION AND ISSUE SLIP</div>
+    </div>
+
+    <table style="width: 100%; border: none; font-family: 'Times New Roman', Times, serif; font-size: 10pt; margin-bottom: 5px;">
+        <tr>
+            <td style="width: 12%; white-space: nowrap; padding: 2px;">Entity Name:</td>
+            <td style="width: 38%; border-bottom: 1px solid black; padding: 2px;" id="p-entity"></td>
+            <td style="width: 25%; text-align: right; padding-right: 10px; white-space: nowrap;">Fund Cluster:</td>
+            <td style="width: 25%; border-bottom: 1px solid black; padding: 2px;" id="p-fund"></td>
+        </tr>
+        <tr>
+            <td style="white-space: nowrap; padding: 2px;">Division:</td>
+            <td style="border-bottom: 1px solid black; padding: 2px;" id="p-division"></td>
+            <td style="text-align: right; padding-right: 10px; white-space: nowrap;">Responsibility Center Code:</td>
+            <td style="border-bottom: 1px solid black; padding: 2px;" id="p-center"></td>
+        </tr>
+        <tr>
+            <td style="white-space: nowrap; padding: 2px;">Office:</td>
+            <td style="border-bottom: 1px solid black; padding: 2px;" id="p-office"></td>
+            <td style="text-align: right; padding-right: 10px; white-space: nowrap;">RIS No:</td>
+            <td style="border-bottom: 1px solid black; font-weight: bold; padding: 2px;" id="p-ris"></td>
+        </tr>
+    </table>
+
+    <table style="width: 100%; border-collapse: collapse; font-family: 'Times New Roman', Times, serif; font-size: 10pt; border: 1px solid black; table-layout: fixed;">
+        <colgroup>
+            <col style="width: 11%;">
+            <col style="width: 8%;">
+            <col style="width: 35%;">
+            <col style="width: 9%;">
+            <col style="width: 5%;">
+            <col style="width: 5%;">
+            <col style="width: 8%;">
+            <col style="width: 19%;">
+        </colgroup>
+        <thead>
+            <tr>
+                <th colspan="4" style="border: 1px solid black; padding: 3px; text-align: center;">REQUISITION</th>
+                <th colspan="2" style="border: 1px solid black; padding: 3px; text-align: center;">Stock Available?</th>
+                <th colspan="2" style="border: 1px solid black; padding: 3px; text-align: center;">Issue</th>
+            </tr>
+            <tr>
+                <th style="border: 1px solid black; padding: 3px; text-align: center;">Stock No.</th>
+                <th style="border: 1px solid black; padding: 3px; text-align: center;">Unit</th>
+                <th style="border: 1px solid black; padding: 3px; text-align: center;">Description</th>
+                <th style="border: 1px solid black; padding: 3px; text-align: center;">Quantity</th>
+                <th style="border: 1px solid black; padding: 3px; text-align: center;">Yes</th>
+                <th style="border: 1px solid black; padding: 3px; text-align: center;">No</th>
+                <th style="border: 1px solid black; padding: 3px; text-align: center;">Quantity</th>
+                <th style="border: 1px solid black; padding: 3px; text-align: center;">Remarks</th>
+            </tr>
+        </thead>
+        <tbody id="print-items-body"></tbody>
+        <tbody>
+            <tr>
+                <td colspan="8" style="border: 1px solid black; padding: 3px; text-align: left;">
+                    <b>Purpose:</b> <span id="p-purpose"></span>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+
+    <table style="width: 100%; border-collapse: collapse; font-family: 'Times New Roman', Times, serif; font-size: 10pt; border: 1px solid black; border-top: none; table-layout: fixed;">
+        <tbody>
+            <tr>
+                <td style="width: 12%; border: 1px solid black; padding: 3px; border-top: none;"></td>
+                <td style="width: 22%; border: 1px solid black; padding: 3px; font-weight: bold; text-align: center; border-top: none;">Requested by:</td>
+                <td style="width: 22%; border: 1px solid black; padding: 3px; font-weight: bold; text-align: center; border-top: none;">Approved by:</td>
+                <td style="width: 22%; border: 1px solid black; padding: 3px; font-weight: bold; text-align: center; border-top: none;">Issued by:</td>
+                <td style="width: 22%; border: 1px solid black; padding: 3px; font-weight: bold; text-align: center; border-top: none;">Received by:</td>
+            </tr>
+            <tr>
+                <td style="border: 1px solid black; padding: 3px; text-align: left;">Signature</td>
+                <td style="border: 1px solid black; padding: 3px;"></td>
+                <td style="border: 1px solid black; padding: 3px;"></td>
+                <td style="border: 1px solid black; padding: 3px;"></td>
+                <td style="border: 1px solid black; padding: 3px;"></td>
+            </tr>
+            <tr>
+                <td style="border: 1px solid black; padding: 3px; text-align: left;">Printed Name</td>
+                <td style="border: 1px solid black; padding: 3px; text-align: center;"><b id="p-req-name"></b></td>
+                <td style="border: 1px solid black; padding: 3px; text-align: center;"><b id="p-app-name"></b></td>
+                <td style="border: 1px solid black; padding: 3px; text-align: center;"><b id="p-iss-name"></b></td>
+                <td style="border: 1px solid black; padding: 3px; text-align: center;"><b id="p-rec-name"></b></td>
+            </tr>
+            <tr>
+                <td style="border: 1px solid black; padding: 3px; text-align: left;">Designation</td>
+                <td style="border: 1px solid black; padding: 3px; text-align: center;" id="p-req-des"></td>
+                <td style="border: 1px solid black; padding: 3px; text-align: center;" id="p-app-des"></td>
+                <td style="border: 1px solid black; padding: 3px; text-align: center;" id="p-iss-des"></td>
+                <td style="border: 1px solid black; padding: 3px; text-align: center;" id="p-rec-des"></td>
+            </tr>
+            <tr>
+                <td style="border: 1px solid black; padding: 3px; text-align: left;">Date</td>
+                <td style="border: 1px solid black; padding: 3px; text-align: center;"></td>
+                <td style="border: 1px solid black; padding: 3px; text-align: center;"></td>
+                <td style="border: 1px solid black; padding: 3px; text-align: center;"></td>
+                <td style="border: 1px solid black; padding: 3px; text-align: center;"></td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
 </body>
 </html>

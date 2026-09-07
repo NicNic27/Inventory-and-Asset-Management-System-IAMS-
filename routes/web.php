@@ -112,6 +112,8 @@ Route::middleware('auth')->group(function () {
 
     // RIS Requests
     Route::get('/ris', [StaffRisController::class, 'index']);
+    Route::get('/ris/create', [StaffRisController::class, 'create']);
+    Route::post('/ris', [StaffRisController::class, 'store']);
     Route::get('/ris/{id}/review', [StaffRisController::class, 'review']);
     Route::post('/ris/{id}/update', [StaffRisController::class, 'update']);
 

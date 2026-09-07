@@ -6,6 +6,7 @@ use App\Models\RisRequest;
 use App\Models\RisItem;
 use App\Models\Supply; 
 use App\Models\Transaction;
+use App\Models\SystemSetting;
 use App\Models\ActivityLog;
 use App\Services\PrReferralService;
 use Illuminate\Http\Request;
@@ -13,6 +14,101 @@ use Illuminate\Support\Facades\Auth;
 
 class RisController extends Controller
 {
+    public function create()
+    {
+        $seqSetting = SystemSetting::firstOrCreate(
+            ['key' => 'seq_ris_no'], 
+            ['value' => '1']
+        );
+        $risNumber = 'RIS-' . date('Y-m') . '-' . str_pad($seqSetting->value, 4, '0', STR_PAD_LEFT);
+        $supplies = Supply::orderBy('article', 'asc')->get();
+        return view('ris.create', compact('risNumber', 'supplies'));
+    }
+
+    public function store(Request $request)
+    {
+        $user = Auth::user();
+
+        $seqSetting = SystemSetting::firstOrCreate(
+            ['key' => 'seq_ris_no'], 
+            ['value' => '1']
+        );
+
+        $currentNumber = (int) $seqSetting->value;
+        $yearMonth = date('Y-m'); 
+        $sequenceFormatted = str_pad($currentNumber, 4, '0', STR_PAD_LEFT); 
+        $generatedRisNo = 'RIS-' . $yearMonth . '-' . $sequenceFormatted;
+
+        while (RisRequest::where('ris_no', $generatedRisNo)->exists()) {
+            $currentNumber++;
+            $sequenceFormatted = str_pad($currentNumber, 4, '0', STR_PAD_LEFT);
+            $generatedRisNo = 'RIS-' . $yearMonth . '-' . $sequenceFormatted;
+        }
+
+        $seqSetting->update(['value' => $currentNumber + 1]);
+
+        $ris = new RisRequest();
+        $ris->user_id = $user->id; 
+        $ris->ris_no = $generatedRisNo; 
+        $ris->entity_name = $request->entity_name;
+        $ris->division = $request->division;
+        $ris->office = $request->unit_section;
+        $ris->fund_cluster = $request->fund_cluster;
+        $ris->rcc = $request->center_code;
+        $ris->purpose = is_array($request->purpose) ? implode('; ', array_filter(array_unique($request->purpose))) : $request->purpose;
+        $ris->sig_requested_by = $request->requested_by;
+        $ris->desig_requested = $request->desig_requested;
+        $ris->date_requested = now()->toDateString();
+        $ris->sig_approved_by = $request->approved_by;
+        $ris->desig_approved = $request->desig_approved;
+        $ris->sig_issued_by = $request->issued_by;
+        $ris->desig_issued = $request->desig_issued;
+        $ris->sig_received_by = $request->received_by;
+        $ris->desig_received = $request->desig_received;
+        
+        $ris->status = 'Pending Staff Review'; 
+        $ris->save();
+
+        $itemCount = count($request->description ?? []);
+        $itemsBySupply = [];
+        for ($i = 0; $i < $itemCount; $i++) {
+            $desc = $request->description[$i] ?? null;
+            if ($desc === 'Others') {
+                $desc = $request->manual_description[$i] ?? 'Unspecified Item';
+            }
+
+            if (!empty($desc)) {
+                $unit = $request->unit_measure[$i] ?? '';
+                $itemKey = strtolower(trim($desc)) . '|' . strtolower(trim($unit));
+                if (!isset($itemsBySupply[$itemKey])) {
+                    $itemsBySupply[$itemKey] = [
+                        'stock_no' => $request->stock_no[$i] ?? null,
+                        'unit' => $unit,
+                        'description' => $desc,
+                        'req_quantity' => 0,
+                        'stock_avail' => 'N/A',
+                        'remarks' => $request->remarks[$i] ?? null,
+                    ];
+                }
+                $itemsBySupply[$itemKey]['req_quantity'] += (int) ($request->quantity[$i] ?? 0);
+            }
+        }
+
+        foreach ($itemsBySupply as $itemData) {
+            RisItem::create(['ris_id' => $ris->id] + $itemData);
+        }
+
+        ActivityLog::create([
+            'user_id' => $user->id,
+            'action' => 'Created',
+            'description' => "Staff created RIS from physical form: {$generatedRisNo}",
+            'ip_address' => request()->ip(),
+            'user_agent' => request()->userAgent()
+        ]);
+
+        return redirect('/ris')->with('msg', 'RIS successfully created! RIS No. ' . $generatedRisNo);
+    }
+
     public function index(Request $request)
     {
         $perPage = $request->input('per_page', 10);
@@ -85,6 +181,9 @@ class RisController extends Controller
         } elseif ($request->action == 'return') {
             $status = 'Pending Staff Review'; 
             $msg = 'returned';
+        } elseif ($request->action == 'redirect_procurement') {
+            $status = 'Redirected to Procurement';
+            $msg = 'redirected';
         } else {
             if ($ris->status != 'Approved') {
                 $status = 'Pending Staff Review';

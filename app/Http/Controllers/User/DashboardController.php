@@ -31,7 +31,7 @@ class DashboardController extends Controller
             ->get(); // Fetch it immediately into a Collection
 
         // Count directly from the Collection
-        $pendingCount = $allUserRequests->whereIn('status', ['Pending Staff Review', 'Forwarded to Admin', 'Pending'])->count();
+        $pendingCount = $allUserRequests->whereIn('status', ['Pending Staff Review', 'Forwarded to Admin', 'Pending', 'Redirected to Procurement'])->count();
         
         $approvedCount = $allUserRequests->where('status', 'Approved')->count();
         
