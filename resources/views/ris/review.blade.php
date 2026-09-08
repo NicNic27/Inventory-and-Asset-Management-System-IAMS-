@@ -194,12 +194,9 @@
                     <button type="button" class="btn btn-warning text-dark fw-bold shadow-sm" onclick="confirmAction('return', 'Re-open for Corrections?', 'Are you sure you want to reopen this RIS? This will revoke the current approval.', 'warning', 'Yes, Re-open', '#ffc107')">
                         <i class="fas fa-folder-open me-1"></i> Re-open for Corrections
                     </button>
-                @elseif(!in_array($req->status, ['Rejected', 'Cancelled', 'Declined', 'Redirected to Procurement']))
+                @elseif(!in_array($req->status, ['Rejected', 'Cancelled', 'Declined']))
                     <button type="button" class="btn btn-success fw-bold shadow-sm" onclick="confirmAction('forward', 'Forward to Admin?', 'Are you sure you want to forward this to the Admin for final approval?', 'question', 'Yes, Forward', '#198754')">
                         <i class="fas fa-share me-1"></i> Forward to Admin
-                    </button>
-                    <button type="button" class="btn btn-info text-white fw-bold shadow-sm" onclick="confirmRedirectProcurement()">
-                        <i class="fas fa-arrow-right-arrow-left me-1"></i> Redirect to Procurement Unit
                     </button>
                 @endif
             </div>
@@ -551,41 +548,6 @@
                 input.type = 'hidden';
                 input.name = 'action';
                 input.value = actionType;
-                form.appendChild(input);
-                form.submit();
-            }
-        });
-    }
-
-    function confirmRedirectProcurement() {
-        const form = document.getElementById('reviewForm');
-        if (!form.checkValidity()) {
-            form.reportValidity(); 
-            return;
-        }
-
-        Swal.fire({
-            title: 'Redirect to Procurement Unit?',
-            html: `<p class="text-start mb-2">This will change the RIS status to <strong>\'Redirected to Procurement\'</strong> and instruct the requestor to:</p>
-                   <ol class="text-start" style="padding-left: 1.5rem;">
-                       <li>Visit the <strong>Procurement Unit / BAC</strong> office</li>
-                       <li>Fill out a <strong>Purchase Request (PR)</strong> for the out-of-stock items</li>
-                       <li>Submit the PR for processing</li>
-                   </ol>
-                   <p class="text-muted mb-0 mt-2"><small>After procurement and delivery, a new RIS will be created automatically from the Purchase Order.</small></p>`,
-            icon: 'info',
-            showCancelButton: true,
-            confirmButtonColor: '#0dcaf0',
-            cancelButtonColor: '#6c757d',
-            confirmButtonText: '<i class="fas fa-arrow-right me-1"></i> Redirect Now',
-            cancelButtonText: 'Cancel',
-            reverseButtons: true
-        }).then((result) => {
-            if (result.isConfirmed) {
-                const input = document.createElement('input');
-                input.type = 'hidden';
-                input.name = 'action';
-                input.value = 'redirect_procurement';
                 form.appendChild(input);
                 form.submit();
             }

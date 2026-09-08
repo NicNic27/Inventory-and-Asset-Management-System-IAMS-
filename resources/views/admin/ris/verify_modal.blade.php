@@ -1,3 +1,33 @@
+<style>
+    .admin-action-wrap { position: relative; }
+    .admin-action-input { position: absolute; opacity: 0; width: 1px; height: 1px; margin: 0; pointer-events: none; }
+    .admin-action-card {
+        display: flex; align-items: center; gap: 12px;
+        height: 100%;
+        padding: 14px 16px;
+        background: #ffffff;
+        border: 2px solid #e9ecef;
+        border-radius: 12px;
+        cursor: pointer;
+        user-select: none;
+        transition: border-color .15s ease, background-color .15s ease, box-shadow .15s ease, transform .15s ease;
+    }
+    .admin-action-card:hover { border-color: #c9d0da; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(16, 25, 84, 0.08); }
+    .admin-action-input:focus-visible + .admin-action-card { outline: 3px solid rgba(16, 25, 84, 0.35); outline-offset: 2px; }
+    .admin-action-input:checked + .admin-action-card {
+        border-color: var(--aac);
+        background: var(--aac-bg);
+        box-shadow: 0 0 0 3px var(--aac-ring);
+    }
+    .aac-icon { font-size: 1.35rem; flex-shrink: 0; }
+    .aac-body { flex: 1; min-width: 0; }
+    .aac-title { display: block; font-weight: 700; font-size: .95rem; color: #212529; line-height: 1.2; }
+    .aac-desc { display: block; font-size: .78rem; color: #6c757d; margin-top: 2px; }
+    .aac-check { margin-left: auto; font-size: 1.1rem; color: var(--aac); opacity: 0; transform: scale(.5); transition: all .15s ease; }
+    .admin-action-input:checked + .admin-action-card .aac-title { color: var(--aac); }
+    .admin-action-input:checked + .admin-action-card .aac-check { opacity: 1; transform: scale(1); }
+</style>
+
 <div class="modal-header border-0 py-3 flex-shrink-0" style="background-color: #101954; color: white; border-radius: 10px 10px 0 0;">
     <h5 class="modal-title fw-bold mb-0"><i class="fas fa-file-signature me-2"></i> Final Admin Review</h5>
     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
@@ -176,18 +206,47 @@
                 </button>
             </div>
         @else
-            <div class="row g-3 border-top pt-3 border-2 border-primary mt-2">
-                <div class="col-12 mt-3">
-                    <label class="form-label fw-bold text-primary"><i class="fas fa-gavel me-1"></i> Final Admin Action</label>
-                    <select name="new_status" id="adminActionSelect" class="form-select form-select-lg shadow-sm" style="border: 2px solid #101954;" required>
-                        <option value="">-- Select Final Action --</option>
-                        <option value="Approved">Approve Request (Release Stocks)</option>
-                        <option value="Pending Staff Review">Return to Staff (Needs Corrections)</option>
-                        <option value="Rejected">Decline / Cancel Request</option>
-                    </select>
-                    <small id="deductWarning" class="text-danger fw-bold d-none mt-2 d-block">
-                        <i class="fas fa-exclamation-triangle"></i> Note: Approving this will automatically deduct the Issued Quantity from the master inventory!
-                    </small>
+            <div class="border-top pt-3 border-2 border-primary mt-2">
+                <label class="form-label fw-bold text-primary"><i class="fas fa-gavel me-1"></i> Final Admin Action</label>
+                <small class="text-muted d-block mb-2">Select one — this is the final decision for this RIS.</small>
+                <div class="row g-2">
+                    <div class="col-md-4 admin-action-wrap">
+                        <input type="radio" class="admin-action-input" name="new_status" id="actionApprove" value="Approved" required>
+                        <label for="actionApprove" class="admin-action-card" style="--aac:#198754; --aac-bg:#e8f5e9; --aac-ring:rgba(25,135,84,.18);">
+                            <span class="aac-icon" style="color:#198754;"><i class="fas fa-circle-check"></i></span>
+                            <span class="aac-body">
+                                <span class="aac-title">Approve Request</span>
+                                <span class="aac-desc">Release stocks from inventory</span>
+                            </span>
+                            <i class="fas fa-circle-check aac-check"></i>
+                        </label>
+                    </div>
+                    <div class="col-md-4 admin-action-wrap">
+                        <input type="radio" class="admin-action-input" name="new_status" id="actionReturn" value="Pending Staff Review" required>
+                        <label for="actionReturn" class="admin-action-card" style="--aac:#b45309; --aac-bg:#fff7e6; --aac-ring:rgba(180,83,9,.18);">
+                            <span class="aac-icon" style="color:#b45309;"><i class="fas fa-rotate-left"></i></span>
+                            <span class="aac-body">
+                                <span class="aac-title">Return to Staff</span>
+                                <span class="aac-desc">Send back for corrections</span>
+                            </span>
+                            <i class="fas fa-circle-check aac-check"></i>
+                        </label>
+                    </div>
+                    <div class="col-md-4 admin-action-wrap">
+                        <input type="radio" class="admin-action-input" name="new_status" id="actionDecline" value="Rejected" required>
+                        <label for="actionDecline" class="admin-action-card" style="--aac:#dc3545; --aac-bg:#fdecec; --aac-ring:rgba(220,53,69,.18);">
+                            <span class="aac-icon" style="color:#dc3545;"><i class="fas fa-ban"></i></span>
+                            <span class="aac-body">
+                                <span class="aac-title">Decline / Cancel</span>
+                                <span class="aac-desc">Reject this request</span>
+                            </span>
+                            <i class="fas fa-circle-check aac-check"></i>
+                        </label>
+                    </div>
+                </div>
+                <div id="deductWarning" class="d-none alert alert-warning d-flex align-items-center gap-2 py-2 px-3 mt-3 mb-0 shadow-sm">
+                    <i class="fas fa-exclamation-triangle fa-lg"></i>
+                    <div class="small">Approving will automatically <strong>deduct the Issued Quantity</strong> of each item from the master inventory.</div>
                 </div>
             </div>
         @endif
@@ -197,20 +256,7 @@
     <div class="modal-footer border-0 bg-white rounded-bottom flex-shrink-0">
         <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">Close</button>
         @if(!in_array($req->status, ['Rejected', 'Declined', 'Cancelled', 'Approved']))
-            <button type="submit" class="btn btn-success px-4 fw-bold"><i class="fas fa-check-circle me-1"></i> Confirm & Save</button>
+            <button type="submit" id="confirmActionBtn" class="btn btn-success px-4 fw-bold"><i class="fas fa-check-circle me-1"></i> Confirm & Save</button>
         @endif
     </div>
 </form>
-
-<script>
-    const actionSelect = document.getElementById('adminActionSelect');
-    if(actionSelect) {
-        actionSelect.addEventListener('change', function() {
-            if (this.value === 'Approved') {
-                document.getElementById('deductWarning').classList.remove('d-none');
-            } else {
-                document.getElementById('deductWarning').classList.add('d-none');
-            }
-        });
-    }
-</script>

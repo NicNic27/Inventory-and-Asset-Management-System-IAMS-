@@ -123,11 +123,11 @@
     
     <div class="nav-menu">
         <a href="{{ url('/user/dashboard') }}" class="nav-link {{ request()->is('user/dashboard*') ? 'active' : '' }}">
-            <i class="fa-solid fa-gauge"></i> Dashboard
+            <i class="fa-solid fa-house"></i> Home
         </a>
         
         <a href="{{ url('/user/ris/create') }}" class="nav-link {{ request()->is('user/ris/create*') ? 'active' : '' }}">
-            <i class="fa-solid fa-file-signature"></i> Fill Out RIS
+            <i class="fa-solid fa-print"></i> Print RIS Form
         </a>
     
     </div>

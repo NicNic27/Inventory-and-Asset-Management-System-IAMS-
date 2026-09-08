@@ -62,7 +62,6 @@
         .status-forwarded { background-color: #cff4fc; color: #055160; border: 1px solid #b6effb; }
         .status-approved { background-color: #d1e7dd; color: #0f5132; border: 1px solid #badbcc; }
         .status-cancelled { background-color: #f8d7da; color: #842029; border: 1px solid #f5c2c7; }
-        .status-redirected { background-color: #cff4fc; color: #055160; border: 1px solid #b6effb; }
 
         /* Advanced Scrollable Pagination */
         #styled-pagination nav > div:not(:last-child),
@@ -124,7 +123,6 @@
                 @if(session('msg') == 'updated') RIS successfully updated. @endif
                 @if(session('msg') == 'forwarded') RIS successfully forwarded to Admin. @endif
                 @if(session('msg') == 'returned') Approved RIS has been returned for corrections. @endif
-                @if(session('msg') == 'redirected') RIS has been redirected to the Procurement Unit. @endif
                 <button type="button" class="btn-close btn-sm pt-3" data-bs-dismiss="alert"></button>
             </div>
         @endif
@@ -148,7 +146,6 @@
                             <option value="All" {{ request('status_filter') == 'All' ? 'selected' : '' }}>All Statuses</option>
                             <option value="Pending Staff Review" {{ request('status_filter') == 'Pending Staff Review' ? 'selected' : '' }}>Pending Staff Review</option>
                             <option value="Forwarded to Admin" {{ request('status_filter') == 'Forwarded to Admin' ? 'selected' : '' }}>Forwarded to Admin</option>
-                            <option value="Redirected to Procurement" {{ request('status_filter') == 'Redirected to Procurement' ? 'selected' : '' }}>Redirected to Procurement</option>
                             <option value="Approved" {{ request('status_filter') == 'Approved' ? 'selected' : '' }}>Approved</option>
                             <option value="Declined" {{ request('status_filter') == 'Declined' ? 'selected' : '' }}>Declined</option>
                             <option value="Cancelled" {{ request('status_filter') == 'Cancelled' ? 'selected' : '' }}>Cancelled</option>
@@ -187,8 +184,6 @@
                                     $status_class = 'status-approved';
                                 } elseif($row->status == 'Forwarded to Admin') {
                                     $status_class = 'status-forwarded';
-                                } elseif($row->status == 'Redirected to Procurement') {
-                                    $status_class = 'status-redirected';
                                 } elseif(in_array($row->status, ['Cancelled', 'Declined', 'Rejected'])) {
                                     $status_class = 'status-cancelled'; 
                                 }

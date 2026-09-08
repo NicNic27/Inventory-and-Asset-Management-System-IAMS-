@@ -168,12 +168,42 @@
                         if (!response.ok) throw new Error('Route not found');
                         return response.text();
                     })
-                    .then(data => { contentArea.innerHTML = data; })
+                    .then(data => { contentArea.innerHTML = data; initVerifyModal(contentArea); })
                     .catch(err => {
                         contentArea.innerHTML = '<div class="p-5 text-center text-danger"><i class="fas fa-exclamation-triangle fa-3x mb-3"></i><p>Failed to load data. Ensure the route exists in web.php.</p></div>';
                     });
             });
         });
+
+        // Wire up the "Final Admin Action" cards injected into the verify modal
+        // (the partial's inline scripts don't execute when loaded via fetch + innerHTML,
+        //  so this delegated logic lives here on the parent page)
+        function initVerifyModal(contentArea) {
+            const radios = contentArea.querySelectorAll('input[name="new_status"]');
+            const warning = contentArea.querySelector('#deductWarning');
+            const confirmBtn = contentArea.querySelector('#confirmActionBtn');
+
+            const buttonStyles = {
+                'Approved':             { cls: 'btn-success',          icon: 'fas fa-circle-check',  text: 'Confirm & Approve' },
+                'Pending Staff Review': { cls: 'btn-warning text-dark', icon: 'fas fa-rotate-left',  text: 'Confirm & Return to Staff' },
+                'Rejected':             { cls: 'btn-danger',           icon: 'fas fa-ban',           text: 'Confirm & Decline' }
+            };
+
+            function refreshActionUI() {
+                const checked = contentArea.querySelector('input[name="new_status"]:checked');
+                if (!checked) return;
+                if (warning) warning.classList.toggle('d-none', checked.value !== 'Approved');
+                if (confirmBtn) {
+                    const s = buttonStyles[checked.value];
+                    if (s) {
+                        confirmBtn.className = 'btn px-4 fw-bold ' + s.cls;
+                        confirmBtn.innerHTML = '<i class="' + s.icon + ' me-1"></i> ' + s.text;
+                    }
+                }
+            }
+
+            radios.forEach(radio => radio.addEventListener('change', refreshActionUI));
+        }
 
         // Pagination Scroll Logic
         window.addEventListener('load', function() {

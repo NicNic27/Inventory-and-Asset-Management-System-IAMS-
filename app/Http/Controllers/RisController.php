@@ -181,9 +181,6 @@ class RisController extends Controller
         } elseif ($request->action == 'return') {
             $status = 'Pending Staff Review'; 
             $msg = 'returned';
-        } elseif ($request->action == 'redirect_procurement') {
-            $status = 'Redirected to Procurement';
-            $msg = 'redirected';
         } else {
             if ($ris->status != 'Approved') {
                 $status = 'Pending Staff Review';

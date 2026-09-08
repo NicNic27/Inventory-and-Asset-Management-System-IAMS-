@@ -209,7 +209,9 @@ Route::middleware('auth')->group(function () {
     // ==========================================
     Route::middleware('role:frontuser')->group(function () {
 
-    Route::get('/user/dashboard', [UserDashboardController::class, 'index']);
+    // TEMP: Dashboard disabled for now — /user/dashboard serves a simple Home page instead.
+    // To restore: point this route back to [UserDashboardController::class, 'index'].
+    Route::get('/user/dashboard', fn () => view('user.home'));
     Route::get('/user/supplies', [UserDashboardController::class, 'supplyOverview']);
 
     // User Notifications
@@ -219,14 +221,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/user/profile', [\App\Http\Controllers\User\ProfileController::class, 'update']);
     Route::get('/user/profile', [UserProfileController::class, 'index']);
 
-    // RIS Routes
+    // RIS Route (user side is now print-only: the physical form is submitted to the
+    // office and encoded by staff — see staff /ris/create)
     Route::get('/user/ris/create', [UserRisController::class, 'create']);
-    Route::post('/user/ris', [UserRisController::class, 'store']);
-    Route::get('/user/ris/history', [UserRisController::class, 'history']);
-    Route::get('/user/ris/{id}', [UserRisController::class, 'show']);
-    Route::get('/user/ris/{id}/edit', [UserRisController::class, 'edit']);
-    Route::post('/user/ris/{id}/update', [UserRisController::class, 'update']);
-    Route::delete('/user/ris/{id}', [UserRisController::class, 'destroy']);
 
     });
 
