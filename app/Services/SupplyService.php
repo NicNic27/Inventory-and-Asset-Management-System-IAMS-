@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Models\Supply;
 use App\Models\Transaction;
 use App\Models\ActivityLog;
-use App\Models\PurchaseOrderItem;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
@@ -365,70 +364,6 @@ class SupplyService
 
             return $transaction;
         });
-    }
-
-    /**
-     * Import a delivered supply PO item into its matching stock card once.
-     */
-    public function syncDeliveredPurchaseOrderItem(PurchaseOrderItem $item): ?Transaction
-    {
-        if (!$item->is_delivered || $item->inventory_synced) {
-            return null;
-        }
-
-        $purchaseOrder = $item->purchaseOrder;
-        if (!$purchaseOrder || $purchaseOrder->po_type === 'Asset') {
-            return null;
-        }
-
-        $supplier = trim((string) $purchaseOrder->supplier_name);
-        $description = trim((string) $item->description);
-        $unit = trim((string) $item->unit);
-
-        $supply = Supply::where('description', $description)
-            ->where('unit_measure', $unit)
-            ->first();
-
-        $transaction = $supply
-            ? $this->receiveSupply($supply, [
-                'quantity' => $item->qty,
-                'unit_price' => $item->unit_cost,
-                'supplier' => $supplier,
-                'po_number' => $purchaseOrder->po_no,
-                'office' => $purchaseOrder->place_of_delivery,
-                'receipt_status' => 'Complete',
-                'remarks' => "Received from PO {$purchaseOrder->po_no}",
-            ])
-            : $this->create([
-                'article' => $description,
-                'description' => $description,
-                'unit_measure' => $unit,
-                'unit_value' => $item->unit_cost,
-                'supplier' => $supplier ?: null,
-                'quantity' => $item->qty,
-                'status' => 'Available',
-            ]);
-
-        if (!$supply) {
-            $transaction = Transaction::where('item_id', $transaction->id)
-                ->where('item_type', 'supplies')
-                ->where('transaction_type', 'IN')
-                ->latest('id')
-                ->first();
-
-            if ($transaction) {
-                $transaction->update([
-                    'po_number' => $purchaseOrder->po_no,
-                    'office' => $purchaseOrder->place_of_delivery,
-                    'receipt_status' => 'Complete',
-                    'remarks' => "Received from PO {$purchaseOrder->po_no}",
-                ]);
-            }
-        }
-
-        $item->forceFill(['inventory_synced' => true])->save();
-
-        return $transaction instanceof Transaction ? $transaction : null;
     }
 
     /**

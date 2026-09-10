@@ -105,22 +105,88 @@
             margin: 0 auto;
         }
 
-        .item-row {
-            position: relative;
-            padding-top: 10px;
+        /* ===== Requisition item cards ===== */
+        .item-card {
+            border: 1px solid #e8eaf3;
+            border-radius: 12px;
+            padding: 16px 18px 18px;
+            margin-bottom: 14px;
+            background: linear-gradient(180deg, #fbfcff 0%, #ffffff 60%);
+            transition: border-color .15s ease, box-shadow .15s ease;
         }
 
-        .btn-remove-row {
+        .item-card:hover {
+            border-color: #c5cae9;
+            box-shadow: 0 3px 12px rgba(26, 35, 126, .07);
+        }
+
+        .item-card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 14px;
+            padding-bottom: 10px;
+            border-bottom: 1px dashed #dfe3f0;
+        }
+
+        .item-badge {
+            background: var(--deped-blue);
+            color: #fff;
+            font-size: .7rem;
+            font-weight: 700;
+            letter-spacing: .6px;
+            padding: 4px 14px;
+            border-radius: 20px;
+        }
+
+        .btn-remove-item {
             color: #dc3545;
-            cursor: pointer;
-            font-size: 0.8rem;
+            font-size: .75rem;
+            font-weight: 600;
             text-decoration: none;
-            float: right;
-            margin-top: -5px;
-            padding-top: 10px;
+            background: #fdeef0;
+            border: 1px solid #f6c9cf;
+            padding: 4px 12px;
+            border-radius: 20px;
+            transition: all .15s ease;
         }
 
-        .btn-remove-row:hover { text-decoration: underline; }
+        .btn-remove-item:hover { background: #dc3545; color: #fff; }
+
+        .amount-chip {
+            font-weight: 700;
+            color: #1b5e20;
+            background: #e8f5e9;
+            border: 1px solid #c8e6c9;
+            padding: 7px 14px;
+            border-radius: 8px;
+            font-size: .9rem;
+            white-space: nowrap;
+            height: 39px;
+            min-width: 120px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .amount-chip.is-empty {
+            color: #9e9e9e;
+            background: #f5f5f5;
+            border-color: #e0e0e0;
+            font-weight: 600;
+        }
+
+        .summary-strip {
+            background: #fff;
+            border: 1px solid #e8eaf3;
+            border-radius: 10px;
+            padding: 8px 16px;
+            font-size: .85rem;
+            color: #555;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, .04);
+        }
+
+        .select2-results__option .opt-desc { font-size: .78rem; color: #8a8f98; }
 
         .select2-container--bootstrap-5 .select2-selection--single {
             border-radius: 8px !important;
@@ -228,47 +294,67 @@
         </div>
 
         <div class="section-box requisition-block">
-            <h6 class="section-title"><i class="fa-solid fa-list-check"></i> Requisition Details</h6>
-            
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
+                <h6 class="section-title mb-0" style="border-bottom: none;"><i class="fa-solid fa-list-check"></i> Requisition Details</h6>
+                <span class="text-muted small"><i class="fa-solid fa-wand-magic-sparkles me-1 text-warning"></i> Pick an item — stock no., unit & price auto-fill. The amount computes live as you type the quantity.</span>
+            </div>
+
             <div id="items-container">
-                <div class="row g-3 mb-4 item-row border-bottom pb-3">
-                    <div class="col-md-12 text-end">
-                        <a href="javascript:void(0)" class="btn-remove-row" onclick="removeRow(this)"><i class="fa-solid fa-trash-can"></i> Remove Item</a>
+                <div class="item-card item-row">
+                    <div class="item-card-header">
+                        <span class="item-badge item-index">ITEM 1</span>
+                        <a href="javascript:void(0)" class="btn-remove-item" onclick="removeRow(this)"><i class="fa-solid fa-trash-can me-1"></i>Remove</a>
                     </div>
-                    <div class="col-md-2">
-                        <label>Stock No.</label>
-                        <input type="text" name="stock_no[]" class="form-control bg-light stock-input" readonly placeholder="Auto-filled">
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label">Unit Measure <span class="text-danger">*</span></label>
-                        <input type="text" name="unit_measure[]" class="form-control bg-light unit-input" readonly placeholder="Auto-filled" required>
-                    </div>
-                    <div class="col-md-2">
-                        <label>Quantity <span class="text-danger">*</span></label>
-                        <input type="number" name="quantity[]" class="form-control" required>
-                    </div>
-                    <div class="col-md-5">
-                        <label>Item Description <span class="text-danger">*</span></label>
-                        <select name="description[]" class="form-select select2-supply" required>
-                            <option value="" selected disabled>-- Select Supply Item --</option>
-                            <option value="Others" class="fw-bold text-primary">Others (Please specify)</option>
-                            @foreach($supplies as $supply)
-                                <option value="{{ $supply->article }}, {{ $supply->description }}" data-barcode="{{ $supply->barcode_id }}" data-qty="{{ $supply->quantity }}" data-unit="{{ $supply->unit_measure }}">{{ $supply->article }} - {{ $supply->description }}</option>
-                            @endforeach
-                        </select>
-                        <input type="text" name="manual_description[]" class="form-control mt-2 manual-desc-input shadow-sm border-primary" style="display: none;" placeholder="Specify custom item name and description">
-                    </div>
-                    <div class="col-md-12">
-                        <label>Remarks</label>
-                        <input type="text" name="remarks[]" class="form-control" placeholder="e.g. Total price, condition, etc.">
+                    <div class="row g-3">
+                        <div class="col-lg-5">
+                            <label>Item Description <span class="text-danger">*</span></label>
+                            <select name="description[]" class="form-select select2-supply" required>
+                                <option value="" selected disabled>-- Select Supply Item --</option>
+                                <option value="Others" class="fw-bold text-primary">Others (Please specify)</option>
+                                @foreach($supplies as $supply)
+                                    <option value="{{ $supply->article }}, {{ $supply->description }}" data-barcode="{{ $supply->barcode_id }}" data-qty="{{ $supply->quantity }}" data-unit="{{ $supply->unit_measure }}" data-value="{{ $supply->unit_value }}" data-article="{{ $supply->article }}">{{ $supply->article }} - {{ $supply->description }}</option>
+                                @endforeach
+                            </select>
+                            <input type="text" name="manual_description[]" class="form-control mt-2 manual-desc-input shadow-sm border-primary" style="display: none;" placeholder="Specify custom item name and description">
+                        </div>
+                        <div class="col-lg-2 col-md-3 col-6">
+                            <label>Stock No.</label>
+                            <input type="text" name="stock_no[]" class="form-control bg-light stock-input" readonly placeholder="Auto-filled">
+                        </div>
+                        <div class="col-lg-2 col-md-3 col-6">
+                            <label class="form-label">Unit Measure <span class="text-danger">*</span></label>
+                            <input type="text" name="unit_measure[]" class="form-control bg-light unit-input" readonly placeholder="Auto-filled" required>
+                        </div>
+                        <div class="col-lg-3 col-md-6">
+                            <label>Quantity <span class="text-danger">*</span></label>
+                            <input type="number" name="quantity[]" class="form-control qty-input" min="1" placeholder="0" required>
+                        </div>
+                        <div class="col-12">
+                            <div class="d-flex align-items-end gap-3 flex-wrap">
+                                <div class="flex-grow-1" style="min-width: 240px;">
+                                    <label>Remarks</label>
+                                    <input type="text" name="remarks[]" class="form-control" placeholder="e.g. condition, notes from the physical form...">
+                                </div>
+                                <div>
+                                    <label class="text-muted small">Amount <span class="fw-normal">(auto)</span></label>
+                                    <div class="amount-chip is-empty" data-amount="0"><span class="amount-value">—</span></div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
-            
-            <div class="mt-3">
+
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-3">
                 <button type="button" class="btn btn-outline-primary btn-sm" onclick="addItem()">
                     <i class="fa-solid fa-plus me-1"></i> Add Item Row
                 </button>
+                <div class="summary-strip">
+                    <i class="fa-solid fa-calculator me-2 text-primary"></i>
+                    <span id="summaryCount">1 item</span>
+                    <span class="mx-2 text-muted">•</span>
+                    Estimated Total: <strong class="ms-1 text-success" id="summaryTotal">₱0.00</strong>
+                </div>
             </div>
         </div>
         <div class="section-box purpose-block">
@@ -351,23 +437,89 @@
         document.getElementById('requisitionForm').submit();
     }
 
+    function fmtPeso(n) {
+        return '₱' + Number(n).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
     function formatSupplyOption(state) {
         if (!state.id) { return state.text; }
-        
+
         if (state.id === 'Others') {
-            return $(`<span class="text-primary fw-bold"><i class="fas fa-pen me-2"></i>${state.text}</span>`);
+            return $(`<span class="text-primary fw-bold"><i class="fas fa-pen me-2"></i>Others (Please specify)</span>`);
         }
-        
-        let qty = parseInt($(state.element).data('qty')) || 0;
-        let badgeHtml = '';
-        
+
+        const $el = $(state.element);
+        const article = String($el.data('article') || '');
+        const fullText = state.text;
+        const desc = fullText.startsWith(article + ' - ') ? fullText.slice(article.length + 3) : fullText;
+        const qty = parseInt($el.data('qty')) || 0;
+        const price = parseFloat($el.data('value'));
+
+        let priceHtml = '';
+        if (!isNaN(price) && price > 0) {
+            priceHtml = `<span class="badge py-1" style="font-size:0.68rem;background:#fff8e1;color:#9a7b0a;border:1px solid #ffe082;"><i class="fas fa-tag me-1"></i>${fmtPeso(price)}</span>`;
+        }
+
+        let stockHtml = '';
         if (qty > 0) {
-            badgeHtml = `<span class="badge bg-success ms-2 py-1" style="font-size:0.7rem;"><i class="fas fa-box-open me-1"></i>${qty} available</span>`;
+            stockHtml = `<span class="badge bg-success-subtle text-success border border-success-subtle py-1" style="font-size:0.68rem;"><i class="fas fa-box-open me-1"></i>${qty} in stock</span>`;
         } else {
-            badgeHtml = `<span class="badge bg-danger ms-2 py-1" style="font-size:0.7rem;"><i class="fas fa-xmark me-1"></i>Out of Stock</span>`;
+            stockHtml = `<span class="badge bg-danger-subtle text-danger border border-danger-subtle py-1" style="font-size:0.68rem;"><i class="fas fa-xmark me-1"></i>Out of Stock</span>`;
         }
-        
-        return $(`<span>${state.text} ${badgeHtml}</span>`);
+
+        return $(`<div class="d-flex justify-content-between align-items-center gap-2" style="width:100%;">
+            <div class="text-truncate" title="${fullText.replace(/"/g, '&quot;')}">
+                <span class="fw-semibold">${article}</span>
+                <span class="opt-desc"> — ${desc}</span>
+            </div>
+            <div class="text-nowrap">${priceHtml}${stockHtml}</div>
+        </div>`);
+    }
+
+    function updateAmount(row) {
+        const $row = $(row);
+        const $chip = $row.find('.amount-chip');
+        const $sel = $row.find('.select2-supply');
+        const selectedVal = $sel.val();
+        let amount = null;
+
+        if (selectedVal && selectedVal !== 'Others') {
+            const data = $sel.select2('data');
+            const opt = data && data.length ? data[0].element : null;
+            const price = opt ? parseFloat($(opt).data('value')) : NaN;
+            const qty = parseInt($row.find('input[name="quantity[]"]').val()) || 0;
+            if (!isNaN(price) && qty > 0) { amount = price * qty; }
+        }
+
+        const $value = $chip.find('.amount-value');
+        if (amount === null) {
+            $value.text('—');
+            $chip.addClass('is-empty').attr('data-amount', '0');
+        } else {
+            $value.text(fmtPeso(amount));
+            $chip.removeClass('is-empty').attr('data-amount', amount);
+        }
+        updateGrandTotal();
+    }
+
+    function updateGrandTotal() {
+        let total = 0, count = 0;
+        $('#items-container .item-row').each(function () {
+            count++;
+            total += parseFloat($(this).find('.amount-chip').attr('data-amount')) || 0;
+        });
+        $('#summaryCount').text(count + (count === 1 ? ' item' : ' items'));
+        $('#summaryTotal').text(fmtPeso(total));
+    }
+
+    function renumberItems() {
+        const rows = document.querySelectorAll('#items-container .item-row');
+        rows.forEach((r, i) => {
+            const badge = r.querySelector('.item-index');
+            if (badge) badge.textContent = 'ITEM ' + (i + 1);
+            const removeBtn = r.querySelector('.btn-remove-item');
+            if (removeBtn) removeBtn.style.visibility = rows.length <= 1 ? 'hidden' : 'visible';
+        });
     }
 
     function initSelect2Fields() {
@@ -386,11 +538,13 @@
             const manualInput = row.find('.manual-desc-input');
             const unitInput = row.find('.unit-input');
             const stockInput = row.find('.stock-input');
+            const qtyInput = row.find('input[name="quantity[]"]');
             
             if (selectedVal === 'Others') {
                 manualInput.show().attr('required', true);
                 stockInput.val('');
                 unitInput.val('').removeAttr('readonly').attr('placeholder', 'Type unit manually').removeClass('bg-light');
+                manualInput.trigger('focus');
             } else {
                 const duplicateSelect = $('#items-container .select2-supply').filter(function () {
                     return this !== e.target && $(this).val() === selectedVal;
@@ -398,6 +552,10 @@
 
                 if (duplicateSelect.length) {
                     $(this).val(null).trigger('change');
+                    manualInput.hide().attr('required', false).val('');
+                    stockInput.val('');
+                    unitInput.val('').attr('readonly', true).attr('placeholder', 'Auto-filled').addClass('bg-light');
+                    updateAmount(row);
                     const duplicateRow = duplicateSelect.closest('.item-row');
                     const quantityInput = duplicateRow.find('input[name="quantity[]"]');
                     quantityInput.trigger('focus').select();
@@ -413,12 +571,22 @@
                 
                 stockInput.val(barcode || '');
                 unitInput.val(unit || '');
+                qtyInput.trigger('focus');
             }
+
+            updateAmount(row);
+        });
+
+        // Live amount: recompute whenever the quantity changes
+        $('#items-container').on('input change', 'input[name="quantity[]"]', function () {
+            updateAmount($(this).closest('.item-row'));
         });
     }
 
     $(document).ready(function() {
         initSelect2Fields();
+        renumberItems();
+        updateGrandTotal();
     });
 
     function updateClock() {
@@ -486,6 +654,8 @@
         container.appendChild(newRow);
         
         initSelect2Fields();
+        updateAmount(newRow);
+        renumberItems();
     }
 
     function removeRow(link) {
@@ -494,6 +664,8 @@
         if (rows.length > 1) {
             $(link).closest('.item-row').find('.select2-supply').select2('destroy');
             link.closest('.item-row').remove();
+            renumberItems();
+            updateGrandTotal();
         } else {
             alert("The form must have at least one item.");
         }

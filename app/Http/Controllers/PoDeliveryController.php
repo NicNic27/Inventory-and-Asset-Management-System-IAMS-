@@ -2,48 +2,72 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\RecordPoDeliveryRequest;
+use App\Http\Requests\ReceivePoDeliveryRequest;
+use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderItem;
 use App\Models\SupplyBatch;
 use App\Services\PoDeliveryService;
+use Illuminate\Http\JsonResponse;
 
 class PoDeliveryController extends Controller
 {
-    public function store(RecordPoDeliveryRequest $request, PoDeliveryService $service)
+    /**
+     * Data for the whole-PO receiving sheet: every line with ordered /
+     * already received / remaining, plus each line's delivery history.
+     */
+    public function show($poId): JsonResponse
     {
-        try {
-            $batch = $service->recordDelivery($request->validated());
-        } catch (\InvalidArgumentException|\DomainException $e) {
-            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
-        }
+        $po = PurchaseOrder::with(['items' => function ($q) {
+            $q->withDeliveredQuantity();
+        }])->findOrFail($poId);
 
-        $poItem = PurchaseOrderItem::findOrFail($batch->po_item_id);
-        $poStatus = $poItem->purchaseOrder->recomputeStatus();
+        $items = $po->items->map(function (PurchaseOrderItem $item) {
+            $ordered   = (int) $item->qty;
+            $delivered = (int) $item->delivered_quantity;
+
+            return [
+                'po_item_id' => $item->id,
+                'description' => $item->description,
+                'unit'       => $item->unit,
+                'ordered'    => $ordered,
+                'received'   => $delivered,
+                'remaining'  => max(0, $ordered - $delivered),
+                'is_asset'   => ($item->item_type ?? 'supply') === 'asset',
+                'complete'   => $ordered > 0 && $delivered >= $ordered,
+                'history'    => SupplyBatch::where('po_item_id', $item->id)
+                    ->orderByDesc('id')
+                    ->get(['dr_number', 'dr_date', 'quantity'])
+                    ->map(fn ($b) => [
+                        'dr_number' => $b->dr_number,
+                        'dr_date'   => $b->dr_date?->format('M d, Y'),
+                        'quantity'  => (int) $b->quantity,
+                    ])
+                    ->values()
+                    ->all(),
+            ];
+        });
 
         return response()->json([
-            'success' => true,
-            'message' => 'Delivery recorded successfully.',
-            'delivered_quantity' => $poItem->getDeliveredQuantity(),
-            'ordered_quantity' => (int) $poItem->qty,
-            'delivery_status' => $poItem->getDeliveryStatus(),
-            'po_status' => $poStatus,
+            'id'             => $po->id,
+            'po_no'          => $po->po_no,
+            'supplier_name'  => $po->supplier_name,
+            'status'         => $po->status,
+            'items'          => $items,
         ]);
     }
 
-    public function history($poItemId)
+    public function store(ReceivePoDeliveryRequest $request, PoDeliveryService $service): JsonResponse
     {
-        $poItem = PurchaseOrderItem::findOrFail($poItemId);
-
-        $batches = SupplyBatch::where('po_item_id', $poItemId)
-            ->orderByDesc('dr_date')
-            ->orderByDesc('id')
-            ->get(['id', 'dr_number', 'dr_date', 'quantity', 'unit_price', 'source_type', 'requesting_office']);
+        try {
+            $result = $service->receivePoDelivery($request->validated());
+        } catch (\DomainException|\InvalidArgumentException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
+        }
 
         return response()->json([
-            'delivered_quantity' => $poItem->getDeliveredQuantity(),
-            'ordered_quantity' => (int) $poItem->qty,
-            'delivery_status' => $poItem->getDeliveryStatus(),
-            'batches' => $batches,
+            'success'   => true,
+            'message'   => "Delivery received. P.O. status is now {$result['po_status']}.",
+            'po_status' => $result['po_status'],
         ]);
     }
 }

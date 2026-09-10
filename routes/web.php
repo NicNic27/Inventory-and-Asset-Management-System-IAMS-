@@ -62,14 +62,12 @@ Route::middleware('auth')->group(function () {
 
     // Purchase Orders
     Route::get('/po', [\App\Http\Controllers\PurchaseOrderController::class, 'index'])->name('po.index');
+    Route::get('/po/{id}/receive-sheet', [\App\Http\Controllers\PoDeliveryController::class, 'show'])->name('po.receive-sheet.show');
+    Route::post('/po/{id}/receive', [\App\Http\Controllers\PoDeliveryController::class, 'store'])->name('po.receive.store');
     Route::post('/po', [\App\Http\Controllers\PurchaseOrderController::class, 'store'])->name('po.store');
     Route::get('/po/{id}', [\App\Http\Controllers\PurchaseOrderController::class, 'show'])->name('po.show');
     Route::put('/po/{id}', [\App\Http\Controllers\PurchaseOrderController::class, 'update'])->name('po.update');
     Route::delete('/po/{id}', [\App\Http\Controllers\PurchaseOrderController::class, 'destroy'])->name('po.destroy');
-
-    // PO Item Deliveries (direct issuance / partial delivery)
-    Route::post('/po-items/deliveries', [\App\Http\Controllers\PoDeliveryController::class, 'store'])->name('po-items.deliveries.store');
-    Route::get('/po-items/{id}/deliveries', [\App\Http\Controllers\PoDeliveryController::class, 'history'])->name('po-items.deliveries.history');
 
     // Pending PR referrals lookup (which RIS a direct issuance is fulfilling)
     Route::get('/pr-referrals/pending', [\App\Http\Controllers\PrReferralController::class, 'pending'])->name('pr-referrals.pending');

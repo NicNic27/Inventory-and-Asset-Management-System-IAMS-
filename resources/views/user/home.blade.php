@@ -208,7 +208,7 @@
 
         <!-- Welcome banner -->
         <div class="welcome-banner">
-            <span class="welcome-badge"><i class="fas fa-handshake-angle"></i> Welcome to the Asset Management Section</span>
+            <span class="welcome-badge"><i class="fas fa-handshake-angle"></i> Welcome to the Asset Management System</span>
             <h1>Welcome, {{ $user->firstname }} {{ $user->lastname }} 👋</h1>
             <p>This is your Division's portal for requesting supplies and materials from the Asset Management Section — Department of Education, Region V.</p>
         </div>

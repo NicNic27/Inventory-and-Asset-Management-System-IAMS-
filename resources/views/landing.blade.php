@@ -829,7 +829,7 @@
     
     <header class="main-header">
         <div class="logo-container">
-            <h1 class="text"> Asset Inventory Management System</h1>
+            <h1 class="text"> Asset Management System</h1>
         </div>
         
         <div class="burger-btn" id="burgerBtn">☰</div>
@@ -894,7 +894,7 @@
                 </div>
                 
                 <div class="about-text-box animate-item">
-                    <p>The Asset Inventory Management System is an interactive web-based solution developed to modernize the inventory and requisition protocols of the Department of Education ROV. It eliminates manual redundancies by integrating Purchase Order tracking, bar code-assisted inventory management, and a structured Requisition and Issue Slip (RIS) workflow. By connecting Division Users, Asset Management Staff, and Administrative Officials into a single digital ecosystem, the system enforces strict accountability. It features real-time stock monitoring, automated unit calculations, and digitized approval routing, ultimately optimizing the allocation of government resources and ensuring accurate, up-to-date transaction logs.
+                    <p>The Asset Management System is an interactive web-based solution developed to modernize the inventory and requisition protocols of the Department of Education ROV. It eliminates manual redundancies by integrating Purchase Order tracking, bar code-assisted inventory management, and a structured Requisition and Issue Slip (RIS) workflow. By connecting Division Users, Asset Management Staff, and Administrative Officials into a single digital ecosystem, the system enforces strict accountability. It features real-time stock monitoring, automated unit calculations, and digitized approval routing, ultimately optimizing the allocation of government resources and ensuring accurate, up-to-date transaction logs.
 
 By centralizing these essential tasks, the platform fosters a more transparent environment where staff can focus on impactful work. It serves as a reliable foundation for data-driven decisions and long-term efficiency.</p>
                 </div>
