@@ -104,7 +104,7 @@
                                     <option value="Partial">Partial</option>
                                     <option value="Complete">Complete</option>
                                 </select>
-                                <small class="text-muted" style="font-size: 11px;">Check off items below to update status.</small>
+                                <small class="text-muted" style="font-size: 11px;">Derived from actual deliveries — use "Receive Delivery" on the P.O. list.</small>
                             </div>
                             
                             <div class="col-md-12 mt-4"><h6 class="fw-bold text-dark border-bottom pb-2">Delivery Information</h6></div>
@@ -170,31 +170,16 @@
     window.onload = () => { if (typeof window.addEmptyItemRow === "function") window.addEmptyItemRow(); };
 
     window.autoUpdatePoStatus = function() {
-        const rows = document.querySelectorAll('.item-row');
-        if (rows.length === 0) return;
-        
-        let checkedCount = 0;
-        rows.forEach(row => {
-            if (row.querySelector('.item-delivered-cb').checked) checkedCount++;
-        });
-        
-        const statusSelect = document.getElementById('in-status');
-        if (checkedCount === 0) {
-            statusSelect.value = 'Pending';
-        } else if (checkedCount === rows.length) {
-            statusSelect.value = 'Complete';
-        } else {
-            statusSelect.value = 'Partial';
-        }
+        // Status is derived from actual deliveries recorded via the Receive Delivery
+        // sheet on the P.O. list — nothing to compute inside the wizard anymore.
     };
 
-    window.addEmptyItemRow = function(data = {unit: 'pc', desc: '', qty: 0, cost: 0.00, is_delivered: false, item_type: 'supply', source_type: 'procurement_stock'}) {
+    window.addEmptyItemRow = function(data = {unit: 'pc', desc: '', qty: 0, cost: 0.00, item_type: 'supply', source_type: 'procurement_stock'}) {
         const container = document.getElementById('itemsContainer');
         const q = parseFloat(data.qty) || 0;
         const c = parseFloat(data.cost) || 0;
         const total = (q * c).toLocaleString(undefined, {minimumFractionDigits: 2});
         const isSelected = (val) => data.unit === val ? 'selected' : '';
-        const isChecked = data.is_delivered ? 'checked' : '';
         const itemType = data.item_type || 'supply';
         const sourceType = data.source_type || 'procurement_stock';
         const cardBorderClass = sourceType === 'direct_issuance' ? 'item-card direct-card' : 'item-card supply-card';
@@ -204,10 +189,6 @@
         const templateHtml = `
             <div class="${cardBorderClass} card position-relative item-row p-3 mb-3 border-0 shadow-sm border-start border-4 border-success">
                 <div class="row g-3 align-items-center">
-                    <div class="col-md-1 text-center pt-2">
-                        <label class="form-label d-block text-success mb-2" title="Mark as Delivered">RCVD</label>
-                        <input type="checkbox" class="form-check-input item-delivered-cb shadow-sm border-secondary" style="width: 22px; height: 22px; cursor: pointer;" ${isChecked} onchange="autoUpdatePoStatus()">
-                    </div>
                     <div class="col-md-2">
                         <label class="form-label">Unit <span class="text-danger">*</span></label>
                         <select class="form-select unit-select" required>
@@ -383,7 +364,6 @@
         rows.forEach(row => {
             let q = parseFloat(row.querySelector('.qty-input').value) || 0;
             let c = parseFloat(row.querySelector('.cost-input').value) || 0;
-            let isD = row.querySelector('.item-delivered-cb').checked;
             let subtotal = q * c;
             formData.total_amount += subtotal;
 
@@ -392,7 +372,6 @@
                 description: row.querySelector('.desc-input').value,
                 qty: q,
                 cost: c,
-                is_delivered: isD,
                 item_type: row.querySelector('.item-type-select')?.value || 'supply',
                 supply_id: row.querySelector('.supply-select')?.value || null,
                 source_type: row.querySelector('.source-type-select')?.value || 'procurement_stock',

@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderItem;
+use App\Models\Supply;
 use App\Models\SupplyBatch;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -55,6 +56,32 @@ class PoDeliveryService
                     throw new \DomainException(
                         "Asset items are received through Asset Inventory — skipped \"{$poItem->description}\"."
                     );
+                }
+
+                // Auto-link unlinked supply lines by the same description + unit rule
+                // the legacy delivery sync uses; if no inventory item exists yet,
+                // create one on receipt (same as the old checkbox flow did).
+                if (!$poItem->supply_id) {
+                    $match = Supply::where('description', trim((string) $poItem->description))
+                        ->where('unit_measure', trim((string) $poItem->unit))
+                        ->first();
+
+                    if ($match) {
+                        $poItem->update(['supply_id' => $match->id]);
+                        $poItem->setRelation('supply', $match);
+                    } else {
+                        $created = $this->supplyService->create([
+                            'article'      => trim((string) $poItem->description),
+                            'description'  => trim((string) $poItem->description),
+                            'unit_measure' => trim((string) $poItem->unit),
+                            'unit_value'   => (float) $poItem->unit_cost,
+                            'supplier'     => $supplier ?: null,
+                            'quantity'     => 0,
+                            'status'       => 'Available',
+                        ]);
+                        $poItem->update(['supply_id' => $created->id]);
+                        $poItem->setRelation('supply', $created);
+                    }
                 }
 
                 if (!$poItem->supply_id) {

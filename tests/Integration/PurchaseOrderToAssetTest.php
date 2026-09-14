@@ -81,20 +81,32 @@ class PurchaseOrderToAssetTest extends TestCase
                 'description' => 'Rubber Band Small',
                 'qty' => 10,
                 'cost' => 20,
-                'is_delivered' => true,
             ]],
         ]);
 
         $response->assertOk()->assertJson(['success' => true]);
+
+        // Stock is only posted when the delivery is received via the
+        // "Receive Delivery" sheet — creating the P.O. posts nothing.
+        $po = \App\Models\PurchaseOrder::where('po_no', 'PO-SUP-100')->firstOrFail();
+        $poItem = $po->items->first();
+
+        $receive = $this->postJson("/po/{$po->id}/receive", [
+            'po_id' => $po->id,
+            'dr_number' => 'DR-TEST-100',
+            'dr_date' => date('Y-m-d'),
+            'items' => [
+                ['po_item_id' => $poItem->id, 'quantity' => 10],
+            ],
+        ]);
+
+        $receive->assertOk()->assertJson(['success' => true]);
+
         $this->assertDatabaseHas('supplies', [
             'description' => 'Rubber Band Small',
             'unit_measure' => 'Piece(s)',
             'quantity' => 10,
             'unit_value' => 20,
-        ]);
-        $this->assertDatabaseHas('purchase_order_items', [
-            'description' => 'Rubber Band Small',
-            'inventory_synced' => true,
         ]);
         $this->assertDatabaseHas('transactions', [
             'po_number' => 'PO-SUP-100',

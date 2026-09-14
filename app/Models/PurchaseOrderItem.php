@@ -50,7 +50,10 @@ class PurchaseOrderItem extends Model
         $delivered = $this->getDeliveredQuantity();
 
         if ($delivered <= 0) {
-            return 'pending';
+            // Legacy rows created before the Receive Delivery sheet used a manual
+            // is_delivered checkbox (and already synced to inventory) — honor it so
+            // recomputation doesn't retroactively mark them Pending.
+            return $this->is_delivered ? 'complete' : 'pending';
         }
 
         return $delivered >= $this->qty ? 'complete' : 'partial';

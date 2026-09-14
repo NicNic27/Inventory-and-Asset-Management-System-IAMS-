@@ -62,12 +62,14 @@ Route::middleware('auth')->group(function () {
 
     // Purchase Orders
     Route::get('/po', [\App\Http\Controllers\PurchaseOrderController::class, 'index'])->name('po.index');
-    Route::get('/po/{id}/receive-sheet', [\App\Http\Controllers\PoDeliveryController::class, 'show'])->name('po.receive-sheet.show');
-    Route::post('/po/{id}/receive', [\App\Http\Controllers\PoDeliveryController::class, 'store'])->name('po.receive.store');
     Route::post('/po', [\App\Http\Controllers\PurchaseOrderController::class, 'store'])->name('po.store');
     Route::get('/po/{id}', [\App\Http\Controllers\PurchaseOrderController::class, 'show'])->name('po.show');
     Route::put('/po/{id}', [\App\Http\Controllers\PurchaseOrderController::class, 'update'])->name('po.update');
     Route::delete('/po/{id}', [\App\Http\Controllers\PurchaseOrderController::class, 'destroy'])->name('po.destroy');
+
+    // Whole-PO receiving (delivery sheet)
+    Route::get('/po/{id}/receive-sheet', [\App\Http\Controllers\PoDeliveryController::class, 'show'])->name('po.receive-sheet.data');
+    Route::post('/po/{id}/receive', [\App\Http\Controllers\PoDeliveryController::class, 'store'])->name('po.receive');
 
     // Pending PR referrals lookup (which RIS a direct issuance is fulfilling)
     Route::get('/pr-referrals/pending', [\App\Http\Controllers\PrReferralController::class, 'pending'])->name('pr-referrals.pending');
@@ -192,6 +194,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/admin/po/{id}', [App\Http\Controllers\Admin\PoController::class, 'show']);
     Route::put('/admin/po/{id}', [App\Http\Controllers\Admin\PoController::class, 'update']);
     Route::delete('/admin/po/{id}', [App\Http\Controllers\Admin\PoController::class, 'destroy']);
+
+    // Whole-PO receiving (delivery sheet) — admin side reuses PoDeliveryController
+    Route::get('/admin/po/{id}/receive-sheet', [\App\Http\Controllers\PoDeliveryController::class, 'show'])->name('admin.po.receive-sheet.data');
+    Route::post('/admin/po/{id}/receive', [\App\Http\Controllers\PoDeliveryController::class, 'store'])->name('admin.po.receive');
 
     // System Settings
     Route::get('/admin/settings', [App\Http\Controllers\Admin\SettingsController::class, 'index']);

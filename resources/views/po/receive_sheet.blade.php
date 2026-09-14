@@ -1,4 +1,6 @@
 {{-- Whole-PO Delivery Receiving Sheet --}}
+{{-- Expects an optional $rsUrlBase (defaults to /po) so both staff (/po) and admin (/admin/po) pages reuse it --}}
+@php($rsUrlBase = $rsUrlBase ?? '/po')
 <div class="modal fade no-print" id="receiveDeliveryModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-scrollable modal-dialog-centered">
         <div class="modal-content border-0" style="border-radius: 14px;">
@@ -91,8 +93,11 @@ window.openReceiveSheet = function(poId, poNo) {
         '<tr><td colspan="6" class="text-center text-muted py-4"><span class="spinner-border spinner-border-sm me-2"></span>Loading items\u2026</td></tr>';
     document.getElementById('rsHistoryPanel').classList.add('d-none');
     document.getElementById('receiveDeliveryForm').reset();
+    if (!document.getElementById('rs_dr_date').value) {
+        document.getElementById('rs_dr_date').value = new Date().toISOString().slice(0, 10);
+    }
 
-    fetch('/po/' + poId + '/receive-sheet', { headers: { 'Accept': 'application/json' } })
+    fetch('{{ $rsUrlBase }}/' + poId + '/receive-sheet', { headers: { 'Accept': 'application/json' } })
         .then(r => { if (!r.ok) throw new Error('Failed to load P.O.'); return r.json(); })
         .then(data => {
             window.rsPoData = data;
@@ -236,7 +241,7 @@ document.getElementById('receiveDeliveryForm').addEventListener('submit', functi
     submitBtn.disabled = true;
     submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Saving\u2026';
 
-    fetch('/po/' + poId + '/receive', {
+    fetch('{{ $rsUrlBase }}/' + poId + '/receive', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
         body: JSON.stringify(payload)

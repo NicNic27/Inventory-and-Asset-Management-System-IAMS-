@@ -151,6 +151,9 @@
                                     <button class="btn btn-sm btn-light border text-success" title="Edit" onclick="editPO({{ $po->id }})">
                                         <i class="fas fa-edit"></i>
                                     </button>
+                                    <button class="btn btn-sm btn-success" title="Receive Delivery" onclick="openReceiveSheet({{ $po->id }}, '{{ $po->po_no }}')">
+                                        <i class="fas fa-truck-loading"></i>
+                                    </button>
                                     <button class="btn btn-sm btn-light border text-danger" title="Delete" onclick="deletePO({{ $po->id }})">
                                         <i class="fas fa-trash"></i>
                                     </button>
@@ -271,6 +274,7 @@
     </div>
 
     @include('admin.po.receive_modal')
+    @include('po.receive_sheet', ['rsUrlBase' => '/admin/po'])
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
@@ -366,10 +370,7 @@
                     let sub = q * uCost;
                     total += sub;
                     
-                    let isDelivered = (item.is_delivered == 1 || item.is_delivered == true);
-                    let checkBadge = isDelivered ? '<span class="badge bg-success float-end rounded-pill"><i class="fas fa-check"></i> Rcvd</span>' : '';
-
-                    vBody.innerHTML += `<tr><td style="text-align:center">${String(index+1).padStart(3,'0')}</td><td style="text-align:center">${item.unit || ''}</td><td>${item.description || ''} ${checkBadge}</td><td style="text-align:center">${q}</td><td style="text-align:right">${uCost.toLocaleString(undefined,{minimumFractionDigits:2})}</td><td style="text-align:right">${sub.toLocaleString(undefined,{minimumFractionDigits:2})}</td></tr>`;
+                    vBody.innerHTML += `<tr><td style="text-align:center">${String(index+1).padStart(3,'0')}</td><td style="text-align:center">${item.unit || ''}</td><td>${item.description || ''}</td><td style="text-align:center">${q}</td><td style="text-align:right">${uCost.toLocaleString(undefined,{minimumFractionDigits:2})}</td><td style="text-align:right">${sub.toLocaleString(undefined,{minimumFractionDigits:2})}</td></tr>`;
                 });
 
                 for(let i=0; i < (8 - itemsArray.length); i++) {
@@ -544,15 +545,13 @@
             if(itemsArray.length > 0) {
                 itemsArray.forEach(item => {
                     let uCost = parseFloat(item.unit_cost !== undefined ? item.unit_cost : (item.cost || 0));
-                    let isD = item.is_delivered == 1 || item.is_delivered == true;
-                    
+
                     if (typeof window.addEmptyItemRow === "function") {
                         window.addEmptyItemRow({
                             unit: item.unit || 'pc', 
                             desc: item.description || '', 
                             qty: item.qty || 0, 
                             cost: uCost,
-                            is_delivered: isD,
                             item_type: item.item_type || 'supply',
                             source_type: item.source_type || 'procurement_stock',
                             requesting_office: item.requesting_office || ''

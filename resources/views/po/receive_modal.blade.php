@@ -208,39 +208,6 @@
     </div>
 </div>
 
-<div class="modal fade no-print" id="recordDeliveryModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content" style="border-radius: 14px; border: none; box-shadow: 0 15px 40px rgba(0,0,0,0.12);">
-            <div class="modal-header bg-white border-bottom px-4 py-3">
-                <h5 class="modal-title fw-bold text-primary m-0 d-flex align-items-center gap-2"><i class="fas fa-truck-loading"></i> Record Delivery</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <form id="recordDeliveryForm">
-                <div class="modal-body px-4 py-3">
-                    <input type="hidden" id="dr_po_item_id">
-                    <div class="mb-3 bg-light border rounded-3 p-3">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <div><span class="text-muted small">Item</span><br><strong id="dr_item_desc" class="text-dark">-</strong></div>
-                            <div class="text-end"><span class="text-muted small">Delivered so far</span><br><strong id="dr_item_progress" class="text-primary">-</strong></div>
-                        </div>
-                    </div>
-                    <div class="row g-3">
-                        <div class="col-6"><label class="form-label">DR Number <span class="text-danger">*</span></label><input type="text" id="dr_number" class="form-control" placeholder="e.g. DR-2026-001" required></div>
-                        <div class="col-6"><label class="form-label">DR Date <span class="text-danger">*</span></label><input type="date" id="dr_date" class="form-control" required></div>
-                        <div class="col-6"><label class="form-label">Quantity Delivered <span class="text-danger">*</span></label><input type="number" id="dr_quantity" class="form-control" min="1" placeholder="0" required></div>
-                        <div class="col-6"><label class="form-label">Unit Price</label><div class="input-group"><span class="input-group-text bg-light">₱</span><input type="number" step="0.01" id="dr_unit_price" class="form-control" placeholder="Auto from PO"></div></div>
-                        <div class="col-12" id="dr_office_wrapper" style="display:none;"><label class="form-label">Requesting Office <span class="text-danger">*</span></label><input type="text" id="dr_requesting_office" class="form-control" placeholder="Office name"></div>
-                    </div>
-                </div>
-                <div class="modal-footer bg-white border-top px-4 py-3">
-                    <button type="button" class="btn btn-light px-3" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-success px-4 fw-bold"><i class="fas fa-check me-1"></i> Save Delivery</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
 <script>
 /* Global issuance mode */
 window.globalIssuanceMode = 'procurement_stock';

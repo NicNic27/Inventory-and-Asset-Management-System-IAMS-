@@ -17,6 +17,7 @@ use App\Services\SupplyService;
 use App\Services\PoDeliveryService;
 use App\Models\RisRequest;
 use App\Models\RisItem;
+use App\Models\SupplyBatch;
 use App\Models\SystemSetting;
 
 class PurchaseOrderController extends Controller
@@ -65,21 +66,8 @@ class PurchaseOrderController extends Controller
         try {
             DB::beginTransaction();
 
-            $totalItems = count($request->items ?? []);
-            $deliveredItems = 0;
-            foreach ($request->items ?? [] as $item) {
-                if (!empty($item['is_delivered']) && ($item['is_delivered'] === true || $item['is_delivered'] === 'true')) {
-                    $deliveredItems++;
-                }
-            }
-
-            $calculatedStatus = 'Pending';
-            if ($totalItems > 0) {
-                if ($deliveredItems == 0) $calculatedStatus = 'Pending';
-                elseif ($deliveredItems == $totalItems) $calculatedStatus = 'Complete';
-                else $calculatedStatus = 'Partial';
-            }
-
+            // Status is no longer chosen in the form — it is derived from actual
+            // deliveries recorded through the "Receive Delivery" sheet.
             $po = PurchaseOrder::create([
                 'po_type' => $request->po_type,
                 'entity_name' => $request->entity_name,
@@ -97,7 +85,7 @@ class PurchaseOrderController extends Controller
                 'delivery_term' => $request->delivery_term,
                 'payment_term' => $request->payment_term,
                 'total_amount' => $request->total_amount,
-                'status' => $calculatedStatus,
+                'status' => 'Pending',
             ]);
 
             foreach ($request->items as $item) {
@@ -108,7 +96,6 @@ class PurchaseOrderController extends Controller
                     'qty' => $item['qty'],
                     'unit_cost' => $item['cost'],
                     'amount' => $item['qty'] * $item['cost'],
-                    'is_delivered' => (!empty($item['is_delivered']) && ($item['is_delivered'] === true || $item['is_delivered'] === 'true')),
                     'item_type' => $item['item_type'] ?? 'supply',
                     'supply_id' => $item['supply_id'] ?? null,
                     'source_type' => $item['source_type'] ?? 'procurement_stock',
@@ -117,6 +104,8 @@ class PurchaseOrderController extends Controller
 
                 $supplyService->syncDeliveredPurchaseOrderItem($poItem);
             }
+
+            $po->recomputeStatus();
 
             $this->autoCreateRisForDirectIssuance($po);
 
@@ -164,21 +153,6 @@ class PurchaseOrderController extends Controller
         try {
             DB::beginTransaction();
 
-            $totalItems = count($request->items ?? []);
-            $deliveredItems = 0;
-            foreach ($request->items ?? [] as $item) {
-                if (!empty($item['is_delivered']) && ($item['is_delivered'] === true || $item['is_delivered'] === 'true')) {
-                    $deliveredItems++;
-                }
-            }
-
-            $calculatedStatus = 'Pending';
-            if ($totalItems > 0) {
-                if ($deliveredItems == 0) $calculatedStatus = 'Pending';
-                elseif ($deliveredItems == $totalItems) $calculatedStatus = 'Complete';
-                else $calculatedStatus = 'Partial';
-            }
-
             $po = PurchaseOrder::findOrFail($id);
             $po->update([
                 'po_type' => $request->po_type,
@@ -197,7 +171,8 @@ class PurchaseOrderController extends Controller
                 'delivery_term' => $request->delivery_term,
                 'payment_term' => $request->payment_term,
                 'total_amount' => $request->total_amount,
-                'status' => $calculatedStatus,
+                // Do not overwrite delivery-derived status here; recompute after item sync
+                'status' => $po->status,
             ]);
 
             $keptItemIds = [];
@@ -209,7 +184,9 @@ class PurchaseOrderController extends Controller
                     'qty' => $item['qty'],
                     'unit_cost' => $item['cost'],
                     'amount' => $item['qty'] * $item['cost'],
-                    'is_delivered' => (!empty($item['is_delivered']) && ($item['is_delivered'] === true || $item['is_delivered'] === 'true')),
+                    // is_delivered is intentionally excluded from the payload — real
+                    // deliveries are recorded through the Receive Delivery sheet, so
+                    // the flag below is only preserved or derived, never reset by edits
                     'item_type' => $item['item_type'] ?? 'supply',
                     'supply_id' => $item['supply_id'] ?? null,
                     'source_type' => $item['source_type'] ?? 'procurement_stock',
@@ -225,12 +202,26 @@ class PurchaseOrderController extends Controller
                     $poItem = PurchaseOrderItem::create($payload);
                 }
 
+                // An item with recorded delivery batches (or one already synced under the
+                // legacy checkbox flow) is by definition delivered — keep that state.
+                if (
+                    !$poItem->is_delivered
+                    && (
+                        SupplyBatch::where('po_item_id', $poItem->id)->exists()
+                        || $poItem->inventory_synced
+                    )
+                ) {
+                    $poItem->forceFill(['is_delivered' => true])->save();
+                }
+
                 $keptItemIds[] = $poItem->id;
 
                 $supplyService->syncDeliveredPurchaseOrderItem($poItem);
             }
 
             $po->items()->whereNotIn('id', $keptItemIds)->delete();
+
+            $po->recomputeStatus();
 
             // Re-create RIS for direct issuance items (clear old auto-generated ones first)
             $autoRisNos = RisRequest::where('purpose', 'like', "%from PO {$po->po_no}%")

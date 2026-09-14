@@ -214,6 +214,7 @@
                                 <div class="d-flex justify-content-center gap-1">
                                     <button class="btn btn-sm btn-light border text-primary" title="View & Print" onclick="viewPO({{ $po->id }})"><i class="fas fa-eye"></i></button>
                                     <button class="btn btn-sm btn-light border text-success" title="Edit" onclick="editPO({{ $po->id }})"><i class="fas fa-edit"></i></button>
+                                    <button class="btn btn-sm btn-success" title="Receive Delivery" onclick="openReceiveSheet({{ $po->id }}, '{{ $po->po_no }}')"><i class="fas fa-truck-loading"></i></button>
                                     <button class="btn btn-sm btn-light border text-danger" title="Delete" onclick="deletePO({{ $po->id }})"><i class="fas fa-trash"></i></button>
                                 </div>
                             </td>
@@ -396,6 +397,7 @@
     </div>
 
     @include('po.receive_modal')
+    @include('po.receive_sheet')
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
@@ -439,32 +441,17 @@
         };
 
         window.autoUpdatePoStatus = function() {
-            const rows = document.querySelectorAll('.item-row');
-            if (rows.length === 0) return;
-            
-            let checkedCount = 0;
-            rows.forEach(row => {
-                if (row.querySelector('.item-delivered-cb').checked) checkedCount++;
-            });
-            
-            const statusSelect = document.getElementById('in-status');
-            if (checkedCount === 0) {
-                statusSelect.value = 'Pending';
-            } else if (checkedCount === rows.length) {
-                statusSelect.value = 'Complete';
-            } else {
-                statusSelect.value = 'Partial';
-            }
+            // Status is derived from actual deliveries recorded via the Receive Delivery
+            // sheet on the P.O. list — nothing to compute inside the wizard anymore.
             if (typeof updateItemCount === 'function') updateItemCount();
         };
 
-        window.addEmptyItemRow = function(data = {unit: 'pc', desc: '', qty: 0, cost: 0.00, is_delivered: false, source_type: window.globalIssuanceMode || 'procurement_stock'}) {
+        window.addEmptyItemRow = function(data = {unit: 'pc', desc: '', qty: 0, cost: 0.00, source_type: window.globalIssuanceMode || 'procurement_stock'}) {
             const container = document.getElementById('itemsContainer');
             const q = parseFloat(data.qty) || 0;
             const c = parseFloat(data.cost) || 0;
             const total = (q * c).toLocaleString(undefined, {minimumFractionDigits: 2});
             const isSelected = (val) => data.unit === val ? 'selected' : '';
-            const isChecked = data.is_delivered ? 'checked' : '';
             const poItemId = data.id || '';
             const itemType = data.item_type || 'supply';
             const sourceType = data.source_type || 'procurement_stock';
@@ -486,12 +473,12 @@
             const officeVisible = sourceType === 'direct_issuance' ? '' : 'display:none;';
             const supplyLinkVisible = itemType === 'asset' ? 'display:none;' : '';
             const deliveryInfo = !poItemId
-                ? `<span class="text-muted small fst-italic">Save the P.O. first to record deliveries</span>`
+                ? `<span class="text-muted small fst-italic">Save the P.O. first, then use "Receive Delivery" on the P.O. list to log what actually arrives</span>`
                 : itemType === 'asset'
                     ? `<span class="badge ${data.delivery_status === 'complete' ? 'bg-success' : data.delivery_status === 'partial' ? 'bg-warning text-dark' : 'bg-secondary'}">${(data.delivered_quantity ?? 0)}/${q} ${data.delivery_status || 'pending'}</span>
                        <span class="text-muted small fst-italic ms-2">Add unit(s) via Asset Inventory, linking this P.O. item</span>`
                     : `<span class="badge ${data.delivery_status === 'complete' ? 'bg-success' : data.delivery_status === 'partial' ? 'bg-warning text-dark' : 'bg-secondary'}">${(data.delivered_quantity ?? 0)}/${q} ${data.delivery_status || 'pending'}</span>
-                       <button type="button" class="btn btn-sm btn-outline-primary ms-2" onclick="openRecordDeliveryModal(this)"><i class="fas fa-truck-loading me-1"></i>Record Delivery</button>`;
+                       <span class="text-muted small fst-italic ms-2">Recorded via "Receive Delivery" on the P.O. list</span>`;
 
             const cardBorderClass = itemType === 'asset' ? 'item-card asset-card' : (sourceType === 'direct_issuance' ? 'item-card direct-card' : 'item-card supply-card');
             const subtitleText = itemType === 'asset' ? 'Asset / Equipment' : (sourceType === 'direct_issuance' ? 'Supply \u2014 Direct Issuance' : 'Supply \u2014 For Inventory');
@@ -514,17 +501,13 @@
             }
             const templateHtml = `
                 <div class="${cardBorderClass} item-row" data-po-item-id="${poItemId}">
-                    <div class="item-header">
-                        <div class="item-number">${document.querySelectorAll('.item-row').length + 1}</div>
-                        <div>
-                            <div class="item-title">${data.desc || 'New Item'}</div>
-                            <div class="item-subtitle">${subtitleText}</div>
-                        </div>
-                        <div class="ms-auto d-flex align-items-center gap-3">
-                            <div class="rcvd-toggle"><label title="Mark as Delivered">RCVD</label>
-                            <input type="checkbox" class="item-delivered-cb" ${isChecked} onchange="autoUpdatePoStatus()"></div>
-                        </div>
+                <div class="item-header">
+                    <div class="item-number">${document.querySelectorAll('.item-row').length + 1}</div>
+                    <div>
+                        <div class="item-title">${data.desc || 'New Item'}</div>
+                        <div class="item-subtitle">${subtitleText}</div>
                     </div>
+                </div>
                     <div class="row g-3 align-items-center">
                         <div class="col-8 col-md-2">
                             <label class="form-label">Unit <span class="text-danger">*</span></label>
@@ -813,19 +796,14 @@
                 const vBody = document.getElementById('v-items');
                 vBody.innerHTML = '';
                 let total = 0;
-                let itemsArray = parsePoItems(data.items);
-                
-                itemsArray.forEach((item, index) => {
-                    let uCost = parseFloat(item.unit_cost !== undefined ? item.unit_cost : (item.cost || 0));
-                    let q = parseFloat(item.qty || 0);
-                    let sub = q * uCost;
-                    total += sub;
-                    
-                    let isDelivered = (item.is_delivered == 1 || item.is_delivered == true);
-                    let checkBadge = isDelivered ? '<span class="badge bg-success float-end rounded-pill"><i class="fas fa-check"></i> Rcvd</span>' : '';
+                let itemsArray = parsePoItems(data.items);                    itemsArray.forEach((item, index) => {
+                        let uCost = parseFloat(item.unit_cost !== undefined ? item.unit_cost : (item.cost || 0));
+                        let q = parseFloat(item.qty || 0);
+                        let sub = q * uCost;
+                        total += sub;
 
-                    vBody.innerHTML += `<tr><td style="text-align:center">${String(index+1).padStart(3,'0')}</td><td style="text-align:center">${item.unit || ''}</td><td style="text-align:left">${item.description || ''} ${checkBadge}</td><td style="text-align:center">${q}</td><td style="text-align:right">${uCost.toLocaleString(undefined,{minimumFractionDigits:2})}</td><td style="text-align:right">${sub.toLocaleString(undefined,{minimumFractionDigits:2})}</td></tr>`;
-                });
+                        vBody.innerHTML += `<tr><td style="text-align:center">${String(index+1).padStart(3,'0')}</td><td style="text-align:center">${item.unit || ''}</td><td style="text-align:left">${item.description || ''}</td><td style="text-align:center">${q}</td><td style="text-align:right">${uCost.toLocaleString(undefined,{minimumFractionDigits:2})}</td><td style="text-align:right">${sub.toLocaleString(undefined,{minimumFractionDigits:2})}</td></tr>`;
+                    });
 
                 for(let i=0; i < (8 - itemsArray.length); i++) vBody.innerHTML += `<tr class="empty-row"><td></td><td></td><td></td><td></td><td></td><td></td></tr>`;
 
@@ -964,8 +942,7 @@
             if(itemsArray.length > 0) {
                 itemsArray.forEach(item => {
                     let uCost = parseFloat(item.unit_cost !== undefined ? item.unit_cost : (item.cost || 0));
-                    let isD = item.is_delivered == 1 || item.is_delivered == true;
-                    
+
                     if (typeof window.addEmptyItemRow === "function") {
                         window.addEmptyItemRow({
                             id: item.id || '',
@@ -973,7 +950,6 @@
                             desc: item.description || '',
                             qty: item.qty || 0,
                             cost: uCost,
-                            is_delivered: isD,
                             item_type: item.item_type || 'supply',
                             supply_id: item.supply_id || '',
                             source_type: item.source_type || 'procurement_stock',
@@ -1044,7 +1020,6 @@
             rows.forEach(row => {
                 let q = parseFloat(row.querySelector('.qty-input').value) || 0;
                 let c = parseFloat(row.querySelector('.cost-input').value) || 0;
-                let isD = row.querySelector('.item-delivered-cb').checked;
                 let subtotal = q * c;
                 formData.total_amount += subtotal;
 
@@ -1054,7 +1029,6 @@
                     description: row.querySelector('.desc-input').value,
                     qty: q,
                     cost: c,
-                    is_delivered: isD,
                     item_type: row.querySelector('.item-type-select').value,
                     supply_id: row.querySelector('.supply-select')?.value || null,
                     source_type: row.querySelector('.source-type-select').value,
@@ -1087,72 +1061,6 @@
             });
         });
 
-        // --- Record Delivery (Direct Issuance / Partial Delivery) ---
-        window.openRecordDeliveryModal = function(btn) {
-            const row = btn.closest('.item-row');
-            const poItemId = row.dataset.poItemId;
-            const sourceType = row.querySelector('.source-type-select').value;
-            const d = row.querySelector('.requesting-division-select')?.value || '';
-            const u = row.querySelector('.requesting-unit-select')?.value || '';
-            const office = d ? (u ? d + ' > ' + u : d) : '';
-
-            document.getElementById('recordDeliveryForm').reset();
-            document.getElementById('dr_po_item_id').value = poItemId;
-            document.getElementById('dr_item_desc').textContent = row.querySelector('.desc-input').value || '-';
-            document.getElementById('dr_item_progress').textContent = row.querySelector('.badge')
-                ? row.querySelector('.badge').textContent.trim() : '-';
-            document.getElementById('dr_requesting_office').value = office;
-            document.getElementById('dr_office_wrapper').style.display = sourceType === 'direct_issuance' ? '' : 'none';
-
-            const modal = new bootstrap.Modal(document.getElementById('recordDeliveryModal'));
-            modal.show();
-        };
-
-        document.getElementById('recordDeliveryForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-
-            const poItemId = document.getElementById('dr_po_item_id').value;
-            const row = document.querySelector(`.item-row[data-po-item-id="${poItemId}"]`);
-            const sourceType = row ? row.querySelector('.source-type-select').value : 'procurement_stock';
-
-            const payload = {
-                _token: '{{ csrf_token() }}',
-                po_item_id: poItemId,
-                dr_number: document.getElementById('dr_number').value,
-                dr_date: document.getElementById('dr_date').value,
-                quantity: document.getElementById('dr_quantity').value,
-                unit_price: document.getElementById('dr_unit_price').value || null,
-                source_type: sourceType,
-                requesting_office: document.getElementById('dr_requesting_office').value || null
-            };
-
-            fetch('{{ route('po-items.deliveries.store') }}', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-                body: JSON.stringify(payload)
-            })
-            .then(response => response.json().then(data => ({ ok: response.ok, data })))
-            .then(({ ok, data }) => {
-                if (ok && data.success) {
-                    bootstrap.Modal.getInstance(document.getElementById('recordDeliveryModal')).hide();
-                    Swal.fire('Delivery Recorded', data.message, 'success').then(() => {
-                        if (row) {
-                            const badge = row.querySelector('.badge');
-                            if (badge) {
-                                badge.textContent = `${data.delivered_quantity}/${data.ordered_quantity} ${data.delivery_status}`;
-                                badge.className = 'badge ' + (data.delivery_status === 'complete' ? 'bg-success' : data.delivery_status === 'partial' ? 'bg-warning text-dark' : 'bg-secondary');
-                            }
-                        }
-                    });
-                } else {
-                    Swal.fire('Error', data.message || 'Failed to record delivery.', 'error');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                Swal.fire('Error', 'Failed to record delivery.', 'error');
-            });
-        });
     </script>
 </body>
 </html>
