@@ -4,9 +4,9 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\RisRequest;
-use App\Models\Supply;
 use App\Models\Transaction;
 use App\Models\ActivityLog;
+use App\Services\RisService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -30,30 +30,21 @@ class RisController extends Controller
         return view('admin.ris.verify_modal', compact('req'))->render();
     }
 
-    public function process(Request $request, $id)
+    public function process(Request $request, $id, RisService $risService)
     {
         $ris = RisRequest::with('items')->findOrFail($id);
         $new_status = $request->new_status; 
         
         if ($new_status == 'Approved' && $ris->status != 'Approved') {
             foreach ($ris->items as $item) {
-                if (strtolower($item->stock_avail) === 'no') continue;
+                if (strtolower((string) $item->stock_avail) === 'no') continue;
 
                 $issueQty = !empty($item->issue_quantity) && $item->issue_quantity > 0 
                             ? (float) $item->issue_quantity 
                             : (float) $item->req_quantity;
 
                 if ($issueQty > 0) {
-                    $supply = null;
-                    if (!empty(trim($item->stock_no))) {
-                        $supply = Supply::where('barcode_id', trim($item->stock_no))->first();
-                    }
-                    if (!$supply && !empty(trim($item->description))) {
-                         $desc = trim($item->description);
-                         $supply = Supply::where('article', 'LIKE', "%{$desc}%")
-                                         ->orWhere('description', 'LIKE', "%{$desc}%")
-                                         ->first();
-                    }
+                    $supply = $risService->resolveSupplyForItem($item);
                     if ($supply) {
                         $supply->decrement('quantity', $issueQty); 
                         Transaction::create([
@@ -72,23 +63,14 @@ class RisController extends Controller
 
         if ($new_status == 'Pending Staff Review' && $ris->status == 'Approved') {
             foreach ($ris->items as $item) {
-                if (strtolower($item->stock_avail) === 'no') continue;
+                if (strtolower((string) $item->stock_avail) === 'no') continue;
 
                 $issueQty = !empty($item->issue_quantity) && $item->issue_quantity > 0 
                             ? (float) $item->issue_quantity 
                             : (float) $item->req_quantity;
 
                 if ($issueQty > 0) {
-                    $supply = null;
-                    if (!empty(trim($item->stock_no))) {
-                        $supply = Supply::where('barcode_id', trim($item->stock_no))->first();
-                    }
-                    if (!$supply && !empty(trim($item->description))) {
-                         $desc = trim($item->description);
-                         $supply = Supply::where('article', 'LIKE', "%{$desc}%")
-                                         ->orWhere('description', 'LIKE', "%{$desc}%")
-                                         ->first();
-                    }
+                    $supply = $risService->resolveSupplyForItem($item);
                     if ($supply) {
                         $supply->increment('quantity', $issueQty); 
                         Transaction::create([

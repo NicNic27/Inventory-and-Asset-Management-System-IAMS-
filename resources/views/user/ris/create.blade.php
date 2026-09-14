@@ -322,7 +322,7 @@
                                     <option value="" selected disabled>-- Search item... --</option>
                                     <option value="Others" class="fw-bold text-primary">Others (Please specify)</option>
                                     @foreach($supplies as $supply)
-                                        <option value="{{ $supply->article }}, {{ $supply->description }}" data-barcode="{{ $supply->barcode_id }}" data-qty="{{ $supply->quantity }}" data-unit="{{ $supply->unit_measure }}">{{ $supply->article }} - {{ $supply->description }}</option>
+                                        <option value="{{ $supply->article }}, {{ $supply->description }}, {{ $supply->classification }}" data-barcode="{{ $supply->barcode_id }}" data-qty="{{ $supply->quantity }}" data-unit="{{ $supply->unit_measure }}">{{ $supply->article }} — {{ $supply->description }}@if(!empty($supply->classification)) ({{ $supply->classification }})@endif</option>
                                     @endforeach
                                 </select>
                                 <input type="text" name="manual_description[]" class="form-control form-control-sm manual-desc-input mt-1 border-primary" style="display: none;" placeholder="Specify item name & description">
@@ -585,9 +585,13 @@
         } else {
             alert("The form must have at least one item.");
         }
-    }
+    }        // Strip the " (classification)" suffix from a "Article — Description (Classification)"
+        // value — the printed RIS document shows only the article and description.
+        function supplyDisplayText(value) {
+            return String(value).replace(/,\s*[^,]*$/, '');
+        }
 
-    function showDownloadModal() {
+        function showDownloadModal() {
         const form = document.getElementById('requisitionForm');
         if (!form.checkValidity()) {
             form.reportValidity(); 
@@ -602,9 +606,9 @@
             const stock = parseInt($(sel).find(':selected').data('qty')) || 0;
             const qty = parseInt(row.querySelector('input[name="quantity[]"]').value) || 0;
             if (stock <= 0) {
-                issues.push(`<li class="text-danger fw-bold">${sel.value} — out of stock</li>`);
+                issues.push(`<li class="text-danger fw-bold">${supplyDisplayText(sel.value)} — out of stock</li>`);
             } else if (qty > stock) {
-                issues.push(`<li class="fw-bold">${sel.value} — requested ${qty}, only ${stock} on hand</li>`);
+                issues.push(`<li class="fw-bold">${supplyDisplayText(sel.value)} — requested ${qty}, only ${stock} on hand</li>`);
             }
         });
 
@@ -699,7 +703,7 @@
             if (descSelect.value === 'Others' && manualInput) {
                 desc = manualInput.value || 'Others';
             } else if (descSelect.value) {
-                desc = descSelect.value;
+                desc = supplyDisplayText(descSelect.value);
             }
 
             if (desc || stock || qty) {

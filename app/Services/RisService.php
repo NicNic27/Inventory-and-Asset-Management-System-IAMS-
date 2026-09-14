@@ -203,6 +203,95 @@ class RisService
     }
 
     /**
+     * Resolve the Supply row an RIS line item refers to.
+     *
+     * Items created through the RIS form store the supply's barcode in
+     * `stock_no` and a combined "Article, Description, Classification"
+     * value in `description`. The barcode is authoritative when set, but
+     * legacy rows and manually typed ("Others") items leave it blank, so
+     * the description is parsed and matched from most to least specific,
+     * with a LIKE fallback for near-miss descriptions.
+     */
+    public function resolveSupplyForItem(RisItem $item): ?Supply
+    {
+        $stockNo = trim((string) $item->stock_no);
+
+        if ($stockNo !== '') {
+            $supply = Supply::where('barcode_id', $stockNo)->first();
+            if ($supply) {
+                return $supply;
+            }
+        }
+
+        $description = trim(str_replace('\\,', ',', (string) $item->description));
+        if ($description === '') {
+            return null;
+        }
+
+        $parts = array_values(array_filter(
+            array_map('trim', explode(',', $description)),
+            fn ($part) => $part !== ''
+        ));
+
+        if ($parts === []) {
+            return null;
+        }
+
+        $article = $parts[0];
+        $itemDescription = $parts[1] ?? null;
+        $classification = $parts[2] ?? null;
+
+        // Most specific: article + description + classification (the exact
+        // dropdown format used by the RIS creation form).
+        if ($itemDescription !== null && $classification !== null) {
+            $supply = Supply::where('article', $article)
+                ->where('description', $itemDescription)
+                ->where('classification', $classification)
+                ->orderBy('id')
+                ->first();
+            if ($supply) {
+                return $supply;
+            }
+        }
+
+        // Article + description (classification may be null on the supply).
+        if ($itemDescription !== null) {
+            $supply = Supply::where('article', $article)
+                ->where('description', $itemDescription)
+                ->orderBy('id')
+                ->first();
+            if ($supply) {
+                return $supply;
+            }
+        }
+
+        // Article alone (first recorded supply under that section).
+        $supply = Supply::where('article', $article)->orderBy('id')->first();
+        if ($supply) {
+            return $supply;
+        }
+
+        // Full description alone.
+        $supply = Supply::where('description', $description)->orderBy('id')->first();
+        if ($supply) {
+            return $supply;
+        }
+
+        // Near-miss fallback for free-typed descriptions.
+        if ($itemDescription !== null) {
+            $supply = Supply::where('article', 'LIKE', "%{$article}%")
+                ->where('description', 'LIKE', "%{$itemDescription}%")
+                ->orderBy('id')
+                ->first();
+            if ($supply) {
+                return $supply;
+            }
+        }
+
+        return Supply::where('article', 'LIKE', "%{$article}%")->orderBy('id')->first();
+    }
+
+    /**
      * Get current stock for items in RIS
      */
     public function getItemsWithStock(RisRequest $risRequest): array

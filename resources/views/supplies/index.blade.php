@@ -95,7 +95,100 @@
         .page-link:hover { color: #101954; background-color: #f4f6f9; }
 
         .modal { z-index: 1060 !important; }
-        
+
+        /* ===== Add New Supply modal ===== */
+        .supply-form-modal .modal-content { border: 0; border-radius: 14px; overflow: hidden; }
+        /* The Add Supply form wraps body+footer in a <form>, which breaks the
+           flex chain modal-dialog-scrollable needs — restore it so the form
+           scrolls instead of clipping below the fold. */
+        .supply-form-modal form {
+            display: flex;
+            flex-direction: column;
+            flex: 1 1 auto;
+            min-height: 0;
+        }
+        .supply-form-modal .modal-body {
+            overflow-y: auto;
+            flex: 1 1 auto;
+            min-height: 0;
+        }
+        .supply-form-modal .modal-header {
+            background: linear-gradient(135deg, #101954 0%, #1d2f7d 60%, #2b4bb3 100%);
+            padding: 1.1rem 1.5rem;
+            border: 0;
+        }
+        .supply-form-modal .modal-header .modal-title { font-weight: 700; letter-spacing: .2px; }
+        .supply-form-modal .modal-header .modal-title small { opacity: .75; font-weight: 400; }
+
+        .supply-form-modal .supply-section-card {
+            background: #fff;
+            border: 1px solid #e9edf3;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(16, 25, 84, .05);
+            margin-bottom: 1rem;
+            overflow: hidden;
+        }
+        .supply-form-modal .supply-section-header {
+            display: flex;
+            align-items: center;
+            gap: .75rem;
+            padding: .65rem 1rem;
+            background: #f8fafd;
+            border-bottom: 1px solid #eef2f8;
+        }
+        .supply-form-modal .supply-section-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 9px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: .85rem;
+            flex: 0 0 32px;
+        }
+        .supply-form-modal .supply-section-title { font-weight: 700; font-size: .92rem; color: #101954; line-height: 1.2; }
+        .supply-form-modal .supply-section-sub { font-size: .75rem; color: #8b93a7; }
+        .supply-form-modal .supply-section-body { padding: 1rem 1rem 1.1rem; }
+        .supply-form-modal .form-label {
+            font-size: .78rem;
+            text-transform: uppercase;
+            letter-spacing: .5px;
+            color: #5a6478;
+            margin-bottom: .3rem;
+        }
+        .supply-form-modal .form-label .text-danger { font-size: .85rem; vertical-align: top; }
+        .supply-form-modal .form-control,
+        .supply-form-modal .form-select { border-radius: 8px; border-color: #dde3ee; }
+        .supply-form-modal .form-control:focus,
+        .supply-form-modal .form-select:focus { border-color: #2b4bb3; box-shadow: 0 0 0 .2rem rgba(43, 75, 179, .12); }
+
+        .supply-form-modal .image-dropzone {
+            position: relative;
+            border: 2px dashed #c8d2e4;
+            border-radius: 12px;
+            background: linear-gradient(180deg, #fbfcfe 0%, #f2f5fb 100%);
+            width: 100%;
+            max-width: 210px;
+            aspect-ratio: 1/1;
+            margin: 0 auto .65rem;
+            overflow: hidden;
+            transition: border-color .15s ease, box-shadow .15s ease;
+            cursor: pointer;
+        }
+        .supply-form-modal .image-dropzone:hover { border-color: #2b4bb3; box-shadow: 0 4px 14px rgba(16, 25, 84, .10); }
+        .supply-form-modal .image-dropzone img { width: 100%; height: 100%; object-fit: cover; display: none; }
+        .supply-form-modal .image-dropzone .dropzone-placeholder {
+            position: absolute; inset: 0;
+            display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .35rem;
+            color: #9aa3b8; pointer-events: none;
+        }
+        .supply-form-modal .image-dropzone.has-image { border-style: solid; border-color: #b9c6df; }
+        .supply-form-modal .image-dropzone.has-image .dropzone-placeholder { display: none; }
+
+        .supply-form-modal .modal-footer { background: #f8fafd; border-top: 1px solid #eef2f8; padding: .8rem 1.5rem; }
+        .supply-form-modal .modal-footer .btn { border-radius: 8px; }
+
         @media (max-width: 768px) { 
             body { overflow: visible; height: auto; }
             .main-content { 
@@ -124,6 +217,12 @@
                 <small class="text-muted">Manage consumable items, stock levels, and details.</small>
             </div>
             <div class="col-12 col-md-6 d-flex flex-column flex-md-row gap-2 justify-content-md-end">
+                <button class="btn btn-outline-secondary shadow-sm mobile-stack" data-bs-toggle="modal" data-bs-target="#manageSectionsModal">
+                    <i class="fas fa-sliders-h me-2"></i> Manage Sections
+                </button>
+                <button class="btn btn-outline-primary shadow-sm mobile-stack" data-bs-toggle="modal" data-bs-target="#quickSectionModal">
+                    <i class="fas fa-sitemap me-2"></i> Add Section / Classification
+                </button>
                 <button class="btn btn-primary shadow-sm mobile-stack" data-bs-toggle="modal" data-bs-target="#addSupplyModal">
                     <i class="fas fa-plus me-2"></i> Add New Supply
                 </button>
@@ -206,10 +305,22 @@
                                                     <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-{{ $classId }}">
                                                         <i class="fas fa-tag text-muted me-2"></i> {{ $classificationName ?: 'General' }}
                                                         <span class="badge bg-light text-dark border ms-2">{{ $rows->count() }} item(s)</span>
+                                                        @if($rows->isEmpty())
+                                                            <span class="badge bg-warning bg-opacity-75 text-dark ms-1" title="Quick-added, no supplies yet">awaiting supplies</span>
+                                                        @endif
                                                     </button>
                                                 </h2>
                                                 <div id="collapse-{{ $classId }}" class="accordion-collapse collapse" data-bs-parent="#classAccordion-{{ $sectionId }}">
                                                     <div class="accordion-body p-0">
+                                                        @if($rows->isEmpty())
+                                                            <div class="text-center py-3">
+                                                                <p class="text-muted small mb-2"><i class="fas fa-sitemap me-1"></i> Section quick-added but no supplies recorded under it yet.</p>
+                                                                <button type="button" class="btn btn-sm btn-outline-primary px-3"
+                                                                        onclick="openAddSupplyPreselected({{ Js::from($sectionName) }}, {{ Js::from($classificationName) }})">
+                                                                    <i class="fas fa-plus me-1"></i> Add supply here
+                                                                </button>
+                                                            </div>
+                                                        @else
                                                         <table class="table align-middle mb-0">
                                                             <thead class="table-light">
                                                                 <tr>
@@ -299,6 +410,7 @@
                                                                 @endforeach
                                                             </tbody>
                                                         </table>
+                                                        @endif
                                                     </div>
                                                 </div>
                                             </div>
@@ -318,11 +430,61 @@
         </div>
     </div>
 
-    <div class="modal fade" id="addSupplyModal" tabindex="-1">
+    <div class="modal fade" id="manageSectionsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-scrollable modal-dialog-centered">
+            <div class="modal-content" style="border-radius: 12px;">
+                <div class="modal-header bg-dark text-white py-3">
+                    <h5 class="modal-title"><i class="fas fa-sliders-h me-2"></i> Manage Sections &amp; Classifications</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-3">
+                    <p class="text-muted small mb-3"><i class="fas fa-info-circle me-1"></i> These pre-registered pairs appear in the list even before supplies are filed under them. Supplies already recorded are never affected.</p>
+                    <div id="manageSectionsList">
+                        <div class="text-center py-4"><div class="spinner-border text-primary"></div></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="quickSectionModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content" style="border-radius: 12px;">
+                <div class="modal-header bg-primary text-white py-3">
+                    <h5 class="modal-title"><i class="fas fa-sitemap me-2"></i> Add Section &amp; Classification</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="quickSectionForm" action="{{ url('/supplies/sections') }}" method="POST">
+                    @csrf
+                    <div class="modal-body p-4">
+                        <p class="text-muted small mb-3"><i class="fas fa-info-circle me-1"></i> Pre-register a section with its classification so it's ready in the dropdowns when adding supplies.</p>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Supply Section <span class="text-danger">*</span></label>
+                            <input type="text" name="name" id="quick_section_name" class="form-control" placeholder="e.g. Bond Paper" required>
+                        </div>
+                        <div>
+                            <label class="form-label fw-bold">Classification <span class="text-danger">*</span></label>
+                            <input type="text" name="classification" id="quick_section_classification" class="form-control" placeholder="e.g. A4" required>
+                            <small class="text-muted d-block mt-1">One per save — repeat with the same section name to add more (e.g. Legal, Letter).</small>
+                        </div>
+                    </div>
+                    <div class="modal-footer py-2 bg-light">
+                        <button type="button" class="btn btn-secondary px-3" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary px-4 fw-bold"><i class="fas fa-check me-2"></i>Save Section</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade supply-form-modal" id="addSupplyModal" tabindex="-1">
         <div class="modal-dialog modal-xl modal-dialog-scrollable">
             <div class="modal-content">
-                <div class="modal-header bg-primary text-white">
-                    <h5 class="modal-title"><i class="fas fa-plus-circle me-2"></i> Add New Supply</h5>
+                <div class="modal-header text-white">
+                    <div>
+                        <h5 class="modal-title mb-0"><i class="fas fa-plus-circle me-2"></i> Add New Supply</h5>
+                        <small>Register a new item into the supplies inventory.</small>
+                    </div>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <form id="addSupplyForm" action="{{ url('/supplies') }}" method="POST" enctype="multipart/form-data">
@@ -330,23 +492,35 @@
                     <div class="modal-body p-4">
                         <div class="row">
                             <div class="col-md-3 text-center border-end pe-md-4 mb-4 mb-md-0">
-                                <label class="form-label fw-bold d-block text-start">Supply Image</label>
-                                <div class="border rounded bg-light d-flex justify-content-center align-items-center mx-auto mb-3 overflow-hidden shadow-sm" 
-                                     style="width: 100%; max-width: 200px; aspect-ratio: 1/1; position: relative;">
-                                    <img id="imagePreviewAdd" src="" alt="Preview" style="display: none; width: 100%; height: 100%; object-fit: cover;">
-                                    <i id="imagePlaceholderAdd" class="fas fa-image fa-4x text-muted opacity-50"></i>
+                                <div class="image-dropzone" id="imageDropzoneAdd"
+                                     onclick="document.getElementById('imageInputAdd').click()"
+                                     title="Click to upload an image">
+                                    <img id="imagePreviewAdd" src="" alt="Preview">
+                                    <div id="imagePlaceholderAdd" class="dropzone-placeholder">
+                                        <i class="fas fa-cloud-upload-alt fa-2x"></i>
+                                        <span class="fw-semibold" style="font-size:.8rem;">Click to upload</span>
+                                        <span style="font-size:.7rem;">JPG or PNG &middot; square works best</span>
+                                    </div>
                                 </div>
-                                <input type="file" name="image" id="imageInputAdd" class="form-control form-control-sm" accept="image/*">
-                                <small class="text-muted text-start d-block mt-2">Recommended: Square format (JPG, PNG)</small>
+                                <input type="file" name="image" id="imageInputAdd" class="d-none" accept="image/*">
+                                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3"
+                                        onclick="document.getElementById('imageInputAdd').click()">
+                                    <i class="fas fa-image me-1"></i> Choose Image
+                                </button>
                             </div>
                             
                             <div class="col-md-9 ps-md-4">
                                 @if(isset($deliveredPoItems) && count($deliveredPoItems) > 0)
-                                    <div class="mb-4 bg-light p-3 rounded border">
-                                        <div class="d-flex justify-content-between align-items-center mb-2">
-                                            <label class="form-label text-primary fw-bold mb-0"><i class="fas fa-magic me-1"></i> Auto-Fill from a Completed P.O. (Optional)</label>
-                                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="autoFillSupplyForm(null)">Clear</button>
+                                    <div class="supply-section-card">
+                                        <div class="supply-section-header">
+                                            <span class="supply-section-icon" style="background: linear-gradient(135deg, #7c3aed, #a855f7);"><i class="fas fa-magic"></i></span>
+                                            <div class="flex-grow-1">
+                                                <div class="supply-section-title">Auto-Fill from a Completed P.O.</div>
+                                                <div class="supply-section-sub">Optional &mdash; pull details from a delivered purchase order.</div>
+                                            </div>
+                                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3" onclick="autoFillSupplyForm(null)">Clear</button>
                                         </div>
+                                        <div class="supply-section-body">
                                         <div class="accordion" id="poAutofillAccordion">
                                             @php
                                                 $groupedItems = $deliveredPoItems->groupBy(function($item) {
@@ -381,10 +555,20 @@
                                                 </div>
                                             @endforeach
                                         </div>
+                                        </div>
                                     </div>
                                 @endif
 
-                                <div class="row g-3">
+                                <div class="supply-section-card">
+                                    <div class="supply-section-header">
+                                        <span class="supply-section-icon" style="background: linear-gradient(135deg, #101954, #2b4bb3);"><i class="fas fa-layer-group"></i></span>
+                                        <div>
+                                            <div class="supply-section-title">Categorization</div>
+                                            <div class="supply-section-sub">Where this item lives in the inventory.</div>
+                                        </div>
+                                    </div>
+                                    <div class="supply-section-body">
+                                    <div class="row g-3">
                                     <div class="col-md-6">
                                         <label class="form-label fw-bold">Supply Section <span class="text-danger">*</span></label>
                                         <select id="add_article_select" class="form-select" onchange="handleSectionChange(this, 'add')">
@@ -424,6 +608,20 @@
                                         <label class="form-label fw-bold">Description</label>
                                         <textarea name="description" id="add_desc" class="form-control" rows="2" placeholder="e.g. A4 Size, 70gsm, White"></textarea>
                                     </div>
+                                    </div>
+                                    </div>
+                                </div>
+
+                                <div class="supply-section-card">
+                                    <div class="supply-section-header">
+                                        <span class="supply-section-icon" style="background: linear-gradient(135deg, #059669, #10b981);"><i class="fas fa-cubes"></i></span>
+                                        <div>
+                                            <div class="supply-section-title">Stock Details</div>
+                                            <div class="supply-section-sub">Units, pricing, and quantity on hand.</div>
+                                        </div>
+                                    </div>
+                                    <div class="supply-section-body">
+                                    <div class="row g-3">
                                     
                                     <div class="col-md-4">
                                         <label class="form-label fw-bold">Unit Measure <span class="text-danger">*</span></label>
@@ -482,14 +680,16 @@
                                         <input type="number" name="low_stock_threshold" class="form-control border-warning border-2 bg-warning bg-opacity-10" min="1" value="10" required>
                                         <small class="text-muted d-block mt-1">System warns you when stock hits this number.</small>
                                     </div>
+                                    </div>
+                                    </div>
                                 </div>
                                 <input type="hidden" name="status" value="Available">
                             </div>
                         </div>
                     </div>
-                    <div class="modal-footer bg-light border-top-0">
+                    <div class="modal-footer">
                         <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary px-4 fw-bold">Save Supply</button>
+                        <button type="submit" class="btn btn-primary px-4 fw-bold"><i class="fas fa-save me-2"></i>Save Supply</button>
                     </div>
                 </form>
             </div>
@@ -681,9 +881,10 @@
 
             if (!sectionName || sectionName === '__new__') {
                 select.disabled = true;
-                select.innerHTML = '<option value="">Select a section first...</option>';
+                select.innerHTML = '<option value="">' + (sectionName === '__new__' ? 'Type a new classification below...' : 'Select a section first...') + '</option>';
                 hiddenInput.classList.add('d-none');
                 hiddenInput.value = '';
+                hiddenInput.placeholder = 'e.g. Size: A4';
                 return;
             }
 
@@ -698,6 +899,7 @@
             select.innerHTML = html;
             hiddenInput.classList.add('d-none');
             hiddenInput.value = '';
+            hiddenInput.placeholder = 'e.g. Size: A4';
         }
 
         function handleSectionChange(select, prefix) {
@@ -708,7 +910,16 @@
                 textInput.classList.remove('d-none');
                 textInput.value = '';
                 textInput.focus();
-                populateClassifications(prefix, null);
+
+                // Brand-new section: open Classification for direct entry right away,
+                // so new supplies can be separated at registration time.
+                const classSelect = document.getElementById(prefix + '_classification_select');
+                const classInput = document.getElementById(prefix + '_classification');
+                classSelect.disabled = true;
+                classSelect.innerHTML = '<option value="">Type a new classification below...</option>';
+                classInput.placeholder = 'e.g. A4, Legal, Letter';
+                classInput.classList.remove('d-none');
+                classInput.value = '';
             } else {
                 textInput.classList.add('d-none');
                 textInput.value = value;
@@ -730,11 +941,255 @@
             }
         }
 
+        // Open the Add Supply modal with a specific section/classification
+        // already chosen (used by the "Add supply here" shortcut on empty
+        // quick-added classification groups in the list).
+        function openAddSupplyPreselected(sectionName, classificationName) {
+            const modalEl = document.getElementById('addSupplyModal');
+            const sectionSelect = document.getElementById('add_article_select');
+            const sectionInput = document.getElementById('add_article');
+            const classSelect = document.getElementById('add_classification_select');
+            const classInput = document.getElementById('add_classification');
+
+            // show.bs.modal fires synchronously inside show(), so the form-reset
+            // listener runs first — preselecting afterwards sticks.
+            bootstrap.Modal.getOrCreateInstance(modalEl).show();
+
+            const sectionOptionExists = Array.from(sectionSelect.options).some(opt => opt.value === sectionName);
+            sectionSelect.value = sectionOptionExists ? sectionName : '__new__';
+            handleSectionChange(sectionSelect, 'add');
+            if (!sectionOptionExists) {
+                sectionInput.value = sectionName;
+            }
+
+            if (classificationName) {
+                const classOptionExists = Array.from(classSelect.options).some(opt => opt.value === classificationName);
+                if (classOptionExists) {
+                    classSelect.value = classificationName;
+                    handleClassificationChange(classSelect, 'add');
+                } else {
+                    classSelect.value = '__new__';
+                    handleClassificationChange(classSelect, 'add');
+                    classInput.value = classificationName;
+                }
+            }
+        }
+
         // Reset the multi-level dropdown whenever the Add Supply modal is opened
         document.getElementById('addSupplyModal').addEventListener('show.bs.modal', function () {
             const sectionSelect = document.getElementById('add_article_select');
             sectionSelect.value = '';
             handleSectionChange(sectionSelect, 'add');
+        });
+
+        // --- QUICK ADD SECTION / CLASSIFICATION ---
+        document.getElementById('quickSectionModal').addEventListener('shown.bs.modal', function () {
+            document.getElementById('quick_section_name').focus();
+        });
+
+        document.getElementById('quickSectionForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const form = this;
+            const btn = form.querySelector('button[type="submit"]');
+            const original = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Saving...';
+            btn.disabled = true;
+
+            fetch(form.action, {
+                method: 'POST',
+                body: new FormData(form),
+                headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+            })
+            .then(r => r.json().then(data => ({ ok: r.ok, data })))
+            .then(({ ok, data }) => {
+                if (!ok) {
+                    const msg = data.errors ? Object.values(data.errors).flat().join(' ') : 'Something went wrong.';
+                    Swal.fire({ icon: 'error', title: 'Could not save', text: msg });
+                    return;
+                }
+
+                const name = data.name, cls = data.classification;
+                const similar = Object.keys(supplySections)
+                    .filter(n => n.toLowerCase() !== name.toLowerCase() &&
+                        (n.toLowerCase().includes(name.toLowerCase()) || name.toLowerCase().includes(n.toLowerCase())));
+                if (similar.length > 0) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Similar section exists',
+                        text: `"${name}" looks a lot like "${similar.join('", "')}" — check the list to be sure this wasn't a typo. You can rename or remove it under Manage Sections.`,
+                        confirmButtonColor: '#2b4bb3'
+                    });
+                }
+
+                // 1. Update the in-page section map used by the dropdowns
+                if (!supplySections[name]) supplySections[name] = [];
+                if (!supplySections[name].includes(cls)) supplySections[name].push(cls);
+                supplySections[name].sort();
+
+                // 2. Inject the section into every section dropdown (Add & Edit)
+                document.querySelectorAll('select[id$="_article_select"]').forEach(sel => {
+                    if (!Array.from(sel.options).some(o => o.value === name)) {
+                        const opt = document.createElement('option');
+                        opt.value = name;
+                        opt.textContent = name;
+                        sel.insertBefore(opt, sel.querySelector('option[value="__new__"]'));
+                    }
+                });
+
+                // 3. Preselect the new pair inside the Add Supply form
+                const addSel = document.getElementById('add_article_select');
+                addSel.value = name;
+                handleSectionChange(addSel, 'add');
+                const clsSel = document.getElementById('add_classification_select');
+                if (clsSel && !clsSel.disabled) clsSel.value = cls;
+
+                form.reset();
+                bootstrap.Modal.getInstance(document.getElementById('quickSectionModal')).hide();
+                if (similar.length === 0) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: data.status === 'created' ? 'Section added!' : 'Section already exists',
+                        text: name + ' › ' + cls + ' — preselected in the Add Supply form.',
+                        timer: 2200,
+                        showConfirmButton: false
+                    });
+                }
+            })
+            .catch(() => Swal.fire({ icon: 'error', title: 'Network error', text: 'Please try again.' }))
+            .finally(() => { btn.innerHTML = original; btn.disabled = false; });
+        });
+
+        // --- MANAGE SECTIONS (rename / remove quick-added pairs) ---
+        const manageSectionsUrl = '{{ url('/supplies/sections') }}';
+
+        document.getElementById('manageSectionsModal').addEventListener('shown.bs.modal', loadManageSections);
+
+        function loadManageSections() {
+            const list = document.getElementById('manageSectionsList');
+            fetch(manageSectionsUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' } })
+                .then(r => r.json())
+                .then(sections => {
+                    list.innerHTML = '';
+                    if (!sections.length) {
+                        list.innerHTML = '<p class="text-center text-muted small py-4 mb-0">No quick-added sections yet.</p>';
+                        return;
+                    }
+                    sections.forEach(section => {
+                        const safeName = escapeHtml(section.name);
+                        list.insertAdjacentHTML('beforeend', `
+                            <div class="border rounded-3 p-3 mb-3 bg-light">
+                                <div class="d-flex justify-content-between align-items-center gap-2">
+                                    <div class="fw-bold text-dark">${safeName}</div>
+                                    <div class="d-flex gap-1">
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" data-action="rename" data-id="${section.id}" data-name="${safeName}" title="Rename section">
+                                            <i class="fas fa-pen"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-danger" data-action="delete-section" data-id="${section.id}" data-name="${safeName}" title="Delete entire section">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                ${section.classifications.length ? `
+                                    <div class="d-flex flex-wrap gap-1 mt-2">
+                                        ${section.classifications.map(c => {
+                                            const safeCls = escapeHtml(c);
+                                            return `
+                                            <span class="badge bg-white text-dark border d-inline-flex align-items-center gap-1 ps-2">
+                                                ${safeCls}
+                                                <button type="button" class="btn btn-sm p-0 border-0 bg-transparent text-danger" data-action="delete-classification" data-id="${section.id}" data-classification="${safeCls}" title="Remove classification" style="line-height:1;">&times;</button>
+                                            </span>`; }).join('')}
+                                    </div>` : ''}
+                            </div>`);
+                    });
+                })
+                .catch(() => { list.innerHTML = '<p class="text-center text-danger small py-4 mb-0">Could not load sections. Close and reopen to retry.</p>'; });
+        }
+
+        function escapeHtml(value) {
+            const div = document.createElement('div');
+            div.textContent = value;
+            return div.innerHTML;
+        }
+
+        document.getElementById('manageSectionsList').addEventListener('click', function (e) {
+            const btn = e.target.closest('button[data-action]');
+            if (!btn) return;
+
+            const action = btn.getAttribute('data-action');
+            const id = btn.getAttribute('data-id');
+            const name = btn.getAttribute('data-name');
+            const cls = btn.getAttribute('data-classification');
+            const csrf = document.querySelector('meta[name="csrf-token"]').content;
+
+            const send = (url, method, body) =>
+                fetch(url, {
+                    method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': csrf,
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json'
+                    },
+                    body: body ? JSON.stringify(body) : undefined
+                }).then(r => r.json().then(d => ({ ok: r.ok, data: d })));
+
+            const onDone = ({ ok, data }) => {
+                if (!ok) {
+                    Swal.fire({ icon: 'error', title: 'Something went wrong', text: (data && data.message) || 'Please try again.' });
+                    return;
+                }
+                window.location.reload();
+            };
+            const onError = () => Swal.fire({ icon: 'error', title: 'Network error', text: 'Please try again.' });
+
+            if (action === 'rename') {
+                Swal.fire({
+                    title: 'Rename section',
+                    input: 'text',
+                    inputValue: name,
+                    inputAttributes: { maxlength: 255 },
+                    showCancelButton: true,
+                    confirmButtonColor: '#2b4bb3',
+                    cancelButtonColor: '#6c757d',
+                    confirmButtonText: 'Rename'
+                }).then(result => {
+                    const newName = (result.value || '').trim();
+                    if (!result.isConfirmed || !newName || newName === name) return;
+                    send(`${manageSectionsUrl}/${id}`, 'PUT', { name: newName }).then(onDone).catch(onError);
+                });
+                return;
+            }
+
+            if (action === 'delete-section') {
+                Swal.fire({
+                    title: `Delete "${name}"?`,
+                    text: 'This removes the section and all its pre-registered classifications. Supplies already recorded under it are NOT deleted.',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#dc3545',
+                    cancelButtonColor: '#6c757d',
+                    confirmButtonText: 'Yes, delete section'
+                }).then(result => {
+                    if (!result.isConfirmed) return;
+                    send(`${manageSectionsUrl}/${id}`, 'DELETE').then(onDone).catch(onError);
+                });
+                return;
+            }
+
+            if (action === 'delete-classification') {
+                Swal.fire({
+                    title: `Remove "${name} › ${cls}"?`,
+                    text: 'The classification disappears from the dropdowns. Supplies already recorded under it are NOT deleted.',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#dc3545',
+                    cancelButtonColor: '#6c757d',
+                    confirmButtonText: 'Yes, remove'
+                }).then(result => {
+                    if (!result.isConfirmed) return;
+                    send(`${manageSectionsUrl}/${id}?classification=${encodeURIComponent(cls)}`, 'DELETE').then(onDone).catch(onError);
+                });
+            }
         });
 
         // --- DUPLICATE ITEM CHECK INTERCEPTOR ---
@@ -999,6 +1454,7 @@
         document.getElementById('imageInputAdd').addEventListener('change', function(event) {
             const preview = document.getElementById('imagePreviewAdd');
             const placeholder = document.getElementById('imagePlaceholderAdd');
+            const dropzone = document.getElementById('imageDropzoneAdd');
             const file = event.target.files[0];
 
             if (file) {
@@ -1007,12 +1463,14 @@
                     preview.src = e.target.result;
                     preview.style.display = 'block';
                     placeholder.style.display = 'none';
+                    dropzone.classList.add('has-image');
                 }
                 reader.readAsDataURL(file);
             } else {
                 preview.src = '';
                 preview.style.display = 'none';
-                placeholder.style.display = 'block';
+                placeholder.style.display = 'flex';
+                dropzone.classList.remove('has-image');
             }
         });
 

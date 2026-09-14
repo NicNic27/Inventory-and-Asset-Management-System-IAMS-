@@ -95,6 +95,10 @@ Route::middleware('auth')->group(function () {
     Route::delete('/supplies/{id}', [SupplyController::class, 'destroy']);
     Route::post('/supplies/{id}/transaction', [SupplyController::class, 'stockTransaction']);
     Route::post('/supplies/{id}/receive', [SupplyController::class, 'receive']);
+    Route::post('/supplies/sections', [SupplyController::class, 'quickStoreSection']);
+    Route::get('/supplies/sections', [SupplyController::class, 'manageSections']);
+    Route::put('/supplies/sections/{id}', [SupplyController::class, 'updateSection']);
+    Route::delete('/supplies/sections/{id}', [SupplyController::class, 'destroySection']);
     Route::get('/supplies/{id}/stock-card', [SupplyController::class, 'stockCard']);
     Route::get('/supplies/{id}/details', [SupplyController::class, 'details']);
 
@@ -149,6 +153,10 @@ Route::middleware('auth')->group(function () {
     // Admin Supplies
     Route::get('/admin/supplies', [AdminSupplyController::class, 'index']);
     Route::post('/admin/supplies', [AdminSupplyController::class, 'store']);
+    Route::post('/admin/supplies/sections', [AdminSupplyController::class, 'quickStoreSection']);
+    Route::get('/admin/supplies/sections', [AdminSupplyController::class, 'manageSections']);
+    Route::put('/admin/supplies/sections/{id}', [AdminSupplyController::class, 'updateSection']);
+    Route::delete('/admin/supplies/sections/{id}', [AdminSupplyController::class, 'destroySection']);
     Route::put('/admin/supplies/{id}', [AdminSupplyController::class, 'update']);
     Route::delete('/admin/supplies/{id}', [AdminSupplyController::class, 'destroy']);
     Route::get('/admin/supplies/{id}/details', [AdminSupplyController::class, 'details']);

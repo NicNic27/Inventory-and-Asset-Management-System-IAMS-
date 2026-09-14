@@ -8,6 +8,7 @@ use App\Models\Supply;
 use App\Models\Transaction;
 use App\Models\SystemSetting;
 use App\Models\ActivityLog;
+use App\Services\RisService;
 use App\Services\PrReferralService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -141,25 +142,31 @@ class RisController extends Controller
         return view('ris.index', compact('requests', 'perPage'));
     }
 
-    public function review($id)
+    public function review($id, RisService $risService)
     {
         $req = RisRequest::with('items')->findOrFail($id);
         
         foreach ($req->items as $item) {
-            $supply = Supply::where('barcode_id', $item->stock_no)->first();
+            $supply = $risService->resolveSupplyForItem($item);
             
             if ($supply) {
-                // Compute actual on-hand from transactions (true source of truth)
-                // instead of supply.quantity which can drift out of sync
-                $totalIn = Transaction::where('item_id', $supply->id)
-                    ->where('item_type', 'supplies')
-                    ->whereIn('transaction_type', ['IN', 'ADDED', 'RETURNED'])
-                    ->sum('quantity');
-                $totalOut = Transaction::where('item_id', $supply->id)
-                    ->where('item_type', 'supplies')
-                    ->where('transaction_type', 'OUT')
-                    ->sum('quantity');
-                $item->current_stock = max(0, (int) $totalIn - (int) $totalOut);
+                if (Transaction::where('item_id', $supply->id)->where('item_type', 'supplies')->exists()) {
+                    // Compute actual on-hand from transactions (true source of truth)
+                    // instead of supply.quantity which can drift out of sync
+                    $totalIn = Transaction::where('item_id', $supply->id)
+                        ->where('item_type', 'supplies')
+                        ->whereIn('transaction_type', ['IN', 'ADDED', 'RETURNED'])
+                        ->sum('quantity');
+                    $totalOut = Transaction::where('item_id', $supply->id)
+                        ->where('item_type', 'supplies')
+                        ->where('transaction_type', 'OUT')
+                        ->sum('quantity');
+                    $item->current_stock = max(0, (int) $totalIn - (int) $totalOut);
+                } else {
+                    // No ledger history (legacy/imported row): fall back to the
+                    // recorded on-hand quantity.
+                    $item->current_stock = max(0, (int) $supply->quantity);
+                }
             } else {
                 $item->current_stock = 0;
             }

@@ -312,7 +312,7 @@
                                 <option value="" selected disabled>-- Select Supply Item --</option>
                                 <option value="Others" class="fw-bold text-primary">Others (Please specify)</option>
                                 @foreach($supplies as $supply)
-                                    <option value="{{ $supply->article }}, {{ $supply->description }}" data-barcode="{{ $supply->barcode_id }}" data-qty="{{ $supply->quantity }}" data-unit="{{ $supply->unit_measure }}" data-value="{{ $supply->unit_value }}" data-article="{{ $supply->article }}">{{ $supply->article }} - {{ $supply->description }}</option>
+                                    <option value="{{ $supply->article }}, {{ $supply->description }}, {{ $supply->classification }}" data-barcode="{{ $supply->barcode_id }}" data-qty="{{ $supply->quantity }}" data-unit="{{ $supply->unit_measure }}" data-value="{{ $supply->unit_value }}" data-article="{{ $supply->article }}">{{ $supply->article }} — {{ $supply->description }}@if(!empty($supply->classification)) ({{ $supply->classification }})@endif</option>
                                 @endforeach
                             </select>
                             <input type="text" name="manual_description[]" class="form-control mt-2 manual-desc-input shadow-sm border-primary" style="display: none;" placeholder="Specify custom item name and description">
@@ -451,7 +451,10 @@
         const $el = $(state.element);
         const article = String($el.data('article') || '');
         const fullText = state.text;
-        const desc = fullText.startsWith(article + ' - ') ? fullText.slice(article.length + 3) : fullText;
+        const hasClassification = / \(([^)]+)\)$/.test(fullText);
+        const desc = fullText.startsWith(article + ' — ')
+            ? fullText.slice(article.length + 3)
+            : fullText;
         const qty = parseInt($el.data('qty')) || 0;
         const price = parseFloat($el.data('value'));
 
@@ -471,6 +474,7 @@
             <div class="text-truncate" title="${fullText.replace(/"/g, '&quot;')}">
                 <span class="fw-semibold">${article}</span>
                 <span class="opt-desc"> — ${desc}</span>
+                ${hasClassification ? `<span class="badge bg-info-subtle text-info-emphasis border border-info-subtle ms-1" style="font-size:0.65rem;">${fullText.match(/ \(([^)]+)\)$/)[1]}</span>` : ''}
             </div>
             <div class="text-nowrap">${priceHtml}${stockHtml}</div>
         </div>`);
