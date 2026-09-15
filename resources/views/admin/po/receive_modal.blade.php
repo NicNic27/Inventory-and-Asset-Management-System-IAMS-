@@ -166,12 +166,29 @@
     </div>
 </div>
 
+    @include('po._supply_link_helpers')
+
 <script>
     window.onload = () => { if (typeof window.addEmptyItemRow === "function") window.addEmptyItemRow(); };
 
     window.autoUpdatePoStatus = function() {
         // Status is derived from actual deliveries recorded via the Receive Delivery
         // sheet on the P.O. list — nothing to compute inside the wizard anymore.
+    };
+
+    /* Validate all form controls before submitting (visible feedback instead of
+       native submit validation tripping over hidden controls). A wrapping <div>
+       has no checkValidity() of its own — test each control inside it. */
+    window.poWizardValidateStep = function() {
+        const form = document.getElementById('poForm');
+        if (!form) return true;
+        const invalid = [...form.querySelectorAll('input, select, textarea')]
+            .find(el => !el.disabled && !el.checkValidity());
+        if (invalid) {
+            if (typeof invalid.reportValidity === 'function') invalid.reportValidity();
+            return false;
+        }
+        return true;
     };
 
     window.addEmptyItemRow = function(data = {unit: 'pc', desc: '', qty: 0, cost: 0.00, item_type: 'supply', source_type: 'procurement_stock'}) {
@@ -217,6 +234,18 @@
                         <label class="form-label">Total Amount</label>
                         <input type="text" class="form-control bg-light fw-bold total-output" readonly value="${total}">
                     </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Section (Destination)</label>
+                        <select class="form-select dest-section-select">
+                            ${window.buildSectionOptions(data.dest_section)}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Classification</label>
+                        <select class="form-select dest-classification-select">
+                            ${window.buildClassificationOptions(data.dest_section || '', data.dest_classification)}
+                        </select>
+                    </div>
                     <div class="col-md-12">
                         <label class="form-label">Fulfillment</label>
                         <div class="d-flex gap-2 align-items-center">
@@ -250,6 +279,16 @@
             </div>
         `;
         container.insertAdjacentHTML('beforeend', templateHtml);
+        const newRow = container.lastElementChild;
+        window.wireDestinationSelects(newRow);
+        window.syncOfficeControls(newRow);
+        if (itemType === 'asset') {
+            const secSel = newRow.querySelector('.dest-section-select');
+            const clsSel = newRow.querySelector('.dest-classification-select');
+            if (secSel) secSel.disabled = true;
+            if (clsSel) clsSel.disabled = true;
+        }
+        if (typeof window.refreshDestinationPreview === 'function') window.refreshDestinationPreview(newRow);
         autoUpdatePoStatus(); 
     };
 
@@ -302,6 +341,24 @@
         row.querySelector('.source-type-select').value = sourceType;
         const wrapper = row.querySelector('.office-wrapper');
         if (wrapper) wrapper.style.display = sourceType === 'direct_issuance' ? '' : 'none';
+        window.syncOfficeControls(row);
+    };
+
+    /* Asset rows skip the destination picker (no inventory filing) */
+    window.onItemTypeToggle = function(btn, type) {
+        const row = btn.closest('.item-row');
+        row.querySelector('.item-type-select').value = type;
+        const destSecSel = row.querySelector('.dest-section-select');
+        const destClsSel = row.querySelector('.dest-classification-select');
+        if (destSecSel && destClsSel) {
+            if (type === 'asset') {
+                destSecSel.disabled = true;
+                destClsSel.disabled = true;
+            } else {
+                destSecSel.disabled = false;
+                destClsSel.disabled = !destSecSel.value;
+            }
+        }
     };
 
     // Attach Calculation Listeners globally
@@ -325,6 +382,8 @@
     // Submitting the Form
     document.getElementById('poForm').addEventListener('submit', function(e) {
         e.preventDefault(); 
+
+        if (!window.poWizardValidateStep()) return;
 
         let formData = {
             _token: '{{ csrf_token() }}',
@@ -373,7 +432,8 @@
                 qty: q,
                 cost: c,
                 item_type: row.querySelector('.item-type-select')?.value || 'supply',
-                supply_id: row.querySelector('.supply-select')?.value || null,
+                dest_section: row.querySelector('.dest-section-select')?.value || null,
+                dest_classification: row.querySelector('.dest-classification-select')?.value || null,
                 source_type: row.querySelector('.source-type-select')?.value || 'procurement_stock',
                 requesting_office: (() => { const d = row.querySelector('.requesting-division-select')?.value; const u = row.querySelector('.requesting-unit-select')?.value; return d ? (u ? d + ' > ' + u : d) : null; })()
             });

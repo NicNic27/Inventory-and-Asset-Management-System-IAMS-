@@ -21,6 +21,8 @@ class ReceivePoDeliveryRequest extends FormRequest
             'items'     => ['required', 'array', 'min:1'],
             'items.*.po_item_id' => ['required', 'integer', 'distinct'],
             'items.*.quantity'   => ['required', 'integer', 'min:0'],
+            'items.*.dest_section'        => ['nullable', 'string', 'max:255'],
+            'items.*.dest_classification' => ['nullable', 'string', 'max:255'],
         ];
     }
 

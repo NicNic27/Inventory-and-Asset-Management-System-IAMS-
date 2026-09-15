@@ -308,6 +308,14 @@
                                                         @if($rows->isEmpty())
                                                             <span class="badge bg-warning bg-opacity-75 text-dark ms-1" title="Quick-added, no supplies yet">awaiting supplies</span>
                                                         @endif
+                                                        @if($rows->isNotEmpty())
+                                                            <a class="btn btn-sm btn-light border text-dark ms-2 classification-stock-card-btn"
+                                                               title="Stock Card for {{ $classificationName ?: 'General' }}"
+                                                               href="{{ url('/supplies/stock-card', ['section' => $sectionName, 'classification' => $classificationName]) }}"
+                                                               onclick="event.stopPropagation()" target="_blank">
+                                                                <i class="fas fa-clipboard-list"></i>
+                                                            </a>
+                                                        @endif
                                                     </button>
                                                 </h2>
                                                 <div id="collapse-{{ $classId }}" class="accordion-collapse collapse" data-bs-parent="#classAccordion-{{ $sectionId }}">
@@ -376,9 +384,6 @@
                                                                                 <button class="btn btn-sm btn-light border text-primary view-btn" title="View" data-id="{{ $row->id }}">
                                                                                     <i class="fas fa-eye"></i>
                                                                                 </button>
-                                                                                <a class="btn btn-sm btn-light border text-dark" title="Stock Card" href="{{ url('/supplies/'.$row->id.'/stock-card') }}" target="_blank">
-                                                                                    <i class="fas fa-clipboard-list"></i>
-                                                                                </a>
 
                                                                                 <button class="btn btn-sm btn-light border text-success edit-btn" title="Edit"
                                                                                         data-bs-toggle="modal"

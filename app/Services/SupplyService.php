@@ -117,6 +117,7 @@ class SupplyService
                     'transaction_type' => 'IN',
                     'quantity' => $data['quantity'],
                     'supplier' => $data['supplier'] ?? null,
+                    'unit_price' => $supply->unit_value,
                     'transaction_date' => date('Y-m-d'),
                     'remarks' => 'Opening Balance / Initial Stock',
                     'date_time' => now()
@@ -429,6 +430,103 @@ class SupplyService
         $item->forceFill(['inventory_synced' => true])->save();
 
         return $transaction instanceof Transaction ? $transaction : null;
+    }
+
+    /**
+     * Merged stock card for one classification group: all supplies sharing the
+     * same Section (article) + Classification, interleaved chronologically into
+     * a single running-balance ledger.
+     *
+     * @return array{supplies: Collection, rows: Collection, total_quantity: int, unit_measure: string, unit_value: float|null}
+     */
+    public function classificationStockCardData(string $section, string $classification): array
+    {
+        $section = trim($section);
+        $classification = trim($classification);
+
+        $supplies = Supply::where('article', $section)
+            ->when(
+                $classification !== '',
+                fn ($q) => $q->where('classification', $classification),
+                fn ($q) => $q->where(fn ($qq) => $qq->whereNull('classification')->orWhere('classification', ''))
+            )
+            ->orderBy('description')
+            ->get();
+
+        $supplyIds = $supplies->pluck('id');
+
+        $transactions = Transaction::whereIn('item_id', $supplyIds)
+            ->where('item_type', 'supplies')
+            // Process order (insertion sequence): every new transaction — add,
+            // PO receipt, RIS deduction — always lands on the next row, never
+            // above earlier ones even when a document carries a backdated or
+            // future transaction_date.
+            ->orderBy('id')
+            ->get();
+
+        $balance = 0;
+        $runningQty = 0;
+        $runningValue = 0.0;
+        $avgUnitValue = (float) ($supplies->avg('unit_value') ?? 0);
+        $descriptionById = $supplies->pluck('description', 'id');
+        $rows = $transactions->map(function (Transaction $transaction) use (&$balance, &$runningQty, &$runningValue, $avgUnitValue, $descriptionById) {
+            $type = strtoupper((string) $transaction->transaction_type);
+            $isReceipt = in_array($type, ['IN', 'ADDED', 'RETURNED'], true);
+            $balance += $isReceipt ? (int) $transaction->quantity : -(int) $transaction->quantity;
+
+            // Weighted-average unit value as of this process, so each row —
+            // the most recent one especially — shows the value synced to it.
+            if ($isReceipt) {
+                $price = $transaction->unit_price !== null
+                    ? (float) $transaction->unit_price
+                    : $avgUnitValue; // legacy rows recorded without a price
+                $runningValue += (int) $transaction->quantity * $price;
+                $runningQty += (int) $transaction->quantity;
+            } else {
+                $avg = $runningQty > 0 ? $runningValue / $runningQty : $avgUnitValue;
+                $runningValue -= (int) $transaction->quantity * $avg;
+                $runningQty = max(0, $runningQty - (int) $transaction->quantity);
+            }
+            $unitValueNow = $runningQty > 0 ? round($runningValue / $runningQty, 2) : null;
+
+            return [
+                'date' => $transaction->transaction_date ?: ($transaction->date_time ? $transaction->date_time->toDateString() : null),
+                'reference' => $transaction->po_number,
+                'receipt_quantity' => $isReceipt ? (int) $transaction->quantity : null,
+                'issue_quantity' => $isReceipt ? null : (int) $transaction->quantity,
+                // Receipt rows show the supplier the stock came from (a PO);
+                // issuance rows show the requesting office from the RIS.
+                'office' => $isReceipt
+                    ? ($transaction->supplier ?: $transaction->office)
+                    : ($transaction->office ?: 'Issuance'),
+                'balance' => $balance,
+                'days_to_consume' => null,
+                'unit_price' => $transaction->unit_price,
+                'unit_value_at_process' => $unitValueNow,
+                'remarks' => $transaction->remarks,
+                'description' => $descriptionById->get($transaction->item_id),
+            ];
+        });
+
+        // Align the running balance with actual on-hand stock across the group.
+        if ($rows->isNotEmpty()) {
+            $totalQuantity = (int) $supplies->sum('quantity');
+            $offset = $totalQuantity - (int) $balance;
+            if ($offset !== 0) {
+                $rows = $rows->map(function (array $row) use ($offset) {
+                    $row['balance'] += $offset;
+                    return $row;
+                });
+            }
+        }
+
+        return [
+            'supplies' => $supplies,
+            'rows' => $rows,
+            'total_quantity' => (int) $supplies->sum('quantity'),
+            'unit_measure' => $supplies->first()->unit_measure ?? '',
+            'unit_value' => $supplies->avg('unit_value'),
+        ];
     }
 
     /**

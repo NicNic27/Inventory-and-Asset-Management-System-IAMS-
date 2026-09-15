@@ -96,17 +96,29 @@ class PurchaseOrderToAssetTest extends TestCase
             'dr_number' => 'DR-TEST-100',
             'dr_date' => date('Y-m-d'),
             'items' => [
-                ['po_item_id' => $poItem->id, 'quantity' => 10],
+                [
+                    'po_item_id' => $poItem->id,
+                    'quantity' => 10,
+                    'dest_section' => 'General Supplies',
+                    'dest_classification' => 'Small',
+                ],
             ],
         ]);
 
         $receive->assertOk()->assertJson(['success' => true]);
 
+        // Received stock is filed under the chosen Section › Classification
         $this->assertDatabaseHas('supplies', [
+            'article' => 'General Supplies',
             'description' => 'Rubber Band Small',
+            'classification' => 'Small',
             'unit_measure' => 'Piece(s)',
             'quantity' => 10,
             'unit_value' => 20,
+        ]);
+        $this->assertDatabaseHas('supply_sections', [
+            'name' => 'General Supplies',
+            'classification' => 'Small',
         ]);
         $this->assertDatabaseHas('transactions', [
             'po_number' => 'PO-SUP-100',

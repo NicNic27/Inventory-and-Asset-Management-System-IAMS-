@@ -6,6 +6,7 @@ use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderItem;
 use App\Models\Supply;
 use App\Models\SupplyBatch;
+use App\Models\SupplySection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
@@ -58,37 +59,56 @@ class PoDeliveryService
                     );
                 }
 
-                // Auto-link unlinked supply lines by the same description + unit rule
-                // the legacy delivery sync uses; if no inventory item exists yet,
-                // create one on receipt (same as the old checkbox flow did).
-                if (!$poItem->supply_id) {
-                    $match = Supply::where('description', trim((string) $poItem->description))
-                        ->where('unit_measure', trim((string) $poItem->unit))
-                        ->first();
+                // Resolve the destination Section + Classification for this line:
+                // the receiving sheet's per-line choice wins, then whatever was
+                // saved on the P.O. item in the wizard, then the existing link.
+                $destSection = trim((string) ($row['dest_section'] ?? $poItem->dest_section ?? ''));
+                $destClassification = trim((string) ($row['dest_classification'] ?? $poItem->dest_classification ?? ''));
 
-                    if ($match) {
-                        $poItem->update(['supply_id' => $match->id]);
-                        $poItem->setRelation('supply', $match);
-                    } else {
-                        $created = $this->supplyService->create([
-                            'article'      => trim((string) $poItem->description),
-                            'description'  => trim((string) $poItem->description),
-                            'unit_measure' => trim((string) $poItem->unit),
-                            'unit_value'   => (float) $poItem->unit_cost,
-                            'supplier'     => $supplier ?: null,
-                            'quantity'     => 0,
-                            'status'       => 'Available',
-                        ]);
-                        $poItem->update(['supply_id' => $created->id]);
-                        $poItem->setRelation('supply', $created);
-                    }
-                }
-
-                if (!$poItem->supply_id) {
+                if ($destSection === '') {
                     throw new \DomainException(
-                        "\"{$poItem->description}\" is not linked to an inventory item. Edit the P.O. and link it first."
+                        "\"{$poItem->description}\" has no destination section. Pick a Section › Classification for it on the receiving sheet."
                     );
                 }
+
+                // Register the destination pair in the Manage Sections registry so
+                // every dropdown (supplies, RIS, PO) offers it from now on.
+                SupplySection::firstOrCreate(
+                    ['name' => $destSection, 'classification' => $destClassification]
+                );
+
+                // Find or create the inventory item that lives under the chosen
+                // Section › Classification. Matching ignores supplier — that is
+                // metadata a PO introduces, not the item's identity.
+                $supply = Supply::where('article', $destSection)
+                    ->where('description', trim((string) $poItem->description))
+                    ->where('unit_measure', trim((string) $poItem->unit))
+                    ->when(
+                        $destClassification !== '',
+                        fn ($q) => $q->where('classification', $destClassification),
+                        fn ($q) => $q->where(fn ($qq) => $qq->whereNull('classification')->orWhere('classification', ''))
+                    )
+                    ->first();
+
+                if (!$supply) {
+                    $supply = $this->supplyService->create([
+                        'article'        => $destSection,
+                        'description'    => trim((string) $poItem->description),
+                        'unit_measure'   => trim((string) $poItem->unit),
+                        'unit_value'     => (float) $poItem->unit_cost,
+                        'supplier'       => $supplier ?: null,
+                        'classification' => $destClassification,
+                        'quantity'       => 0,
+                        'status'         => 'Available',
+                    ]);
+                }
+
+                $poItem->update([
+                    'supply_id'           => $supply->id,
+                    'dest_section'        => $destSection,
+                    'dest_classification' => $destClassification,
+                ]);
+                $poItem->setRelation('supply', $supply);
 
                 $quantity = (int) $row['quantity'];
                 $delivered = (int) SupplyBatch::where('po_item_id', $poItem->id)->lockForUpdate()->sum('quantity');
@@ -100,8 +120,6 @@ class PoDeliveryService
                         "{$remaining} of {$poItem->qty} ordered."
                     );
                 }
-
-                $supply = $poItem->supply;
 
                 SupplyBatch::create([
                     'supply_id'   => $supply->id,

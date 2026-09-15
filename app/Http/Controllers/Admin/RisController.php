@@ -53,6 +53,9 @@ class RisController extends Controller
                             'transaction_type' => 'OUT',
                             'quantity' => $issueQty,
                             'supplier' => $supply->supplier,
+                            // Stock card "Office" column: the requesting office
+                            // exactly as written on the RIS (not the division).
+                            'office' => $ris->office,
                             'transaction_date' => now()->toDateString(),
                             'remarks' => 'RIS Auto-Release: ' . $ris->ris_no
                         ]);
@@ -79,6 +82,7 @@ class RisController extends Controller
                             'transaction_type' => 'IN',
                             'quantity' => $issueQty,
                             'supplier' => $supply->supplier,
+                            'office' => $ris->office,
                             'transaction_date' => now()->toDateString(),
                             'remarks' => 'RIS Revoked/Returned: ' . $ris->ris_no
                         ]);

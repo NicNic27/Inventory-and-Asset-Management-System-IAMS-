@@ -279,6 +279,7 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         window.SUPPLIES_LIST = @json($supplies ?? []);
+        window.SECTIONS_MAP = @json($sections ?? []);
         let currentPoData = null;
 
         // Auto-search logic (Debounce)
@@ -553,6 +554,8 @@
                             qty: item.qty || 0, 
                             cost: uCost,
                             item_type: item.item_type || 'supply',
+                            dest_section: item.dest_section || '',
+                            dest_classification: item.dest_classification || '',
                             source_type: item.source_type || 'procurement_stock',
                             requesting_office: item.requesting_office || ''
                         });

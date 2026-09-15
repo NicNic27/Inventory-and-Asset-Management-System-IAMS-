@@ -15,6 +15,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Auth;
 use App\Services\SupplyService;
 use App\Services\PoDeliveryService;
+use App\Models\SupplySection;
 use App\Models\RisRequest;
 use App\Models\RisItem;
 use App\Models\SupplyBatch;
@@ -50,9 +51,22 @@ class PurchaseOrderController extends Controller
         }
 
         $purchaseOrders = $query->get();
-        $supplies = Supply::orderBy('article')->get(['id', 'article', 'description', 'unit_measure']);
+        $supplies = Supply::orderBy('article')
+            ->orderBy('description')
+            ->orderBy('classification')
+            ->get(['id', 'article', 'description', 'classification', 'unit_measure', 'quantity', 'low_stock_threshold']);
 
-        return view('po.index', compact('purchaseOrders', 'supplies'));
+        // Destination picker data: Section => [classifications] from the registry
+        // merged with sections/classifications that exist on actual supplies.
+        $sections = collect();
+        foreach (Supply::select('article', 'classification')->get() as $supplyRow) {
+            $article = trim((string) $supplyRow->article);
+            if ($article === '') continue;
+            $sections->put($article, $sections->get($article, collect())->push(trim((string) $supplyRow->classification)));
+        }
+        $sections = SupplySection::mergeWithExisting($sections);
+
+        return view('po.index', compact('purchaseOrders', 'supplies', 'sections'));
     }
 
     public function store(Request $request, SupplyService $supplyService, PoDeliveryService $poDeliveryService)
@@ -98,6 +112,8 @@ class PurchaseOrderController extends Controller
                     'amount' => $item['qty'] * $item['cost'],
                     'item_type' => $item['item_type'] ?? 'supply',
                     'supply_id' => $item['supply_id'] ?? null,
+                    'dest_section' => $item['dest_section'] ?? null,
+                    'dest_classification' => $item['dest_classification'] ?? null,
                     'source_type' => $item['source_type'] ?? 'procurement_stock',
                     'requesting_office' => $item['requesting_office'] ?? null,
                 ]);
@@ -189,6 +205,8 @@ class PurchaseOrderController extends Controller
                     // the flag below is only preserved or derived, never reset by edits
                     'item_type' => $item['item_type'] ?? 'supply',
                     'supply_id' => $item['supply_id'] ?? null,
+                    'dest_section' => $item['dest_section'] ?? null,
+                    'dest_classification' => $item['dest_classification'] ?? null,
                     'source_type' => $item['source_type'] ?? 'procurement_stock',
                     'requesting_office' => $item['requesting_office'] ?? null,
                 ];

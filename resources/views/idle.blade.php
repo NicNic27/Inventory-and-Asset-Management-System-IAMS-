@@ -150,7 +150,7 @@
                 <div class="col-lg-7 col-md-12">
                     <div class="system-title">Asset & Inventory Management System</div>
                     <h1 class="main-heading">
-                        A.I.M System Under<br><span>Dev Process</span>
+                        Asset Management System Under<br><span>Dev Process</span>
                     </h1>
                 </div>
 

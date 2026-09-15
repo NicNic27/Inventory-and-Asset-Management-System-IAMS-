@@ -402,7 +402,12 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         window.SUPPLIES_LIST = @json($supplies ?? []);
+        window.SECTIONS_MAP = @json($sections ?? []);
         let currentPoData = null;
+        // Destination picker helpers (escapeHtml, buildSectionOptions,
+        // buildClassificationOptions, buildDestinationPreviewHtml,
+        // refreshDestinationPreview, wireDestinationSelects) are shared via the
+        // po/_supply_link_helpers partial, loaded with po/receive_modal above.
 
         window.officeMapping = {
             "Administrative Division": ["Asset Management Section", "General Services Unit", "Payroll Services Unit", "Records Section", "Personnel Section", "Cash Section"],
@@ -455,21 +460,8 @@
             const poItemId = data.id || '';
             const itemType = data.item_type || 'supply';
             const sourceType = data.source_type || 'procurement_stock';
-            const groupedSupplies = {};
-            (window.SUPPLIES_LIST || []).forEach(s => {
-                const key = s.article || 'Other';
-                if (!groupedSupplies[key]) groupedSupplies[key] = [];
-                groupedSupplies[key].push(s);
-            });
-            let supplyOptions = '<option value="">\u2014 Not linked \u2014</option>';
-            Object.keys(groupedSupplies).sort().forEach(article => {
-                supplyOptions += `<optgroup label="${article}">`;
-                groupedSupplies[article].forEach(s => {
-                    const label = (s.classification || s.description) + ' (' + s.unit_measure + ')';
-                    supplyOptions += `<option value="${s.id}" ${String(data.supply_id) === String(s.id) ? 'selected' : ''}>${label}</option>`;
-                });
-                supplyOptions += '</optgroup>';
-            });
+            const sectionOptions = window.buildSectionOptions(data.dest_section);
+            const classificationOptions = window.buildClassificationOptions(data.dest_section || '', data.dest_classification);
             const officeVisible = sourceType === 'direct_issuance' ? '' : 'display:none;';
             const supplyLinkVisible = itemType === 'asset' ? 'display:none;' : '';
             const deliveryInfo = !poItemId
@@ -482,15 +474,9 @@
 
             const cardBorderClass = itemType === 'asset' ? 'item-card asset-card' : (sourceType === 'direct_issuance' ? 'item-card direct-card' : 'item-card supply-card');
             const subtitleText = itemType === 'asset' ? 'Asset / Equipment' : (sourceType === 'direct_issuance' ? 'Supply \u2014 Direct Issuance' : 'Supply \u2014 For Inventory');
-            let inventoryPreviewHtml = '';
-            if (itemType === 'supply' && sourceType === 'procurement_stock') {
-                if (data.supply_id) {
-                    const linkedSupply = (window.SUPPLIES_LIST || []).find(s => String(s.id) === String(data.supply_id));
-                    if (linkedSupply) {
-                        inventoryPreviewHtml = `<div class="col-12"><div class="inventory-preview"><i class="fas fa-arrow-right"></i> Will be added to: <strong>${linkedSupply.article || '\u2014'} \u203A ${linkedSupply.classification || linkedSupply.description || '\u2014'}</strong></div></div>`;
-                    }
-                }
-            }
+            const inventoryPreviewHtml = (itemType === 'supply')
+                ? window.buildDestinationPreviewHtml(data.dest_section, data.dest_classification)
+                : '';
             let assetFieldsHtml = '';
             if (itemType === 'asset') {
                 assetFieldsHtml = `<div class="col-12 asset-fields"><div class="row g-3">
@@ -579,11 +565,17 @@
                             </div>
                             <input type="hidden" class="item-type-select" value="${itemType}">
                         </div>
-                        <div class="col-12 col-md-5 supply-link-wrapper" style="${supplyLinkVisible}">
-                            <label class="form-label">Link to Supply</label>
-                            <select class="form-select supply-select" onchange="onSupplyLinkChanged(this)">
-                                <option value="">— Not linked —</option>
-                                ${supplyOptions}
+                        <div class="col-6 col-md-3 dest-wrapper" style="${supplyLinkVisible}">
+                            <label class="form-label">Section (Destination)</label>
+                            <select class="form-select dest-section-select">
+                                ${sectionOptions}
+                            </select>
+                            <div class="small text-muted mt-1">Destination is chosen when receiving the delivery</div>
+                        </div>
+                        <div class="col-6 col-md-3 dest-wrapper" style="${supplyLinkVisible}">
+                            <label class="form-label">Classification</label>
+                            <select class="form-select dest-classification-select">
+                                ${classificationOptions}
                             </select>
                         </div>
                         <div class="col-12 col-md-3">
@@ -622,6 +614,14 @@
             `;
             container.insertAdjacentHTML('beforeend', templateHtml);
             const newRow = container.lastElementChild;
+            window.wireDestinationSelects(newRow);
+            window.syncOfficeControls(newRow);
+            if (itemType === 'asset') {
+                const secSel = newRow.querySelector('.dest-section-select');
+                const clsSel = newRow.querySelector('.dest-classification-select');
+                if (secSel) secSel.disabled = true;
+                if (clsSel) clsSel.disabled = true;
+            }
             autoUpdatePoStatus(); 
         };
 
@@ -632,8 +632,21 @@
             toggleBtns.forEach(b => b.classList.remove('active-supply', 'active-asset'));
             btn.classList.add(type === 'supply' ? 'active-supply' : 'active-asset');
             row.querySelector('.item-type-select').value = type;
-            const supplyWrapper = row.querySelector('.supply-link-wrapper');
-            if (supplyWrapper) supplyWrapper.style.display = type === 'asset' ? 'none' : '';
+            row.querySelectorAll('.dest-wrapper').forEach(el => { el.style.display = type === 'asset' ? 'none' : ''; });
+            // Disabled selects are exempt from validation, so asset rows can submit
+            // without a destination; re-enable when switching back to supply.
+            const destSecSel = row.querySelector('.dest-section-select');
+            const destClsSel = row.querySelector('.dest-classification-select');
+            if (destSecSel && destClsSel) {
+                if (type === 'asset') {
+                    destSecSel.disabled = true;
+                    destClsSel.disabled = true;
+                } else {
+                    destSecSel.disabled = false;
+                    destClsSel.disabled = !destSecSel.value;
+                    window.refreshDestinationPreview(row);
+                }
+            }
             const existingAssetFields = row.querySelector('.asset-fields');
             if (existingAssetFields) existingAssetFields.closest('.col-12').remove();
             const existingPreview = row.querySelector('.inventory-preview');
@@ -658,28 +671,8 @@
             row.querySelector('.source-type-select').value = sourceType;
             const wrapper = row.querySelector('.office-wrapper');
             if (wrapper) wrapper.style.display = sourceType === 'direct_issuance' ? '' : 'none';
+            window.syncOfficeControls(row);
             updateItemCardVisuals(row);
-        };
-
-        window.onSupplyLinkChanged = function(select) {
-            const row = select.closest('.item-row');
-            updateInventoryPreview(row);
-        };
-
-        window.updateInventoryPreview = function(row) {
-            const supplyId = row.querySelector('.supply-select')?.value;
-            const sourceType = row.querySelector('.source-type-select')?.value;
-            const itemType = row.querySelector('.item-type-select')?.value;
-            const existing = row.querySelector('.inventory-preview')?.closest('.col-12');
-            if (existing) existing.remove();
-            if (itemType === 'supply' && sourceType === 'procurement_stock' && supplyId) {
-                const supply = (window.SUPPLIES_LIST || []).find(s => String(s.id) === String(supplyId));
-                if (supply) {
-                    const previewHtml = `<div class="col-12"><div class="inventory-preview"><i class="fas fa-arrow-right"></i> Will be added to: <strong>${supply.article || '\u2014'} \u203A ${supply.classification || supply.description || '\u2014'}</strong></div></div>`;
-                    const deliveryCol = row.querySelector('.border-top');
-                    if (deliveryCol) deliveryCol.insertAdjacentHTML('beforebegin', previewHtml);
-                }
-            }
         };
 
         window.updateItemCardVisuals = function(row) {
@@ -951,7 +944,8 @@
                             qty: item.qty || 0,
                             cost: uCost,
                             item_type: item.item_type || 'supply',
-                            supply_id: item.supply_id || '',
+                            dest_section: item.dest_section || '',
+                            dest_classification: item.dest_classification || '',
                             source_type: item.source_type || 'procurement_stock',
                             requesting_office: item.requesting_office || '',
                             delivered_quantity: item.delivered_quantity ?? 0,
@@ -973,6 +967,21 @@
         // Submitting the Form
         document.getElementById('poForm').addEventListener('submit', function(e) {
             e.preventDefault(); 
+
+            // Safety net: if any enabled control anywhere in the form is invalid
+            // (e.g. a field on a step the user jumped past via the step header),
+            // jump to its step and surface the message instead of letting native
+            // validation cancel the submit as a silent no-op.
+            const form = document.getElementById('poForm');
+            if (!form.checkValidity()) {
+                const firstInvalid = [...form.querySelectorAll(':invalid')].find(el => !el.disabled);
+                if (firstInvalid) {
+                    const panel = firstInvalid.closest('.step-panel');
+                    if (panel && panel.dataset.panel) window.poWizard.goToStep(parseInt(panel.dataset.panel, 10));
+                    if (typeof firstInvalid.reportValidity === 'function') firstInvalid.reportValidity();
+                }
+                return;
+            }
 
             // Derive PO type from items: if any item is 'asset', PO is Asset; otherwise Supply
             let hasAsset = false;
@@ -1030,7 +1039,8 @@
                     qty: q,
                     cost: c,
                     item_type: row.querySelector('.item-type-select').value,
-                    supply_id: row.querySelector('.supply-select')?.value || null,
+                    dest_section: row.querySelector('.dest-section-select')?.value || null,
+                    dest_classification: row.querySelector('.dest-classification-select')?.value || null,
                     source_type: row.querySelector('.source-type-select').value,
                     requesting_office: (() => { const d = row.querySelector('.requesting-division-select')?.value; const u = row.querySelector('.requesting-unit-select')?.value; return d ? (u ? d + ' > ' + u : d) : null; })(),
                     asset_model: row.querySelector('.asset-model-input')?.value || null,

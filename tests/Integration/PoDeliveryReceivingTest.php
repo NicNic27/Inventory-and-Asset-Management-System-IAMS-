@@ -75,7 +75,7 @@ class PoDeliveryReceivingTest extends TestCase
             'dr_date' => date('Y-m-d'),
             'remarks' => 'Full delivery',
             'items' => [
-                ['po_item_id' => $poItem->id, 'quantity' => 10],
+                ['po_item_id' => $poItem->id, 'quantity' => 10, 'dest_section' => 'General Supplies', 'dest_classification' => 'Small'],
             ],
         ]);
 
@@ -114,7 +114,7 @@ class PoDeliveryReceivingTest extends TestCase
             'dr_number' => 'DR-2026-002',
             'dr_date' => date('Y-m-d'),
             'items' => [
-                ['po_item_id' => $poItem->id, 'quantity' => 4],
+                ['po_item_id' => $poItem->id, 'quantity' => 4, 'dest_section' => 'General Supplies', 'dest_classification' => 'Small'],
             ],
         ]);
 
@@ -129,7 +129,7 @@ class PoDeliveryReceivingTest extends TestCase
             'dr_number' => 'DR-2026-003',
             'dr_date' => date('Y-m-d'),
             'items' => [
-                ['po_item_id' => $poItem->id, 'quantity' => 6],
+                ['po_item_id' => $poItem->id, 'quantity' => 6, 'dest_section' => 'General Supplies', 'dest_classification' => 'Small'],
             ],
         ]);
 
@@ -143,7 +143,7 @@ class PoDeliveryReceivingTest extends TestCase
             'dr_number' => 'DR-2026-004',
             'dr_date' => date('Y-m-d'),
             'items' => [
-                ['po_item_id' => $poItem->id, 'quantity' => 1],
+                ['po_item_id' => $poItem->id, 'quantity' => 1, 'dest_section' => 'General Supplies', 'dest_classification' => 'Small'],
             ],
         ]);
         $response->assertStatus(422);
@@ -158,7 +158,7 @@ class PoDeliveryReceivingTest extends TestCase
             'po_id' => $po->id,
             'dr_number' => 'DR-2026-005',
             'dr_date' => date('Y-m-d'),
-            'items' => [['po_item_id' => $poItem->id, 'quantity' => 3]],
+            'items' => [['po_item_id' => $poItem->id, 'quantity' => 3, 'dest_section' => 'General Supplies', 'dest_classification' => 'Small']],
         ])->assertOk();
 
         $response = $this->getJson("/po/{$po->id}/receive-sheet");
@@ -216,7 +216,7 @@ class PoDeliveryReceivingTest extends TestCase
             'po_id' => $po->id,
             'dr_number' => 'DR-2026-006',
             'dr_date' => date('Y-m-d'),
-            'items' => [['po_item_id' => $poItem->id, 'quantity' => 10]],
+            'items' => [['po_item_id' => $poItem->id, 'quantity' => 10, 'dest_section' => 'General Supplies', 'dest_classification' => 'Small']],
         ])->assertOk();
         $this->assertEquals('Complete', $po->fresh()->status);
 

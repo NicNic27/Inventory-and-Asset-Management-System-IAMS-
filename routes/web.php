@@ -100,6 +100,7 @@ Route::middleware('auth')->group(function () {
     Route::put('/supplies/sections/{id}', [SupplyController::class, 'updateSection']);
     Route::delete('/supplies/sections/{id}', [SupplyController::class, 'destroySection']);
     Route::get('/supplies/{id}/stock-card', [SupplyController::class, 'stockCard']);
+    Route::get('/supplies/stock-card/{section}/{classification}', [SupplyController::class, 'classificationStockCard']);
     Route::get('/supplies/{id}/details', [SupplyController::class, 'details']);
 
     // Barcodes
@@ -160,6 +161,7 @@ Route::middleware('auth')->group(function () {
     Route::put('/admin/supplies/{id}', [AdminSupplyController::class, 'update']);
     Route::delete('/admin/supplies/{id}', [AdminSupplyController::class, 'destroy']);
     Route::get('/admin/supplies/{id}/details', [AdminSupplyController::class, 'details']);
+    Route::get('/admin/supplies/stock-card/{section}/{classification}', [AdminSupplyController::class, 'classificationStockCard']);
     Route::post('/admin/supplies/{id}/transaction', [AdminSupplyController::class, 'stockTransaction']);
 
     // Admin Assets

@@ -34,6 +34,8 @@ class PoDeliveryController extends Controller
                 'remaining'  => max(0, $ordered - $delivered),
                 'is_asset'   => ($item->item_type ?? 'supply') === 'asset',
                 'complete'   => $ordered > 0 && $delivered >= $ordered,
+                'dest_section' => $item->dest_section,
+                'dest_classification' => $item->dest_classification,
                 'history'    => SupplyBatch::where('po_item_id', $item->id)
                     ->orderByDesc('id')
                     ->get(['dr_number', 'dr_date', 'quantity'])

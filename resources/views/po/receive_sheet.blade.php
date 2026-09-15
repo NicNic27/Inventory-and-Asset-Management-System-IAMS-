@@ -40,11 +40,12 @@
                         <table class="table table-sm align-middle mb-2" style="font-size:.85rem;">
                             <thead>
                                 <tr class="text-muted text-uppercase" style="font-size:.7rem;letter-spacing:.5px;">
-                                    <th style="width:34%;">Item</th>
+                                    <th style="width:30%;">Item</th>
+                                    <th style="width:22%;">Destination (Section › Classification)</th>
                                     <th class="text-center">Ordered</th>
                                     <th class="text-center">Received</th>
                                     <th class="text-center">Remaining</th>
-                                    <th class="text-center" style="width:130px;">Receiving Now</th>
+                                    <th class="text-center" style="width:110px;">Receiving Now</th>
                                     <th class="text-center">History</th>
                                 </tr>
                             </thead>
@@ -56,11 +57,11 @@
                         <button type="button" class="btn btn-sm btn-outline-success" id="rsReceiveAllBtn">
                             <i class="fas fa-check-double me-1"></i> Receive All Remaining
                         </button>
-                        <div class="small text-muted">
-                            P.O. will become
-                            <strong id="rsPreviewStatus" class="text-dark">&mdash;</strong>
-                            after saving &middot; received quantities post to inventory immediately
-                        </div>
+                    <div class="small text-muted">
+                        P.O. will become
+                        <strong id="rsPreviewStatus" class="text-dark">&mdash;</strong>
+                        after saving &middot; received stock files under each item's chosen Section &rsaquo; Classification
+                    </div>
                     </div>
 
                     {{-- Per-item delivery history --}}
@@ -90,7 +91,7 @@ window.openReceiveSheet = function(poId, poNo) {
     document.getElementById('rsPoNo').textContent = poNo || ('PO #' + poId);
     document.getElementById('rsSupplier').textContent = 'Loading\u2026';
     document.getElementById('rsItemsBody').innerHTML =
-        '<tr><td colspan="6" class="text-center text-muted py-4"><span class="spinner-border spinner-border-sm me-2"></span>Loading items\u2026</td></tr>';
+        '<tr><td colspan="7" class="text-center text-muted py-4"><span class="spinner-border spinner-border-sm me-2"></span>Loading items\u2026</td></tr>';
     document.getElementById('rsHistoryPanel').classList.add('d-none');
     document.getElementById('receiveDeliveryForm').reset();
     if (!document.getElementById('rs_dr_date').value) {
@@ -107,7 +108,7 @@ window.openReceiveSheet = function(poId, poNo) {
         })
         .catch(err => {
             document.getElementById('rsItemsBody').innerHTML =
-                '<tr><td colspan="6" class="text-center text-danger py-4">Could not load the P.O. items.</td></tr>';
+                '<tr><td colspan="7" class="text-center text-danger py-4">Could not load the P.O. items.</td></tr>';
             if (window.Swal) Swal.fire('Error', err.message || 'Failed to load P.O.', 'error');
         });
 
@@ -124,8 +125,14 @@ function rsRenderItems(items) {
     const body = document.getElementById('rsItemsBody');
     body.innerHTML = '';
 
+    if (!window.SECTIONS_MAP || Object.keys(window.SECTIONS_MAP).length === 0) {
+        body.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4">No sections registered yet — add Sections &amp; Classifications from the Supplies page first.</td></tr>';
+        rsUpdatePreview();
+        return;
+    }
+
     if (items.length === 0) {
-        body.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">This P.O. has no items.</td></tr>';
+        body.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4">This P.O. has no items.</td></tr>';
         rsUpdatePreview();
         return;
     }
@@ -149,14 +156,25 @@ function rsRenderItems(items) {
             ? `<button type="button" class="btn btn-sm btn-light border" title="View delivery history" onclick="rsShowHistory(${item.po_item_id})"><i class="fas fa-clock-rotate-left text-muted"></i></button>`
             : '<span class="text-muted">&mdash;</span>';
 
+        const destinationCell = item.is_asset
+            ? '<span class="text-muted fst-italic small">&mdash;</span>'
+            : `<select class="form-select form-select-sm dest-section-select" style="min-width:130px;">
+                   ${window.buildSectionOptions(item.dest_section)}
+               </select>
+               <select class="form-select form-select-sm dest-classification-select mt-1" style="min-width:130px;">
+                   ${window.buildClassificationOptions(item.dest_section || '', item.dest_classification)}
+               </select>`;
+
         tr.innerHTML = `
             <td><div class="fw-semibold text-dark">${rsEsc(item.description)}</div><div class="text-muted small">${rsEsc(item.unit || '')}</div></td>
+            <td>${destinationCell}</td>
             <td class="text-center fw-semibold">${item.ordered}</td>
             <td class="text-center">${item.received > 0 ? '<span class="text-success fw-bold">' + item.received + '</span>' : '<span class="text-muted">0</span>'}</td>
             <td class="text-center ${item.remaining === 0 ? 'text-muted' : 'text-danger fw-bold'}">${item.remaining}</td>
             <td class="text-center">${receiveCell}</td>
             <td class="text-center">${historyBtn}</td>`;
         body.appendChild(tr);
+        window.wireDestinationSelects(tr);
     });
 
     body.querySelectorAll('.rs-qty').forEach(input => {
@@ -172,7 +190,12 @@ function rsCollectPayload() {
         const input = tr.querySelector('.rs-qty');
         const qty = input ? (parseInt(input.value, 10) || 0) : 0;
         if (qty > 0) {
-            items.push({ po_item_id: parseInt(tr.dataset.poItemId, 10), quantity: qty });
+            items.push({
+                po_item_id: parseInt(tr.dataset.poItemId, 10),
+                quantity: qty,
+                dest_section: tr.querySelector('.dest-section-select')?.value || null,
+                dest_classification: tr.querySelector('.dest-classification-select')?.value || null
+            });
         }
     });
 

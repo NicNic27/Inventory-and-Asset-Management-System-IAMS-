@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Controllers\PurchaseOrderController;
 use App\Models\PurchaseOrder;
 use App\Models\Supply;
+use App\Models\SupplySection;
 use Illuminate\Http\Request;
 
 /**
@@ -44,9 +45,22 @@ class PoController extends Controller
         }
 
         $purchaseOrders = $query->get();
-        $supplies = Supply::orderBy('article')->get(['id', 'article', 'description', 'unit_measure']);
+        $supplies = Supply::orderBy('article')
+            ->orderBy('description')
+            ->orderBy('classification')
+            ->get(['id', 'article', 'description', 'classification', 'unit_measure', 'quantity', 'low_stock_threshold']);
 
-        return view('admin.po.index', compact('purchaseOrders', 'supplies'));
+        // Destination picker data: Section => [classifications] from the registry
+        // merged with sections/classifications that exist on actual supplies.
+        $sections = collect();
+        foreach (Supply::select('article', 'classification')->get() as $supplyRow) {
+            $article = trim((string) $supplyRow->article);
+            if ($article === '') continue;
+            $sections->put($article, $sections->get($article, collect())->push(trim((string) $supplyRow->classification)));
+        }
+        $sections = SupplySection::mergeWithExisting($sections);
+
+        return view('admin.po.index', compact('purchaseOrders', 'supplies', 'sections'));
     }
 
     public function store(Request $request)

@@ -332,6 +332,7 @@ class SupplyController extends Controller
             'transaction_type' => 'Added',
             'quantity' => $request->initial_quantity ?? 0,
             'supplier' => $request->supplier,
+            'unit_price' => $supply->unit_value,
             'transaction_date' => date('Y-m-d'),
             'remarks' => 'Opening Balance / New Item',
         ]);
@@ -503,28 +504,54 @@ HTML;
         $supply = Supply::findOrFail($id);
         $transactions = Transaction::where('item_id', $supply->id)
             ->where('item_type', 'supplies')
-            ->orderBy('transaction_date')
+            // Process order (insertion sequence): every new transaction — add,
+            // PO receipt, RIS deduction — always lands on the next row, never
+            // above earlier ones even when a document carries a backdated or
+            // future transaction_date.
             ->orderBy('id')
             ->get();
 
         $balance = 0;
-        $rows = $transactions->map(function (Transaction $transaction) use (&$balance) {
+        $runningQty = 0;
+        $runningValue = 0.0;
+        $fallbackValue = (float) $supply->unit_value;
+        $rows = $transactions->map(function (Transaction $transaction) use (&$balance, &$runningQty, &$runningValue, $fallbackValue) {
             $type = strtoupper((string) $transaction->transaction_type);
             $isReceipt = in_array($type, ['IN', 'ADDED', 'RETURNED'], true);
             $receiptQuantity = $isReceipt ? (int) $transaction->quantity : null;
             $issueQuantity = !$isReceipt ? (int) $transaction->quantity : null;
             $balance += $isReceipt ? (int) $transaction->quantity : -(int) $transaction->quantity;
 
+            // Weighted-average unit value as of this process, so each row —
+            // the most recent one especially — shows the value synced to it.
+            if ($isReceipt) {
+                $price = $transaction->unit_price !== null
+                    ? (float) $transaction->unit_price
+                    : $fallbackValue; // legacy rows recorded without a price
+                $runningValue += (int) $transaction->quantity * $price;
+                $runningQty += (int) $transaction->quantity;
+            } else {
+                $avg = $runningQty > 0 ? $runningValue / $runningQty : $fallbackValue;
+                $runningValue -= (int) $transaction->quantity * $avg;
+                $runningQty = max(0, $runningQty - (int) $transaction->quantity);
+            }
+            $unitValueNow = $runningQty > 0 ? round($runningValue / $runningQty, 2) : null;
+
             return [
                 'date' => $transaction->transaction_date ?: ($transaction->date_time ? Carbon::parse($transaction->date_time)->toDateString() : null),
                 'reference' => $transaction->po_number,
                 'receipt_quantity' => $receiptQuantity,
                 'issue_quantity' => $issueQuantity,
-                'office' => $transaction->office ?: ($isReceipt ? $transaction->supplier : 'Issuance'),
+                // Receipt rows show the supplier the stock came from (a PO);
+                // issuance rows show the requesting office from the RIS.
+                'office' => $isReceipt
+                    ? ($transaction->supplier ?: $transaction->office)
+                    : ($transaction->office ?: 'Issuance'),
                 'balance' => $balance,
                 'days_to_consume' => null,
                 'supplier' => $transaction->supplier,
                 'unit_price' => $transaction->unit_price,
+                'unit_value_at_process' => $unitValueNow,
                 'remarks' => $transaction->remarks,
             ];
         });
@@ -542,6 +569,25 @@ HTML;
         }
 
         return view('supplies.stock-card', compact('supply', 'rows'));
+    }
+
+    /**
+     * Printable stock card for one classification group (Section › Classification),
+     * merging the ledgers of every supply sharing that pair.
+     */
+    public function classificationStockCard(Request $request, SupplyService $supplyService, string $section, string $classification)
+    {
+        $data = $supplyService->classificationStockCardData(urldecode($section), urldecode($classification));
+
+        return view('supplies.classification-stock-card', [
+            'sectionName' => urldecode($section),
+            'classificationName' => urldecode($classification),
+            'supplies' => $data['supplies'],
+            'rows' => $data['rows'],
+            'totalQuantity' => $data['total_quantity'],
+            'unitMeasure' => $data['unit_measure'],
+            'unitValue' => $data['unit_value'],
+        ]);
     }
 
     public function update(Request $request, $id)

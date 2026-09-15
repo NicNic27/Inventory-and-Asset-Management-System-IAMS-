@@ -208,6 +208,8 @@
     </div>
 </div>
 
+    @include('po._supply_link_helpers')
+
 <script>
 /* Global issuance mode */
 window.globalIssuanceMode = 'procurement_stock';
@@ -238,16 +240,31 @@ window.setGlobalIssuance = function(mode) {
         // Show/hide office wrapper
         const wrapper = row.querySelector('.office-wrapper');
         if (wrapper) wrapper.style.display = mode === 'direct_issuance' ? '' : 'none';
-        if (mode === 'direct_issuance') {
-            loadReferralOptions(row, row.querySelector('.supply-select')?.value || '', '', '', '');
-        }
+        document.querySelectorAll('.item-row').forEach(row2 => window.syncOfficeControls(row2));
     });
 };
 
 window.poWizard = {
     currentStep: 1, totalSteps: 4,
     goToStep(step) { if (step < 1 || step > this.totalSteps) return; this.currentStep = step; this.render(); },
-    next() { if (this.currentStep < this.totalSteps) { this.currentStep++; this.render(); } },
+    next() {
+        if (this.currentStep >= this.totalSteps) return;
+        // Validate the current step's form controls before advancing. A <div>
+        // panel has no checkValidity() of its own — test each control inside it.
+        // Hidden-but-enabled invalid controls no longer exist because
+        // syncOfficeControls disables them.
+        const panel = document.querySelector('.step-panel[data-panel="' + this.currentStep + '"]');
+        if (panel) {
+            const invalid = [...panel.querySelectorAll('input, select, textarea')]
+                .find(el => !el.disabled && !el.checkValidity());
+            if (invalid) {
+                if (typeof invalid.reportValidity === 'function') invalid.reportValidity();
+                return;
+            }
+        }
+        this.currentStep++;
+        this.render();
+    },
     prev() { if (this.currentStep > 1) { this.currentStep--; this.render(); } },
     render() {
         document.querySelectorAll('.step-panel').forEach(p => p.classList.remove('active'));
@@ -315,37 +332,5 @@ window.updateItemCardVisuals = function(row) {
     }
 };
 
-/* Build grouped supply <optgroup> HTML */
-window.buildGroupedSupplyOptions = function(selectedId) {
-    const supplies = window.SUPPLIES_LIST || [];
-    if (supplies.length === 0) return '<option value="">— No supplies available —</option>';
-    // Group by article
-    const groups = {};
-    supplies.forEach(s => {
-        const key = s.article || 'Other';
-        if (!groups[key]) groups[key] = [];
-        groups[key].push(s);
-    });
-    let html = '<option value="">— Not linked —</option>';
-    Object.keys(groups).sort().forEach(article => {
-        html += '<optgroup label="' + article.replace(/"/g, '&quot;') + '">';
-        groups[article].forEach(s => {
-            const label = (s.classification || s.description) + ' (' + s.unit_measure + ')';
-            html += '<option value="' + s.id + '"' + (String(selectedId) === String(s.id) ? ' selected' : '') + '>' + label.replace(/</g, '&lt;') + '</option>';
-        });
-        html += '</optgroup>';
-    });
-    return html;
-};
-
-/* Show inventory destination preview based on selected supply */
-window.updateInventoryPreview = function(row) {
-    const wrapper = row.querySelector('.inventory-preview-wrapper');
-    if (!wrapper) return;
-    const supplyId = row.querySelector('.supply-select')?.value;
-    if (!supplyId) { wrapper.innerHTML = ''; return; }
-    const supply = (window.SUPPLIES_LIST || []).find(s => String(s.id) === String(supplyId));
-    if (!supply) { wrapper.innerHTML = ''; return; }
-    wrapper.innerHTML = '<div class="inventory-preview"><i class="fas fa-arrow-right"></i> Will be added to: <strong>' + (supply.article || '—') + ' &rsaquo; ' + (supply.classification || supply.description || '—') + '</strong></div>';
-};
+/* Destination picker helpers come from po/_supply_link_helpers.blade.php */
 </script>

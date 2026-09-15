@@ -333,6 +333,7 @@ class SupplyController extends Controller
             'transaction_type' => 'Added',
             'quantity' => $request->initial_quantity ?? 0,
             'supplier' => $request->supplier,
+            'unit_price' => $supply->unit_value,
             'transaction_date' => date('Y-m-d'),
             'remarks' => 'Opening Balance / New Item',
         ]);
@@ -560,6 +561,25 @@ class SupplyController extends Controller
             <div class="ov-footer"><button type="button" class="btn" data-bs-dismiss="modal">Close Window</button></div>
         </div>
 HTML;
+    }
+
+    /**
+     * Printable stock card for one classification group (Section › Classification),
+     * merging the ledgers of every supply sharing that pair.
+     */
+    public function classificationStockCard(Request $request, SupplyService $supplyService, string $section, string $classification)
+    {
+        $data = $supplyService->classificationStockCardData(urldecode($section), urldecode($classification));
+
+        return view('supplies.classification-stock-card', [
+            'sectionName' => urldecode($section),
+            'classificationName' => urldecode($classification),
+            'supplies' => $data['supplies'],
+            'rows' => $data['rows'],
+            'totalQuantity' => $data['total_quantity'],
+            'unitMeasure' => $data['unit_measure'],
+            'unitValue' => $data['unit_value'],
+        ]);
     }
 
     public function stockTransaction(Request $request, SupplyService $supplyService, $id)

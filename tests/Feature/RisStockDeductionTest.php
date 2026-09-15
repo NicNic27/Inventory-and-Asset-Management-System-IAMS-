@@ -254,6 +254,41 @@ class RisStockDeductionTest extends TestCase
         ]);
     }
 
+    public function test_approval_records_the_requesting_office_on_the_release_transaction(): void
+    {
+        $this->actingAsAdmin();
+
+        $supply = Supply::create([
+            'article'      => 'Bond Paper',
+            'description'  => 'Sub 20',
+            'unit_measure' => 'Ream',
+            'unit_value'   => 120,
+            'quantity'     => 30,
+            'status'       => 'Available',
+        ]);
+
+        // The RIS carries both a division and the specific office/unit/section
+        $ris = $this->createRisWithItem([
+            'stock_no'      => null,
+            'unit'          => 'Ream',
+            'description'   => 'Bond Paper, Sub 20',
+            'req_quantity'  => 4,
+            'issue_quantity' => 4,
+            'stock_avail'   => 'yes',
+        ]);
+
+        $this->post("/admin/ris/{$ris->id}/process", ['new_status' => 'Approved'])->assertRedirect();
+
+        $this->assertDatabaseHas('transactions', [
+            'item_id'          => $supply->id,
+            'item_type'        => 'supplies',
+            'transaction_type' => 'OUT',
+            'quantity'         => 4,
+            // The office from the RIS — not the division, not a generic label
+            'office'           => 'Test Office',
+        ]);
+    }
+
     public function test_approval_is_idempotent_and_does_not_double_deduct(): void
     {
         $this->actingAsAdmin();
